@@ -230,15 +230,32 @@ def _init_source_for_config(value: str, target: Path) -> str:
         # resolves paths from the config directory.  Prefer the cwd file when
         # it exists (the explicit CLI interpretation); otherwise preserve the
         # useful config-relative default such as ``art/master.png``.
-        cwd_candidate = (Path.cwd() / raw).resolve()
-        config_candidate = (target.parent.resolve() / raw).resolve()
+        cwd = Path.cwd().resolve()
+        cwd_candidate = (cwd / raw).resolve()
+        config_parent = target.parent.resolve()
+        config_candidate = (config_parent / raw).resolve()
         # A relative argument is first interpreted from the caller's cwd when
         # that file already exists.  If it does not, retain the task-local
         # spelling instead of serializing a path relative to an unrelated cwd.
         # This matters for ``init jobs/name/job.toml`` from an empty checkout:
         # the starter ``art/master.png`` should remain beside that job, not
         # unexpectedly point at ``../art/master.png`` under the caller.
-        resolved = cwd_candidate if cwd_candidate.is_file() else config_candidate
+        # README-style invocations often name the task directory twice:
+        # ``init jobs/name/job.toml --source jobs/name/art/master.png``.
+        # If the artwork does not exist yet, the ordinary existence check
+        # cannot distinguish that cwd-relative spelling from the
+        # task-relative default and would serialize
+        # ``jobs/name/jobs/name/art/master.png``. Recognise the task-directory
+        # prefix even before the file is created; the resulting path is still
+        # normalised relative to the config directory below.
+        try:
+            task_prefix = config_parent.relative_to(cwd)
+            raw_parts = raw.parts
+            prefix_parts = task_prefix.parts
+            cwd_qualified = bool(prefix_parts) and raw_parts[: len(prefix_parts)] == prefix_parts
+        except ValueError:
+            cwd_qualified = False
+        resolved = cwd_candidate if cwd_candidate.is_file() or cwd_qualified else config_candidate
     try:
         return Path(os.path.relpath(resolved, target.parent.resolve())).as_posix()
     except (ValueError, OSError):

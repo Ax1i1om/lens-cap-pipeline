@@ -152,10 +152,14 @@ def _resolve_tool(
     # explicit fallback candidates so a clean clone can discover the same
     # optional tools that the standalone 3MF adapter supports, while still
     # allowing a job's configured executable to take precedence.
+    # Materialise once: callers normally pass tuples, but accepting a generic
+    # iterable should not consume a generator while deciding which desktop
+    # bundle fallback to append.
     fallback_names = list(names)
-    if any("bambu" in str(name).lower() for name in names):
+    lowered_names = [str(name).lower() for name in fallback_names]
+    if any("bambu" in name for name in lowered_names):
         fallback_names.append("/Applications/BambuStudio.app/Contents/MacOS/BambuStudio")
-    if any("openscad" in str(name).lower() for name in names):
+    if any("openscad" in name for name in lowered_names):
         fallback_names.append("/Applications/OpenSCAD.app/Contents/MacOS/OpenSCAD")
     for name in fallback_names:
         found = shutil.which(name)

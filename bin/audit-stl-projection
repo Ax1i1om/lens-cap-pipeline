@@ -1,16 +1,16 @@
-#!/usr/bin/env python3
+#!/bin/sh
 # SPDX-License-Identifier: Apache-2.0
-"""Repository launcher for the public STL projection audit."""
-
-from __future__ import annotations
-
-import sys
-from pathlib import Path
-
-ROOT = Path(__file__).resolve().parents[1]
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
-
-from scripts.audit_stl_projection import main  # noqa: E402
-
-raise SystemExit(main())
+# Repository-local projection-audit launcher; use the project venv when one
+# exists because the audit depends on NumPy/Pillow.
+set -eu
+ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+if [ -x "$ROOT/.venv/bin/python" ]; then
+    PYTHON_BIN="$ROOT/.venv/bin/python"
+else
+    PYTHON_BIN=$(command -v python3 || true)
+fi
+if [ -z "$PYTHON_BIN" ]; then
+    echo "audit-stl-projection: Python 3 is required (run scripts/bootstrap.py first)" >&2
+    exit 127
+fi
+exec "$PYTHON_BIN" "$ROOT/scripts/audit_stl_projection.py" "$@"

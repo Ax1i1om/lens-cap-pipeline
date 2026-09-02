@@ -242,6 +242,31 @@ def test_init_creates_placeholder_for_a_custom_relative_source_directory(
     assert not (config_path.parent / "art").exists()
 
 
+def test_init_normalizes_missing_cwd_qualified_source_path(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A cwd-qualified source remains portable before the file exists."""
+
+    monkeypatch.chdir(tmp_path)
+    config_path = tmp_path / "jobs" / "qualified" / "job.toml"
+    assert main(
+        [
+            "init",
+            str(config_path),
+            "--source",
+            "jobs/qualified/art/master.png",
+            "--face-diameter",
+            "52",
+        ]
+    ) == 0
+    generated = config_path.read_text(encoding="utf-8")
+    assert 'source_art = "art/master.png"' in generated
+    source = config_path.parent / "art" / "master.png"
+    image = Image.new("RGB", (64, 64), (17, 18, 17))
+    image.save(source)
+    assert load_config(config_path).source_path == source.resolve()
+
+
 def test_init_rejects_an_empty_source_argument(tmp_path: Path) -> None:
     config_path = tmp_path / "job.toml"
     assert main(["init", str(config_path), "--source", "", "--face-diameter", "52"]) == 2

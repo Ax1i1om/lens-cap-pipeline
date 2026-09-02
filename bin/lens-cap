@@ -1,13 +1,22 @@
-#!/usr/bin/env python3
-"""Repository-local launcher (works before installing the package)."""
-
-from pathlib import Path
-import sys
-
-ROOT = Path(__file__).resolve().parents[1]
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
-
-from lens_cap_pipeline.cli import main  # noqa: E402
-
-raise SystemExit(main())
+#!/bin/sh
+# SPDX-License-Identifier: Apache-2.0
+# Repository-local CLI launcher. Prefer the checkout's venv so an invocation
+# from an unactivated shell still sees NumPy/Pillow installed by bootstrap.
+set -eu
+ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+if [ -x "$ROOT/.venv/bin/python" ]; then
+    PYTHON_BIN="$ROOT/.venv/bin/python"
+else
+    PYTHON_BIN=$(command -v python3 || true)
+fi
+if [ -z "$PYTHON_BIN" ]; then
+    echo "lens-cap: Python 3 is required (run scripts/bootstrap.py first)" >&2
+    exit 127
+fi
+if [ -n "${PYTHONPATH:-}" ]; then
+    PYTHONPATH_VALUE="$ROOT:$PYTHONPATH"
+else
+    PYTHONPATH_VALUE="$ROOT"
+fi
+export PYTHONPATH="$PYTHONPATH_VALUE"
+exec "$PYTHON_BIN" -m lens_cap_pipeline.cli "$@"

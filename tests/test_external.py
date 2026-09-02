@@ -47,6 +47,18 @@ def test_external_resolver_keeps_bare_command_on_path_and_path_typo_is_fail_clos
     assert calls == []
 
 
+def test_external_resolver_accepts_one_shot_name_iterables(monkeypatch) -> None:
+    """Desktop fallback detection must not consume a generator twice."""
+
+    monkeypatch.setattr(
+        external_module.shutil,
+        "which",
+        lambda value: "/host/bin/openscad" if value == "openscad" else None,
+    )
+    names = (name for name in ("openscad",))
+    assert external_module._resolve_tool(None, names) == "/host/bin/openscad"
+
+
 def test_validation_tool_resolver_uses_path_for_bare_name(tmp_path: Path, monkeypatch) -> None:
     calls: list[str] = []
 
