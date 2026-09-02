@@ -3,6 +3,10 @@
 An auditable, reproducible pipeline from approved lens-cap artwork to relief
 masks/SVGs, followed by an explicit modelling and printer handoff.
 
+> **ALPHA · v0.1.0-alpha.1**: This is the first public preview. The config
+> schema, modelling adapters, and CLI may still change incompatibly; file
+> checks do not prove physical fit or a Bambu 3MF slice.
+
 The central rule is **approved artwork is read-only; modelling never redraws
 it**. The stable core emits a same-canvas process master, one mask and SVG per
 material, role masks, and JSON safety reports. OpenSCAD/3MF are explicit
@@ -88,8 +92,11 @@ approved `source_art`; explicit `--force` is required when replacing process,
 model, or mesh derivatives. `bambu-handoff` deterministically rewrites its
 JSON manifest but does not launch the slicer. OpenSCAD and Bambu Studio are
 optional. Missing tools are reported as `unverifiable`, never as a false
-success. Inspect the final 3MF in Bambu Studio and record its version, profile,
-and preview separately.
+success. OpenSCAD export uses the `Manifold` backend so an integrated STL
+retains imported relief solids; an older OpenSCAD without that backend should
+use the separate component STL set instead of treating a CGAL assembly as a
+complete one-piece relief. Inspect the final 3MF in Bambu Studio and record
+its version, profile, and preview separately.
 
 In Bambu Studio, choose one cap print set from the handoff: use
 `integrated_monochrome` for a single-material one-piece STL, or
@@ -202,6 +209,9 @@ Pipeline code and first-party templates are [Apache-2.0](LICENSE). Brand marks, 
 references, approved artwork, and downloaded cap sources keep their own
 copyright/trademark/licence terms; record provenance in each job manifest.
 The repository ignores private artwork and large printer outputs by default.
+Local `jobs/` workspaces are ignored as well because they commonly contain
+artwork or meshes that are not cleared for redistribution. Publish a specific
+job only after a provenance/licence review, using `git add -f` deliberately.
 See [`CONTRIBUTING.md`](CONTRIBUTING.md), [`SECURITY.md`](SECURITY.md), and
 [`THIRD_PARTY.md`](THIRD_PARTY.md) for contribution and release boundaries.
 

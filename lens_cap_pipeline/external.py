@@ -12,6 +12,7 @@ from __future__ import annotations
 import hashlib
 import json
 import shutil
+import struct
 import subprocess
 import tempfile
 from dataclasses import dataclass
@@ -20,6 +21,12 @@ from typing import Any, Iterable
 
 from .config import PipelineConfig
 from .model import ModelResult
+
+# OpenSCAD's CGAL backend can silently omit imported PolySet reliefs when an
+# assembly combines the cup (a Nef polyhedron) with separate SVG extrusions.
+# The Manifold backend preserves those disconnected, colour-layer solids and
+# is therefore the required backend for the integrated assembly export.
+OPENSCAD_BACKEND = "Manifold"
 
 
 class ExternalToolError(RuntimeError):
@@ -191,10 +198,33 @@ def _stl_is_nonempty_manifold_candidate(path: Path) -> tuple[bool, dict[str, Any
         return False, {"reason": str(exc)}
 
 
+def _stl_z_bounds(path: Path) -> tuple[float, float] | None:
+    """Return vertex Z bounds for a binary STL, or ``None`` if unreadable."""
+    try:
+        data = path.read_bytes()
+        if len(data) < 84:
+            return None
+        count = int.from_bytes(data[80:84], "little", signed=False)
+        if count <= 0 or 84 + count * 50 != len(data):
+            return None
+        minimum = float("inf")
+        maximum = float("-inf")
+        for offset in range(84, len(data), 50):
+            # Each binary STL record is normal (12 bytes), three vertices
+            # (36 bytes), and a two-byte attribute field.  Vertex Z values are
+            # positions 5, 8, and 11 in the twelve-float tuple.
+            values = struct.unpack_from("<12f", data, offset)
+            minimum = min(minimum, values[5], values[8], values[11])
+            maximum = max(maximum, values[5], values[8], values[11])
+        return (minimum, maximum)
+    except (OSError, struct.error, ValueError):
+        return None
+
+
 def _canonicalize_binary_stl(path: Path) -> tuple[bool, dict[str, Any]]:
     """Normalize binary STL triangle order for cross-clone reproducibility.
 
-    OpenSCAD/CGAL can emit the same triangle multiset in a different order
+    OpenSCAD can emit the same triangle multiset in a different order
     when run from separate checkouts.  Sorting complete 50-byte triangle
     records preserves geometry, normals, and attribute bytes while producing
     a stable artifact hash for manifests and handoffs.  The STL header is
@@ -252,6 +282,7 @@ def export_openscad(
         "schema_version": 1,
         "adapter": "openscad",
         "status": "unverifiable",
+        "backend": OPENSCAD_BACKEND,
         # Keep the legacy ``model`` key, but make its value relative to the
         # model directory.  An absolute checkout path would make this audit
         # manifest differ after cloning the same job on another machine.
@@ -340,7 +371,7 @@ def export_openscad(
         command = [
             executable,
             "--backend",
-            "CGAL",
+            OPENSCAD_BACKEND,
             "--export-format",
             "binstl",
             "-D",
@@ -352,7 +383,7 @@ def export_openscad(
         report_command = [
             Path(executable).name,
             "--backend",
-            "CGAL",
+            OPENSCAD_BACKEND,
             "--export-format",
             "binstl",
             "-D",
@@ -383,6 +414,31 @@ def export_openscad(
             valid, details = _stl_is_nonempty_manifold_candidate(output)
             details["canonicalization"] = canonical_details
             valid = bool(valid and canonical_ok)
+            # A CGAL-style export can report success while dropping the
+            # imported relief PolySets from the integrated assembly.  The
+            # Manifold backend is the normal remedy; keep this invariant as a
+            # second line of defence if a different backend is introduced.
+            if selector == "assembly" and nonempty:
+                z_bounds = _stl_z_bounds(output)
+                expected_face_top = float(
+                    getattr(model, "report", {}).get("mechanical", {}).get("total_height_mm", 0.0)
+                )
+                relief_heights = [float(p.height_mm) for p in config.relief if p.name in nonempty]
+                required_top = expected_face_top + (min(relief_heights) if relief_heights else 0.0)
+                if z_bounds is None or z_bounds[1] < required_top - 1e-3:
+                    valid = False
+                    details["assembly_relief_check"] = {
+                        "status": "failed",
+                        "reason": "assembly STL does not contain the declared relief height",
+                        "z_bounds": list(z_bounds) if z_bounds is not None else None,
+                        "required_top_mm": required_top,
+                    }
+                else:
+                    details["assembly_relief_check"] = {
+                        "status": "passed",
+                        "z_bounds": list(z_bounds),
+                        "required_top_mm": required_top,
+                    }
         else:
             valid, details = False, {"reason": "output missing"}
         status = "passed" if result.returncode == 0 and valid else "failed"

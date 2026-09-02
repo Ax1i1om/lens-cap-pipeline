@@ -2,6 +2,9 @@
 
 一个可审计、可复现的镜头盖图稿 → 浮雕遮罩／SVG → 后续建模与打印准备流程。
 
+> **ALPHA · v0.1.0-alpha.1**：这是首个公开预览版。配置 schema、模型适配器和
+> CLI 仍可能发生不兼容变化；文件检查不等于实体卡合或 Bambu 3MF 切片验证。
+
 本项目的核心原则是：**批准的图稿只读，模型化不重新绘图**。当前稳定核心负责在同一坐标画布上按声明的 palette 生成索引处理稿、材料遮罩和 SVG，并输出可复核 JSON 报告；OpenSCAD／3MF 是显式的后续适配层，不会隐藏在图像处理里。
 
 ## 快速开始
@@ -87,7 +90,7 @@ lens-cap validate jobs/my-lens/job.toml
 lens-cap build jobs/my-lens/job.toml --force --export-openscad --bambu-handoff
 ```
 
-`process`／`model`／`export-openscad` 不会自动上传文件、发布项目或覆盖批准图稿；只有显式 `--force` 才会替换已有的图稿处理、模型和网格派生物。`bambu-handoff` 会按当前模型重写一个可审计的 JSON 清单，但不会启动 Bambu Studio。OpenSCAD／Bambu Studio 不属于必装依赖；缺失工具会标为 `unverifiable`，不会伪造成功。实际 3MF 切片仍需在 Bambu Studio 中检查并记录版本、配置和预览。
+`process`／`model`／`export-openscad` 不会自动上传文件、发布项目或覆盖批准图稿；只有显式 `--force` 才会替换已有的图稿处理、模型和网格派生物。`bambu-handoff` 会按当前模型重写一个可审计的 JSON 清单，但不会启动 Bambu Studio。OpenSCAD／Bambu Studio 不属于必装依赖；缺失工具会标为 `unverifiable`，不会伪造成功。OpenSCAD 导出默认使用支持多实体彩色浮雕装配的 `Manifold` 后端；若本机 OpenSCAD 不支持该后端，必须升级或改用分色 STL，不应把只含底座的旧 `CGAL` 装配体当成完整一体模型。实际 3MF 切片仍需在 Bambu Studio 中检查并记录版本、配置和预览。
 
 交给 Bambu Studio 时请从 handoff 的 `print_sets` 选择一个镜头盖集合：
 `integrated_monochrome`（单色一体 STL）或 `multicolor_components`（按材料分配的
@@ -188,6 +191,8 @@ Skill、docs 和示例是仓库／source distribution 的 companion 文档，不
 ## 开源边界
 
 代码和模板采用 [Apache-2.0](LICENSE)。镜头品牌、商标、电影参考、用户图稿和下载的镜头盖模型不自动转移到该许可证；每个任务都应在 manifest 中记录来源、作者、许可证和修改说明。仓库默认忽略私有图稿、STL、3MF 和 G-code。
+
+本地 `jobs/` 工作区也默认被忽略，因为其中通常包含尚未获准再分发的图稿和模型；只有完成 provenance／许可证审查后，才应使用 `git add -f` 发布特定任务。
 
 本仓库不会自动登录 MakerWorld、调用 ChromaCanvas、上传云端项目或声称已经生成／切片 3MF；稳定核心公开到 SVG、SCAD、STL 和可审计 handoff，平台专用的 3MF／切片步骤必须由用户在相应软件中完成并记录版本与预览。
 

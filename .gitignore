@@ -19,3 +19,7 @@ venv/
 result.json
 art/master.png
 art/master.jpg
+
+# Per-lens working jobs may contain private or provider-restricted artwork.
+# Publish a job only with an explicit provenance/licence review (`git add -f`).
+jobs/

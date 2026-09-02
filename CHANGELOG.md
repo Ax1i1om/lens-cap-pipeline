@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.1.0-alpha.1 — 2026-09-02
+
+First public Alpha release of the reproducible lens-cap pipeline.
+
+* Publishes the deterministic artwork → mask/SVG → parameterised OpenSCAD
+  workflow, portable CLI, examples, Skills, tests, and CI configuration.
+* Includes explicit fitted-cap intake for measured diameter, foam choice, and
+  default inner-wall friction ribs, with coupon-gated physical-fit reporting.
+* Uses the OpenSCAD Manifold backend for integrated relief exports and rejects
+  an assembly mesh when the declared relief height is missing.
+* Keeps private artwork, generated STL/3MF/G-code, and platform credentials out
+  of the repository by default.
+* Ignores per-lens `jobs/` workspaces by default; publish a job only after its
+  artwork and model provenance/licence have been reviewed.
+
+Known Alpha limitations: Bambu Studio/3MF slicing is an external manual step;
+physical fit and material behaviour require a same-material coupon; brand marks,
+film references, and generated artwork require separate provenance and rights.
+
 ## Unreleased
 
 * Added generic, manifest-recorded inner-wall friction wedges to fitted caps.

@@ -17,6 +17,7 @@ import numpy as np
 from PIL import Image
 
 from .config import PipelineConfig
+from .external import OPENSCAD_BACKEND
 
 VALIDATE_VERSION = "0.1.0"
 
@@ -129,7 +130,7 @@ def _check_openscad(config: PipelineConfig, scad: Path) -> dict[str, Any]:
         command = [
             executable,
             "--backend",
-            "CGAL",
+            OPENSCAD_BACKEND,
             "--export-format",
             "binstl",
             "-D",
@@ -149,7 +150,7 @@ def _check_openscad(config: PipelineConfig, scad: Path) -> dict[str, Any]:
                 "command": [
                     Path(executable).name,
                     "--backend",
-                    "CGAL",
+                    OPENSCAD_BACKEND,
                     "--export-format",
                     "binstl",
                     "-D",
@@ -162,7 +163,7 @@ def _check_openscad(config: PipelineConfig, scad: Path) -> dict[str, Any]:
         report_command = [
             Path(executable).name,
             "--backend",
-            "CGAL",
+            OPENSCAD_BACKEND,
             "--export-format",
             "binstl",
             "-D",

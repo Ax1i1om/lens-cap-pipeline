@@ -104,6 +104,12 @@ ring before a full multicolour print. The bundled `wide_tapered` profile is
 mechanical geometry only and must not alter the approved focal-length/aperture
 artwork or introduce brand marks.
 
+The OpenSCAD adapter uses the `Manifold` backend for exports so an integrated
+assembly retains the imported relief solids as well as the cap body. A machine
+with an older OpenSCAD that lacks this backend should use the separate
+component STL set rather than treating a `CGAL` assembly export as a complete
+one-piece relief.
+
 For binary STL exports, the OpenSCAD adapter sorts complete triangle records
 into a deterministic order after the renderer finishes. Geometry, normals and
 attribute bytes are preserved, but renderer-native raw byte order is not; the
