@@ -20,6 +20,13 @@ wall_thickness_mm = 2.4
 bottom_thickness_mm = 2.0
 side_height_mm = 14.0
 bare_clearance_mm = 0.40
+friction_ribs_enabled = true
+friction_ribs_explicit = false
+friction_rib_count = 12
+friction_rib_protrusion_mm = 0.10
+friction_rib_width_mm = 1.20
+friction_rib_height_mm = 8.0
+friction_rib_start_mm = 1.0
 retention_strategy = "continuous_foam"
 
 [print]

@@ -44,6 +44,10 @@ make two different decoders produce identical pixels.
 `fit` and `print` are optional nested tables. Their complete mechanical and
 printer fields are shown below; omitting `fit` uses conservative defaults, but
 an actual fitted-cap release should record the liner decision explicitly.
+Configs created before the friction-rib fields were introduced inherit the new
+default (`friction_ribs_enabled=true`) when rebuilt; set it explicitly to
+`false` if you need to reproduce a legacy smooth-wall model, then rerun the
+process/model stages and record the migration.
 
 ## Circle and image processing
 
@@ -148,6 +152,13 @@ wall_thickness_mm = 2.4
 bottom_thickness_mm = 2.0
 side_height_mm = 14.0
 bare_clearance_mm = 0.40            # used when no foam
+friction_ribs_enabled = true        # default; set false for a smooth inner wall
+friction_ribs_explicit = false      # true when the user answered this choice
+friction_rib_count = 12
+friction_rib_protrusion_mm = 0.10   # radial intrusion; conservative light default
+friction_rib_width_mm = 1.20        # tangential width of each rib
+friction_rib_height_mm = 8.0        # axial rib span
+friction_rib_start_mm = 1.0         # height above the open edge
 retention_strategy = "auto"
 
 [print]
@@ -156,7 +167,14 @@ printer = "Bambu Lab A1 mini"
 filament_slots = ["black", "gray", "ivory", "red"]
 ```
 
-The fitted-cap intake remains two questions: actual mating outside diameter,
-and whether/how thick the foam liner is. Structure is resolved as `auto` by the
-model adapter. Physical fit is `UNVERIFIABLE` until a test ring/coupon is
-printed and measured.
+The fitted-cap intake asks for the actual mating outside diameter, whether/how
+thick the foam liner is, and whether to keep the inner-wall friction ribs. The
+rib choice defaults to enabled and is recorded in `friction_ribs_explicit` when
+the user answers it; `--no-friction-ribs` produces a smooth wall. Structure is
+resolved as `auto` by the model adapter. Physical fit is `UNVERIFIABLE` until a
+test ring/coupon is printed and measured. The model report also records the
+derived rib-tip diameter, signed bare-wall interference (when no foam is used),
+and local foam compression; an intrusion that consumes
+the entire compressed foam gap is rejected before geometry generation. When
+ribs are disabled, rib-tip geometry is reported as not applicable rather than
+as an implied hidden feature.

@@ -24,6 +24,12 @@ ask one compact grouped question before generating geometry:
    grips (前口径, in millimetres)?
 2. Will the inner wall receive foam? If yes, ask for the uncompressed thickness
    including adhesive.
+3. Should the inner-wall friction ribs be retained? They are enabled by default;
+   if the user has no preference, keep them on and record
+   `friction_ribs_enabled=true` and `friction_ribs_explicit=false`; use
+   `--no-friction-ribs` only when the user explicitly requests a smooth wall,
+   then record `friction_ribs_enabled=false` and
+   `friction_ribs_explicit=true`.
 
 Use the confirmed mating diameter as the face/relief diameter by default; do
 not ask for a second relief-diameter value. Do not ask the user to choose a
@@ -31,6 +37,9 @@ structure: set assembly_mode to auto. If compression is not supplied, use the
 documented provisional 20% assumption and require a fit coupon. A nominal
 filter thread is not a mating measurement. A standalone relief also needs an
 explicit face diameter and nozzle/minimum-feature limit.
+The bundled model uses neutral, vertical friction ribs as a light retention aid;
+when foam is present they can locally increase compression, so keep the
+provisional setting subject to a fit-coupon check.
 
 ## Per-job identity and provenance
 
@@ -47,6 +56,27 @@ tradition, or cinematography connection) to give the piece a deliberate tone.
 Label verified fact, sourced industry folklore, and visual inspiration
 separately. Folklore may inform the design, but without a source it must remain
 `UNVERIFIABLE` and must not be phrased as confirmed lens usage.
+
+### Manifest-driven brand marks
+
+The pipeline has no built-in vocabulary of brand, coating, series, or mount
+marks. Treat `allowed_text` and `allowed_marks` in the current job manifest as
+closed, exact sets (after the manifest's documented Unicode/case
+normalisation), and use no other literal mark or logo. A maker-specific coating
+glyph is an optional nonnumeric mark; it is never a default token, accent
+colour, filament assignment, geometry role, or placement rule, and it is not a
+numeric T-stop.
+Do not infer a mark from a filename, image colour, neighbouring job, or a
+familiar maker. Any maker-specific coating glyph may appear only when the
+current job's verified manifest explicitly allows it; it must never leak into
+another maker's job.
+
+For newly generated artwork, render a mark only when its exact string/glyph is
+listed and permitted by the current manifest. For an already approved
+`art_master`, an unlisted visible mark is a manifest mismatch: preserve the
+master unchanged and stop the identity gate as `UNVERIFIABLE`/`FAIL` until the
+manifest is corrected. The model stage remains brand-agnostic and must import
+the current job's masks/SVGs; it must never type a brand mark itself.
 
 ## Immutable artwork and provenance
 
@@ -124,6 +154,9 @@ version and hashes.
   report exists.
 - The face diameter and foam/cavity calculation are recorded separately from
   optical identity. Fit is UNVERIFIABLE until a printed coupon is measured.
+- Friction ribs are mechanical geometry, not artwork: preserve the enabled or
+  disabled decision and neutral rib dimensions in the geometry report. A
+  smooth-wall opt-out must be explicit; do not infer it from a lens brand.
 - Report artwork, geometry, external-tool, slicer, and physical-fit status
   independently. Never turn an unavailable preview into a PASS.
 

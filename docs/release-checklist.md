@@ -48,6 +48,9 @@ Use this checklist for each tagged release and for each published lens job.
       redistribute (or is kept outside the repository).
 - [ ] Brand/model text and historical references are listed as allowed marks;
       no stale tokens from another lens leaked into the job.
+- [ ] Every rendered brand, coating, series, and mount mark is an exact entry
+      in the current manifest's `allowed_text`/`allowed_marks`; no generic
+      Skill, template, test, or model code supplies a maker-specific default.
 - [ ] The source/model URL, author, licence and modifications are recorded for
       every downloaded cap body or third-party asset.
 
@@ -66,6 +69,13 @@ Use this checklist for each tagged release and for each published lens job.
       explicit override is documented.
 - [ ] Foam thickness/compression or bare-plastic retention is documented;
       compression assumptions are labelled provisional.
+- [ ] Inner-wall friction-rib choice is recorded. Ribs are enabled by default;
+      if foam is used, treat them as light extra grip and verify the setting with
+      the fit coupon (or document the explicit smooth-wall opt-out).
+- [ ] When ribs are enabled, the manifest and geometry report retain count,
+      radial protrusion, tangential width, and axial start/height. When foam and
+      ribs are combined, check local rib interference on the coupon; nominal
+      cavity diameter alone is not evidence of safe compression or retention.
 - [ ] A fit ring/coupon was printed and physically measured before claiming fit.
 - [ ] `lens-cap model` emits the SCAD and geometry report;
       `lens-cap export-openscad` and `lens-cap bambu-handoff` outputs are
@@ -79,8 +89,8 @@ Use this checklist for each tagged release and for each published lens job.
 
 The public same-canvas projection audit (or an equivalent adapter) must be
 run for every relief STL, with its diff/report archived beside the job. A
-model/validation PASS without this footprint check is not a claim that T* or
-any other text stayed in place.
+model/validation PASS without this footprint check is not a claim that the
+manifest-declared artwork text or marks stayed in place.
 
 ## Publication
 

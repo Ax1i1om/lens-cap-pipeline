@@ -69,10 +69,12 @@ After approval:
 5. compare the process master and role masks before any external adapter.
 
 For a standalone printable front, ask for the finished face diameter and
-nozzle/minimum-feature limit. For a fitted cap, ask only for the actual mating
-outside diameter (前口径) and the foam plan; the confirmed diameter also sets
-the face/relief diameter by default. The production Skill asks this gate before
-modeling and does not ask users to choose a structure.
+nozzle/minimum-feature limit. For a fitted cap, ask for the actual mating
+outside diameter (前口径), the foam plan, and whether to retain the inner-wall
+friction ribs. Ribs default to on; only an explicit smooth-wall request
+disables them. The confirmed diameter also sets the face/relief diameter by
+default. The production Skill asks this gate before modeling and does not ask
+users to choose an assembly structure.
 
 The design brief is a human/provenance contract. The CLI does not infer or
 silently fill its semantic fields: `validate` proves deterministic file

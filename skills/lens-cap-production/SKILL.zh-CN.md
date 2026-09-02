@@ -10,11 +10,17 @@ Skill 完成；本 Skill 不在建模阶段重画图稿。
 
 1. 镜头实际卡合的圆柱外径（前口径）是多少 mm？
 2. 内壁是否贴泡棉？若是，未压缩厚度是多少 mm（含胶层）？
+3. 是否保留内壁摩擦凸条？默认开启；如果用户没有特别要求，记录
+   `friction_ribs_enabled=true`、`friction_ribs_explicit=false`，只有用户明确
+   要求光滑内壁时才记录 `friction_ribs_enabled=false`、
+   `friction_ribs_explicit=true` 并关闭。
 
 已确认的卡合外径同时作为默认正面／浮雕直径，不要再次询问浮雕直径；
 也不要让用户选择结构类型，使用 assembly_mode=auto。没有压缩率时按
-20% 临时工程假设计算，并明确标注、要求先打印试配环。滤镜螺纹名义尺寸
-不能代替实测卡合外径。只做独立浮雕正面时，才需要另问成品直径及喷嘴／
+20% 临时工程假设计算，并明确标注、要求先打印试配环。默认摩擦凸条是中性、
+与品牌无关的机械保留结构；有泡棉时只把它当作轻微增摩辅助，不能替代泡棉
+厚度和压缩率的实测。滤镜螺纹名义尺寸不能代替实测卡合外径。只做独立浮雕
+正面时，才需要另问成品直径及喷嘴／
 最小线宽。
 
 ## 每个任务的身份与来源
@@ -24,6 +30,8 @@ Skill 完成；本 Skill 不在建模阶段重画图稿。
 的哈希，以及品牌／电影典故的来源和许可证。缺少这些闭合集合时，只能把图稿
 身份记为 `UNVERIFIABLE`，不能从其他镜头任务带入文字、图案或尺寸；核心程序
 仍可处理像素，但不得声称品牌文字或历史典故已经独立核验。
+厂商镀膜字形属于可选的非数值标记，必须与电影镜头的数值 T-stop 分开；它不是
+默认标记或固定检查词，任何厂商专属字形都必须由当前 manifest 明确允许。
 每个概念任务至少选择一个与该镜头厂商或镜头文化相关的设计锚点（例如已记录的
 技术史、品牌工艺、电影摄影关联）来提升调性；把“已核实事实”“有出处的行业
 传闻”和“纯视觉灵感”分开标注。民间传闻可以作为创作参考，但没有来源时必须
@@ -39,6 +47,9 @@ Skill 完成；本 Skill 不在建模阶段重画图稿。
     # Windows PowerShell：.venv\Scripts\Activate.ps1
     lenscap init jobs/name/job.toml --source art/master.png \
       --measured-diameter 95 --foam-thickness 1.5
+    # 仅在用户明确选择光滑内壁时：
+    # lenscap init jobs/name/job.toml --source art/master.png \
+    #   --measured-diameter 95 --no-friction-ribs
     # 编辑圆心、半径和 palette 后：
     lenscap build jobs/name/job.toml --force --export-openscad --bambu-handoff
     lenscap validate jobs/name/job.toml
@@ -85,6 +96,9 @@ UNVERIFIABLE。Bambu handoff 是版本中立的清单，不等于已经生成或
 - 每个派生物绑定当前源图和配置哈希；只有显式 --force 才重建旧输出；
 - model 必须同时匹配当前源图锁和逐色 SVG 哈希；存在外部报告时，旧模型留下的
   同名 STL 不会被静默当作当前输入；
+- 摩擦凸条属于中性的机械保留结构，不是图稿或品牌元素；保留其启用／关闭决定
+  及尺寸参数。默认开启，只有用户明确要求光滑内壁时才关闭；带泡棉时默认仅作
+  轻微增摩辅助，仍须通过试配环验证；
 - 图稿、几何、外部工具、切片预览、实体卡合分别报告 PASS／FAIL／
   UNVERIFIABLE；未测量试配环不能声称卡合成功；
 - `PASS` 表示声明的确定性文件检查一致，`FAIL` 表示阻断阶段的明确不一致，

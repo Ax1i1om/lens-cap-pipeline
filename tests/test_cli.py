@@ -55,9 +55,59 @@ def test_init_derives_face_from_measured_diameter(tmp_path: Path) -> None:
     assert config.face_diameter_mm == 95.0
     assert config.fit.foam_liner_status == "foam"
     assert config.fit.liner_thickness_mm == 1.5
+    generated = config_path.read_text(encoding="utf-8")
+    assert "friction_ribs_enabled = true" in generated
+    assert "friction_rib_protrusion_mm = 0.1" in generated
+    assert "friction_ribs_explicit = false" in generated
     # The generated TOML intentionally omits a duplicate face field when it is
     # derived from the measured mating diameter.
     assert "face_diameter_mm =" not in config_path.read_text(encoding="utf-8")
+
+
+def test_init_defaults_to_inner_friction_ribs_and_records_default(tmp_path: Path) -> None:
+    source = tmp_path / "master.png"
+    image = Image.new("RGBA", (64, 64), (0, 0, 0, 0))
+    ImageDraw.Draw(image).ellipse((4, 4, 59, 59), fill=(17, 18, 17, 255))
+    image.save(source)
+    config_path = tmp_path / "jobs" / "ribs-default.toml"
+    assert main(
+        [
+            "init",
+            str(config_path),
+            "--source",
+            str(source),
+            "--measured-diameter",
+            "95",
+        ]
+    ) == 0
+    config = load_config(config_path)
+    assert config.fit.friction_ribs_enabled is True
+    assert config.fit.friction_ribs_explicit is False
+    assert config.fit.friction_rib_count == 12
+    assert config.fit.friction_rib_protrusion_mm == 0.10
+
+
+def test_init_can_explicitly_disable_inner_friction_ribs(tmp_path: Path) -> None:
+    source = tmp_path / "master.png"
+    image = Image.new("RGBA", (64, 64), (0, 0, 0, 0))
+    ImageDraw.Draw(image).ellipse((4, 4, 59, 59), fill=(17, 18, 17, 255))
+    image.save(source)
+    config_path = tmp_path / "jobs" / "ribs-off.toml"
+    assert main(
+        [
+            "init",
+            str(config_path),
+            "--source",
+            str(source),
+            "--measured-diameter",
+            "95",
+            "--no-friction-ribs",
+        ]
+    ) == 0
+    config = load_config(config_path)
+    assert config.fit.friction_ribs_enabled is False
+    assert config.fit.friction_ribs_explicit is True
+    assert "friction_ribs_enabled = false" in config_path.read_text(encoding="utf-8")
 
 
 def test_init_creates_the_declared_output_directory(tmp_path: Path) -> None:

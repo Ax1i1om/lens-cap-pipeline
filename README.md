@@ -114,12 +114,16 @@ base／relief STL）；`fit_coupon` 只用于先打印试配环。不要把一�
 
 ## 卡合参数规则
 
-卡合式任务只需要确认：
+卡合式任务需要确认：
 
 1. 镜头实际卡合外径（`measured_diameter_mm`，同时默认作为 `face_diameter_mm`）；
-2. 是否贴泡棉，以及未压缩厚度（`fit.foam_liner_status`、`fit.liner_thickness_mm`）。
+2. 是否贴泡棉，以及未压缩厚度（`fit.foam_liner_status`、`fit.liner_thickness_mm`）；
+3. 是否保留内壁摩擦凸条（默认开启；明确关闭可使用
+   `--no-friction-ribs` 或 `fit.friction_ribs_enabled = false`，需要显式开启时可用
+   `--friction-ribs`）。
 
-成品正面／浮雕直径从实测卡合外径派生，除非明确写入 `face_diameter_mm` 覆盖。未提供压缩率时模型暂按 20% 并标为假设；必须先打印试配环，不能把文件检查当成实物配合证明。
+成品正面／浮雕直径从实测卡合外径派生，除非明确写入 `face_diameter_mm` 覆盖。未提供压缩率时模型暂按 20% 并标为假设；默认凸条径向侵入量为保守的 0.10 mm，只作为轻微增摩，带泡棉时仍可能局部增加压缩，必须先打印试配环，不能把文件检查当成实物配合证明。不贴泡棉时，报告还会给出带符号的裸壁名义干涉量（正值为过盈、负值为余隙）；默认 0.40 mm 裸壁间隙与 0.10 mm 凸条会留下约 0.20 mm 直径余隙，因此不要把默认凸条理解成无条件的裸塑料压配。
+旧版未声明凸条的配置在重建时会继承这一新默认；若要复现旧的光滑内壁，请显式写入 `friction_ribs_enabled = false`，并重新跑 process/model，不能继续使用旧模型文件冒充当前配置。
 
 ## 图稿保真和安全门
 

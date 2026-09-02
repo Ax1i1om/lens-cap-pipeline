@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from types import SimpleNamespace
 
+import pytest
 from test_pipeline import _job
 
-from lens_cap_pipeline.config import load_config
+from lens_cap_pipeline.config import ConfigError, load_config
 from lens_cap_pipeline.external import write_bambu_handoff
-from lens_cap_pipeline.model import ModelError, generate_model
+from lens_cap_pipeline.model import ModelError, _mechanical_values, generate_model
 from lens_cap_pipeline.process import process
 from lens_cap_pipeline.validate import validate_job
 
@@ -32,8 +34,10 @@ side_height_mm = 14.0
     model = generate_model(config, process_report)
     assert model.scad_path.is_file()
     scad = model.scad_path.read_text(encoding="utf-8")
-    assert "CARL ZEISS" not in scad
-    assert "SONNAR" not in scad
+    # The model is intentionally brand-agnostic. It must import the current
+    # job's SVG masks and never retype a maker-specific string or glyph; this
+    # remains valid for any manifest brand, not just historical fixtures.
+    assert "text(" not in scad
     assert "import(file=" in scad
     geometry = json.loads(model.geometry_report_path.read_text(encoding="utf-8"))
     assert geometry["mechanical"]["cavity_diameter_mm"] == 97.4
@@ -41,6 +45,162 @@ side_height_mm = 14.0
     validation = validate_job(config)
     assert validation["status"] == "passed"
     assert validation["checks"]["geometry"]["status"] == "passed"
+    assert validation["checks"]["geometry"]["mechanical_parameter_checks"]["friction_rib_angle_deg"] is True
+
+
+def test_model_includes_default_inner_friction_ribs_in_body_and_coupon(tmp_path: Path) -> None:
+    config_path = _job(tmp_path)
+    text = config_path.read_text(encoding="utf-8").replace(
+        "face_diameter_mm = 52.0",
+        "face_diameter_mm = 95.0\nmeasured_diameter_mm = 95.0",
+    )
+    text += '\n[fit]\nfoam_liner_status = "foam"\nliner_thickness_mm = 1.5\n'
+    config_path.write_text(text, encoding="utf-8")
+    config = load_config(config_path)
+    result = generate_model(config, process(config))
+    scad = result.scad_path.read_text(encoding="utf-8")
+    assert "friction_ribs_enabled = true;" in scad
+    assert "friction_rib_count = 12;" in scad
+    assert "module friction_rib_set" in scad
+    assert "friction_rib_angle_deg" in scad
+    assert "linear_extrude(height=rib_height" in scad
+    # Both the full body and the short fit coupon call the same retention
+    # profile; the coupon intentionally clips the axial span to its height.
+    assert scad.count("friction_rib_set(") >= 2
+    mechanical = result.report["mechanical"]
+    assert mechanical["friction_ribs_enabled"] is True
+    assert mechanical["friction_rib_tip_diameter_mm"] == 97.2
+    assert mechanical["friction_rib_bare_interference_mm"] is None
+    assert mechanical["foam_local_compression_fraction"] == (0.20 + 0.10 / 1.5)
+
+
+def test_model_can_disable_inner_friction_ribs_without_changing_artwork(tmp_path: Path) -> None:
+    config_path = _job(tmp_path)
+    text = config_path.read_text(encoding="utf-8").replace(
+        "face_diameter_mm = 52.0",
+        "face_diameter_mm = 95.0\nmeasured_diameter_mm = 95.0",
+    )
+    text += """
+[fit]
+foam_liner_status = "foam"
+liner_thickness_mm = 1.5
+friction_ribs_enabled = false
+friction_ribs_explicit = true
+friction_rib_count = 1
+friction_rib_width_mm = 0.01
+friction_rib_height_mm = 999
+friction_rib_start_mm = -20
+"""
+    config_path.write_text(text, encoding="utf-8")
+    config = load_config(config_path)
+    assert config.fit.friction_ribs_enabled is False
+    # Disabled ribs do not impose geometry-specific constraints on their
+    # unused dimensions; this permits a clean smooth-wall override.
+    result = generate_model(config, process(config))
+    scad = result.scad_path.read_text(encoding="utf-8")
+    assert "friction_ribs_enabled = false;" in scad
+    assert result.report["mechanical"]["friction_ribs_enabled"] is False
+    assert result.report["mechanical"]["foam_local_compression_fraction"] == 0.20
+    assert result.report["mechanical"]["friction_rib_tip_diameter_mm"] is None
+    assert result.report["mechanical"]["friction_rib_bare_interference_mm"] is None
+    assert validate_job(config)["checks"]["geometry"]["mechanical_parameters_match"] is True
+
+
+def test_model_reports_signed_bare_rib_interference(tmp_path: Path) -> None:
+    config_path = _job(tmp_path)
+    text = config_path.read_text(encoding="utf-8").replace(
+        "face_diameter_mm = 52.0",
+        "face_diameter_mm = 95.0\nmeasured_diameter_mm = 95.0",
+    )
+    text += '\n[fit]\nfoam_liner_status = "none"\n'
+    config_path.write_text(text, encoding="utf-8")
+    result = generate_model(load_config(config_path), process(load_config(config_path)))
+    # Default 0.40 mm diametral bare clearance minus 0.20 mm rib reduction
+    # leaves -0.20 mm nominal interference (i.e. 0.20 mm clearance).
+    assert result.report["mechanical"]["friction_rib_bare_interference_mm"] == pytest.approx(-0.20)
+
+
+def test_direct_mechanical_api_rejects_nonfinite_measurement() -> None:
+    config = SimpleNamespace(measured_diameter_mm=float("nan"), raw={}, fit=None)
+    try:
+        _mechanical_values(config)
+    except ModelError as exc:
+        assert "finite" in str(exc)
+    else:  # pragma: no cover
+        raise AssertionError("non-finite direct API measurement was accepted")
+
+
+def test_direct_mechanical_api_rejects_boolean_as_a_measurement() -> None:
+    config = SimpleNamespace(measured_diameter_mm=True, raw={}, fit=None)
+    try:
+        _mechanical_values(config)
+    except ModelError as exc:
+        assert "finite number" in str(exc)
+    else:  # pragma: no cover
+        raise AssertionError("boolean direct API measurement was accepted")
+
+
+def test_direct_mechanical_api_rejects_nonfinite_rib_parameter() -> None:
+    config = SimpleNamespace(
+        measured_diameter_mm=95.0,
+        nozzle_mm=0.2,
+        raw={},
+        fit=SimpleNamespace(friction_rib_width_mm=float("nan")),
+    )
+    try:
+        _mechanical_values(config)
+    except ModelError as exc:
+        assert "friction_rib_width_mm" in str(exc)
+    else:  # pragma: no cover
+        raise AssertionError("non-finite direct API rib parameter was accepted")
+
+
+def test_friction_rib_cannot_consume_compressed_foam_gap(tmp_path: Path) -> None:
+    config_path = _job(tmp_path)
+    text = config_path.read_text(encoding="utf-8").replace(
+        "face_diameter_mm = 52.0",
+        "face_diameter_mm = 95.0\nmeasured_diameter_mm = 95.0",
+    )
+    text += """
+[fit]
+foam_liner_status = "foam"
+liner_thickness_mm = 1.5
+compression_fraction = 0.20
+friction_rib_protrusion_mm = 1.20
+"""
+    config_path.write_text(text, encoding="utf-8")
+    try:
+        load_config(config_path)
+    except ConfigError as exc:
+        assert "compressed foam radial gap" in str(exc)
+    else:  # pragma: no cover
+        raise AssertionError("rib intrusion consuming the foam gap was accepted")
+
+
+def test_model_uses_arbitrary_palette_labels(tmp_path: Path) -> None:
+    """No maker/coating name or colour label may be a model-stage default."""
+    config_path = _job(tmp_path)
+    text = config_path.read_text(encoding="utf-8")
+    text = text.replace(
+        "face_diameter_mm = 52.0",
+        "face_diameter_mm = 95.0\nmeasured_diameter_mm = 95.0",
+    )
+    text = text.replace("[palette.red.detect]", "[palette.accent_mark.detect]")
+    text = text.replace("[palette.red]", "[palette.accent_mark]")
+    text += """
+[fit]
+foam_liner_status = "foam"
+liner_thickness_mm = 1.5
+"""
+    config_path.write_text(text, encoding="utf-8")
+    config = load_config(config_path)
+    process_report = process(config)
+    model = generate_model(config, process_report)
+    scad = model.scad_path.read_text(encoding="utf-8")
+
+    assert "relief_2_accent_mark" in scad
+    assert "relief_2_red" not in scad
+    assert "text(" not in scad
 
 
 def test_model_rejects_a_tampered_process_svg(tmp_path: Path) -> None:

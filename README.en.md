@@ -125,12 +125,24 @@ successful slicer preview.
 
 ## Fitted-cap intake
 
-Ask only for the actual outside diameter of the cylindrical surface being
-gripped and the liner plan (foam or no foam, plus uncompressed thickness when
-foam is used). A fitted job derives the face/relief diameter from
-`measured_diameter_mm` unless an explicit `face_diameter_mm` override is
-documented. Mechanical fit remains unverified until a coupon is printed and
-measured.
+Ask for the actual outside diameter of the cylindrical surface being gripped,
+the liner plan (foam or no foam, plus uncompressed thickness when foam is
+used), and whether to retain the inner-wall friction ribs. Ribs are enabled by
+default; record an explicit smooth-wall choice with `--no-friction-ribs` or
+`fit.friction_ribs_enabled = false` (use `--friction-ribs` to make the enabled
+choice explicit). A fitted job derives the face/relief
+diameter from `measured_diameter_mm` unless an explicit `face_diameter_mm` override is
+documented. The default radial rib intrusion is a conservative 0.10 mm. With
+foam, ribs are only a light extra-grip aid and may still locally compress the
+liner. For a bare wall, the report also records signed nominal diametral
+interference (positive means interference, negative means clearance); with the
+default 0.40 mm bare clearance and 0.10 mm intrusion, about 0.20 mm of
+diametral clearance remains. Mechanical fit remains unverified until a coupon
+is printed and measured.
+Pre-rib configurations inherit the new enabled default when rebuilt; to
+reproduce a legacy smooth wall, set `friction_ribs_enabled = false`, rerun the
+process/model stages, and do not reuse an old model as if it matched the new
+configuration.
 
 ## Fidelity and safety gates
 

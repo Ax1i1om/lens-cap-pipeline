@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import os
 import tempfile
 from dataclasses import dataclass
@@ -19,7 +20,9 @@ from typing import Any
 
 from .config import PipelineConfig
 
-MODEL_VERSION = "0.1.0"
+# Geometry contract version: the 0.2 series adds the default, parameterized
+# inner-wall retention wedges and their report fields.
+MODEL_VERSION = "0.2.0"
 
 
 class ModelError(RuntimeError):
@@ -80,7 +83,14 @@ def _mechanical_values(config: PipelineConfig) -> dict[str, Any]:
         # A fitted model must not silently treat the decorative face diameter
         # as the gripping diameter.  Require an explicit measurement.
         raise ModelError("measured_diameter_mm is required before generating a fitted cap model")
-    measured = float(measured)
+    if isinstance(measured, bool):
+        raise ModelError("measured_diameter_mm must be a finite number")
+    try:
+        measured = float(measured)
+    except (TypeError, ValueError, OverflowError) as exc:
+        raise ModelError("measured_diameter_mm must be a finite number") from exc
+    if not math.isfinite(measured):
+        raise ModelError("measured_diameter_mm must be a finite number")
     if measured <= 0:
         raise ModelError("measured_diameter_mm must be positive")
 
@@ -92,49 +102,175 @@ def _mechanical_values(config: PipelineConfig) -> dict[str, Any]:
             return nested[name]
         return default
 
+    def bool_value(name: str, default: bool) -> bool:
+        value = fit_value(name, default)
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, (int, float)) and value in {0, 1}:
+            return bool(value)
+        if isinstance(value, str):
+            normalized = value.strip().lower()
+            if normalized in {"true", "yes", "on", "1"}:
+                return True
+            if normalized in {"false", "no", "off", "0"}:
+                return False
+        raise ModelError(f"{name} must be a boolean")
+
+    def number_value(name: str, value: Any, default: float | None = None) -> float:
+        if value is None:
+            if default is None:
+                raise ModelError(f"{name} must be a finite number")
+            value = default
+        if isinstance(value, bool):
+            raise ModelError(f"{name} must be a finite number")
+        try:
+            result = float(value)
+        except (TypeError, ValueError, OverflowError) as exc:
+            raise ModelError(f"{name} must be a finite number") from exc
+        if not math.isfinite(result):
+            raise ModelError(f"{name} must be a finite number")
+        return result
+
     foam_status = str(fit_value("foam_liner_status", raw.get("foam_liner_status", "none"))).lower()
     if foam_status not in {"none", "foam"}:
         raise ModelError("foam_liner_status must be 'none' or 'foam'")
     liner = fit_value("liner_thickness_mm", raw.get("liner_thickness_mm"))
-    compression = float(fit_value("compression_fraction", raw.get("compression_fraction", 0.20)))
+    compression = number_value(
+        "compression_fraction", fit_value("compression_fraction", raw.get("compression_fraction", 0.20))
+    )
+    bare_clearance = number_value(
+        "bare_clearance_mm", fit_value("bare_clearance_mm", raw.get("bare_clearance_mm", 0.40))
+    )
+    if bare_clearance < 0:
+        raise ModelError("bare_clearance_mm must be non-negative")
     if foam_status == "foam":
-        if liner is None or float(liner) <= 0:
+        if liner is None:
             raise ModelError("liner_thickness_mm is required when foam_liner_status='foam'")
-        liner = float(liner)
+        liner_value = number_value("liner_thickness_mm", liner)
+        if liner_value <= 0:
+            raise ModelError("liner_thickness_mm is required when foam_liner_status='foam'")
+        liner = liner_value
         if not 0 <= compression < 1:
             raise ModelError("compression_fraction must be in [0,1)")
         cavity = measured + 2.0 * liner * (1.0 - compression)
         radial_compression = liner * compression
     else:
-        liner = None if liner is None else float(liner)
-        bare_clearance = float(fit_value("bare_clearance_mm", raw.get("bare_clearance_mm", 0.40)))
-        if bare_clearance < 0:
-            raise ModelError("bare_clearance_mm must be non-negative")
+        liner = None if liner is None else number_value("liner_thickness_mm", liner)
         cavity = measured + bare_clearance
         radial_compression = 0.0
 
-    wall = float(fit_value("wall_thickness_mm", 2.4))
-    bottom = float(fit_value("bottom_thickness_mm", 2.0))
-    side = float(fit_value("side_height_mm", 14.0))
+    wall = number_value("wall_thickness_mm", fit_value("wall_thickness_mm", 2.4))
+    bottom = number_value("bottom_thickness_mm", fit_value("bottom_thickness_mm", 2.0))
+    side = number_value("side_height_mm", fit_value("side_height_mm", 14.0))
     if wall < 0.4 or bottom <= 0 or side <= 0:
         raise ModelError("wall, bottom, and side dimensions are invalid")
+    friction_enabled = bool_value("friction_ribs_enabled", True)
+    rib_count_raw = fit_value("friction_rib_count", 12)
+    if isinstance(rib_count_raw, bool):
+        raise ModelError("friction_rib_count must be an integer in [3,128]")
+    try:
+        rib_count_float = float(rib_count_raw)
+        rib_count = int(rib_count_float)
+    except (TypeError, ValueError, OverflowError) as exc:
+        raise ModelError("friction_rib_count must be an integer in [3,128]") from exc
+    rib_protrusion = number_value(
+        "friction_rib_protrusion_mm", fit_value("friction_rib_protrusion_mm", 0.10)
+    )
+    rib_width = number_value("friction_rib_width_mm", fit_value("friction_rib_width_mm", 1.20))
+    rib_height = number_value("friction_rib_height_mm", fit_value("friction_rib_height_mm", 8.0))
+    rib_start = number_value("friction_rib_start_mm", fit_value("friction_rib_start_mm", 1.0))
+    nozzle = number_value("nozzle_mm", getattr(config, "nozzle_mm", 0.2))
+    if nozzle <= 0:
+        raise ModelError("nozzle_mm must be positive")
+    if friction_enabled:
+        if rib_count_float != rib_count or rib_count < 3 or rib_count > 128:
+            raise ModelError("friction_rib_count must be an integer in [3,128]")
+        if rib_protrusion <= 0 or rib_width <= 0 or rib_height <= 0 or rib_start < 0:
+            raise ModelError("friction rib dimensions must be positive")
+        if rib_start + rib_height > side:
+            raise ModelError("friction ribs must lie within side_height_mm")
+        if rib_width < nozzle:
+            raise ModelError("friction_rib_width_mm must be >= nozzle_mm")
+        if rib_width >= math.pi * measured / rib_count * 0.9:
+            raise ModelError("friction_rib_width_mm is too wide for the selected rib count")
+        if rib_protrusion >= measured / 4.0:
+            raise ModelError("friction_rib_protrusion_mm is too large for the mating diameter")
+        if foam_status == "foam":
+            # A rib may add local compression, but it must not consume the
+            # entire already-compressed foam gap.  This hard floor prevents a
+            # clearly impossible configuration; milder over-compression still
+            # remains a physical-coupon question.
+            compressed_radial_gap = liner * (1.0 - compression)
+            if rib_protrusion >= compressed_radial_gap - 1e-9:
+                raise ModelError(
+                    "friction_rib_protrusion_mm must stay below the compressed foam radial gap"
+                )
+    # Keep the ribs mechanically fused to the wall while exposing only the
+    # requested protrusion inside the cavity.  This overlap is intentionally
+    # derived from wall thickness so it cannot create a detached one-piece
+    # feature when a user changes the wall dimension.
+    rib_wall_overlap = min(0.60, wall * 0.5)
+    if friction_enabled:
+        # Convert the user-facing tangential width to a neutral angular
+        # footprint for a tapered wedge.  Capping the angle keeps neighbouring
+        # ribs separate on small diameters while retaining the requested width
+        # on normal lens barrels.  The tip is narrowed to provide a gentle
+        # lead-in instead of a sharp full-width edge.
+        rib_angle_deg = min(
+            8.0,
+            360.0 * rib_width / (math.pi * cavity),
+            180.0 / rib_count,
+        )
+        rib_tip_angle_deg = rib_angle_deg * 0.55
+    else:
+        rib_angle_deg = 0.0
+        rib_tip_angle_deg = 0.0
     total = bottom + side
     if cavity <= 0 or cavity + 2 * wall <= cavity:
         raise ModelError("derived cavity/outer diameter is invalid")
+    rib_tip_diameter = cavity - 2.0 * rib_protrusion if friction_enabled else None
+    # Positive means nominal bare-plastic interference; negative means that
+    # the configured bare clearance still remains.  With foam this value is
+    # intentionally not reported because the liner stack-up is the contact
+    # medium and needs a coupon rather than a bare-wall inference.
+    bare_interference = (
+        measured - rib_tip_diameter
+        if friction_enabled and foam_status == "none" and rib_tip_diameter is not None
+        else None
+    )
     return {
         "measured_diameter_mm": measured,
         "foam_liner_status": foam_status,
         "liner_thickness_mm": liner,
         "compression_fraction": compression,
         "radial_compression_mm": radial_compression,
-        "bare_clearance_mm": float(fit_value("bare_clearance_mm", raw.get("bare_clearance_mm", 0.40))),
+        "bare_clearance_mm": bare_clearance,
         "cavity_diameter_mm": cavity,
         "wall_thickness_mm": wall,
         "bottom_thickness_mm": bottom,
         "side_height_mm": side,
         "total_height_mm": total,
+        "friction_ribs_enabled": friction_enabled,
+        "friction_ribs_explicit": bool_value("friction_ribs_explicit", False),
+        "friction_rib_count": rib_count,
+        "friction_rib_protrusion_mm": rib_protrusion,
+        "friction_rib_width_mm": rib_width,
+        "friction_rib_height_mm": rib_height,
+        "friction_rib_start_mm": rib_start,
+        "friction_rib_wall_overlap_mm": rib_wall_overlap,
+        "friction_rib_angle_deg": rib_angle_deg,
+        "friction_rib_tip_angle_deg": rib_tip_angle_deg,
+        "friction_rib_tip_diameter_mm": rib_tip_diameter,
+        "friction_rib_bare_interference_mm": bare_interference,
+        "foam_local_compression_fraction": (
+            compression + rib_protrusion / liner
+            if friction_enabled and foam_status == "foam" and liner
+            else compression
+            if foam_status == "foam"
+            else None
+        ),
         "retention_strategy": str(fit_value("retention_strategy", "auto")),
-        "compression_is_assumption": bool(fit_value("compression_is_assumption", True)),
+        "compression_is_assumption": bool_value("compression_is_assumption", True),
     }
 
 
@@ -257,7 +393,14 @@ def generate_model(
     if not isinstance(report_digest, str) or report_digest != expected_digest:
         raise ModelError("process report belongs to a different config; rerun the process stage")
     mechanical = _mechanical_values(config)
-    face_diameter = float(config.face_diameter_mm)
+    if isinstance(config.face_diameter_mm, bool):
+        raise ModelError("face_diameter_mm must be a finite number")
+    try:
+        face_diameter = float(config.face_diameter_mm)
+    except (TypeError, ValueError, OverflowError) as exc:
+        raise ModelError("face_diameter_mm must be a finite number") from exc
+    if not math.isfinite(face_diameter):
+        raise ModelError("face_diameter_mm must be a finite number")
     if face_diameter <= 0:
         raise ModelError("face_diameter_mm must be positive")
     if face_diameter > mechanical["cavity_diameter_mm"] + 2 * mechanical["wall_thickness_mm"]:
@@ -348,15 +491,74 @@ panel_base_thickness = 0.80;
 segments = 360;
 eps = 0.001;
 base_color = {_scad_string(base_hex)};
+friction_ribs_enabled = {str(bool(fit["friction_ribs_enabled"])).lower()};
+friction_ribs_explicit = {str(bool(fit["friction_ribs_explicit"])).lower()};
+friction_rib_count = {int(fit["friction_rib_count"])};
+friction_rib_protrusion_mm = {fit["friction_rib_protrusion_mm"]:.6g};
+friction_rib_width_mm = {fit["friction_rib_width_mm"]:.6g};
+friction_rib_height_mm = {fit["friction_rib_height_mm"]:.6g};
+friction_rib_start_mm = {fit["friction_rib_start_mm"]:.6g};
+friction_rib_wall_overlap_mm = {fit["friction_rib_wall_overlap_mm"]:.6g};
+friction_rib_angle_deg = {fit["friction_rib_angle_deg"]:.6g};
+friction_rib_tip_angle_deg = {fit["friction_rib_tip_angle_deg"]:.6g};
 render_part = "assembly";
 
 // The cavity opens downward (z=0); the closed floor/front face is at z=total_height.
 module cap_body() {{
-    difference() {{
-        cylinder(d=cavity_diameter + 2 * wall_thickness, h=total_height, $fn=segments);
-        cylinder(d=cavity_diameter, h=side_height + eps, $fn=segments);
+    union() {{
+        difference() {{
+            cylinder(d=cavity_diameter + 2 * wall_thickness, h=total_height, $fn=segments);
+            cylinder(d=cavity_diameter, h=side_height + eps, $fn=segments);
+        }}
+        friction_rib_set(cavity_diameter, side_height);
     }}
 }}
+
+// Short, tapered vertical interference ribs are fused into the inner wall.
+// Each neutral wedge overlaps the wall by a derived amount and narrows toward
+// its circumferential contact tip.  It enters the nominal cavity only by
+// friction_rib_protrusion_mm.  The short smooth span at the open edge provides
+// a simple axial entry allowance; this is not a substitute for a separately
+// modelled axial chamfer.  Retention geometry stays independent of brand,
+// logo, and optical text.
+module friction_rib_set(target_diameter=cavity_diameter, z_limit=side_height) {{
+    rib_height = min(friction_rib_height_mm, z_limit - friction_rib_start_mm);
+    if (friction_ribs_enabled && rib_height > 0)
+        for (rib_index = [0 : friction_rib_count - 1])
+            rotate([0, 0, rib_index * 360 / friction_rib_count])
+                translate([0, 0, friction_rib_start_mm])
+                    linear_extrude(height=rib_height, convexity=4)
+                        polygon(points=friction_rib_profile(target_diameter));
+}}
+
+// A four-point annular wedge gives the rib a narrow contact tip and a positive
+// wall overlap.  OpenSCAD's trigonometric functions use degrees.
+function friction_rib_profile(target_diameter) = [
+    [
+        (target_diameter / 2 + friction_rib_wall_overlap_mm) * cos(-friction_rib_angle(target_diameter) / 2),
+        (target_diameter / 2 + friction_rib_wall_overlap_mm) * sin(-friction_rib_angle(target_diameter) / 2)
+    ],
+    [
+        (target_diameter / 2 + friction_rib_wall_overlap_mm) * cos(friction_rib_angle(target_diameter) / 2),
+        (target_diameter / 2 + friction_rib_wall_overlap_mm) * sin(friction_rib_angle(target_diameter) / 2)
+    ],
+    [
+        (target_diameter / 2 - friction_rib_protrusion_mm) * cos(friction_rib_tip_angle(target_diameter) / 2),
+        (target_diameter / 2 - friction_rib_protrusion_mm) * sin(friction_rib_tip_angle(target_diameter) / 2)
+    ],
+    [
+        (target_diameter / 2 - friction_rib_protrusion_mm) * cos(-friction_rib_tip_angle(target_diameter) / 2),
+        (target_diameter / 2 - friction_rib_protrusion_mm) * sin(-friction_rib_tip_angle(target_diameter) / 2)
+    ]
+];
+
+function friction_rib_angle(target_diameter) = min([
+    8,
+    360 * friction_rib_width_mm / (PI * target_diameter),
+    180 / friction_rib_count
+]);
+
+function friction_rib_tip_angle(target_diameter) = friction_rib_angle(target_diameter) * 0.55;
 
 module face_base() {{
     // The body floor is structural; this thin disk defines the artwork base
@@ -377,10 +579,15 @@ module assembly() {{
 }}
 
 module fit_ring(target_diameter=cavity_diameter, ring_height=8) {{
+    // The default is a short coupon; friction_rib_set clips its axial span
+    // to the available ring height while keeping the same radial profile.
     assert(target_diameter > 0, "fit ring diameter must be positive");
-    difference() {{
-        cylinder(d=target_diameter + 2 * wall_thickness, h=ring_height, $fn=segments);
-        cylinder(d=target_diameter, h=ring_height + eps, $fn=segments);
+    union() {{
+        difference() {{
+            cylinder(d=target_diameter + 2 * wall_thickness, h=ring_height, $fn=segments);
+            cylinder(d=target_diameter, h=ring_height + eps, $fn=segments);
+        }}
+        friction_rib_set(target_diameter, ring_height);
     }}
 }}
 

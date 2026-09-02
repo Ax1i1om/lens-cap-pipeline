@@ -94,7 +94,10 @@ def _write_config(path: Path, data: dict) -> None:
         for key in (
             "liner_material", "liner_thickness_mm", "compression_fraction",
             "compression_is_assumption", "wall_thickness_mm", "bottom_thickness_mm",
-            "side_height_mm", "bare_clearance_mm", "retention_strategy",
+            "side_height_mm", "bare_clearance_mm", "friction_ribs_enabled",
+            "friction_ribs_explicit", "friction_rib_count", "friction_rib_protrusion_mm",
+            "friction_rib_width_mm", "friction_rib_height_mm", "friction_rib_start_mm",
+            "retention_strategy",
         ):
             if fit.get(key) is None:
                 continue
@@ -170,6 +173,12 @@ def _parser() -> argparse.ArgumentParser:
     )
     init_parser.add_argument("--measured-diameter", type=float, default=None, help="actual gripping diameter for a fitted cap")
     init_parser.add_argument("--foam-thickness", type=float, default=None, help="uncompressed foam liner thickness in mm")
+    init_parser.add_argument(
+        "--friction-ribs",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help="enable inner-wall friction ribs (default: enabled; use --no-friction-ribs to disable)",
+    )
     init_parser.add_argument("--nozzle", type=float, default=0.2)
     init_parser.add_argument("--output-dir", default="build")
     init_parser.add_argument("--job-slug", default="my-lens-cap")
@@ -307,13 +316,30 @@ def main(argv: list[str] | None = None) -> int:
                 if args.face_diameter is None:
                     data.pop("face_diameter_mm", None)
             if args.foam_thickness is not None:
-                data["fit"] = {
-                    "foam_liner_status": "foam",
-                    "liner_thickness_mm": args.foam_thickness,
-                    "compression_fraction": 0.20,
-                    "compression_is_assumption": True,
-                    "retention_strategy": "continuous_foam",
-                }
+                # Update the template's fit table instead of replacing it.
+                # Keeping wall, rib, and printability defaults in the emitted
+                # file makes the job self-describing and prevents a future
+                # schema change from silently changing an old starter job.
+                fit_data = data.setdefault("fit", {})
+                fit_data.update(
+                    {
+                        "foam_liner_status": "foam",
+                        "liner_thickness_mm": args.foam_thickness,
+                        "compression_fraction": 0.20,
+                        "compression_is_assumption": True,
+                        "retention_strategy": "continuous_foam",
+                    }
+                )
+            # Keep the default in the generated config so a job is portable
+            # and self-describing.  If the user explicitly chose a flag, mark
+            # that decision separately from the enabled/disabled value.
+            fit_data = data.setdefault("fit", {})
+            if args.friction_ribs is not None:
+                fit_data["friction_ribs_enabled"] = bool(args.friction_ribs)
+                fit_data["friction_ribs_explicit"] = True
+            else:
+                fit_data.setdefault("friction_ribs_enabled", True)
+                fit_data.setdefault("friction_ribs_explicit", False)
             _write_config(target, data)
             target.parent.joinpath("art").mkdir(parents=True, exist_ok=True)
             output_path = Path(str(data.get("output_dir", "build"))).expanduser()

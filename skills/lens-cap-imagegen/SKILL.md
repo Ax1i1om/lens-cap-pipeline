@@ -32,10 +32,15 @@ neighbouring lens job. If the identity is genuinely ambiguous, ask one focused
 question; otherwise state the normalization before generating.
 
 For a fitted cap or an assembled 3MF, route the physical stage to
-lens-cap-production. Ask only for the actual mating outside diameter (前口径)
-and whether the inner wall receives foam, including uncompressed thickness
-when foam is used. Use that diameter as the default face/relief diameter; do
-not ask for a second relief diameter or a structure choice.
+lens-cap-production. Ask one compact grouped question for the actual mating
+outside diameter (前口径), the liner/foam plan (including uncompressed
+thickness when foam is used), and the inner-wall friction-rib preference. Ribs
+are enabled by default; no preference records `friction_ribs_enabled=true` and
+`friction_ribs_explicit=false`, while an explicit smooth-wall request records
+`friction_ribs_enabled=false` and `friction_ribs_explicit=true` and triggers
+retention/liner/printability re-checks. Use that diameter as the default
+face/relief diameter; do not ask for a second relief diameter or a structure
+choice.
 
 ## Evidence and cultural anchors
 
@@ -81,8 +86,14 @@ The default composition is a complete circular medallion on a square canvas:
 5. Avoid pointillism, dense halftone, gradients, glossy 3D, photographic
    clutter, random numerals, pseudo-text, and accidental rectangular crops.
 
-Keep F-stop text separate from cinema T-stop notation, and keep a ZEISS T*
-coating mark separate from a T-stop. Do not add a logo, revision suffix,
+Treat every brand/model/coating/series/mount mark as current-job data: render
+only the exact entries in the brief/manifest's `allowed_text` and
+`allowed_marks` closed sets. A maker-specific coating glyph is merely an
+optional mark, never a default or a request to add a maker-specific mark. Any
+such glyph can appear only when this job's verified manifest explicitly allows
+it; it must not leak into another maker's job. Keep any manifest-declared
+coating mark separate from numeric cinema T-stop notation. Do not add a logo,
+revision suffix,
 mount label, film title, actor, spacecraft, or official insignia unless the
 user supplies an authorized asset and explicitly requests it. A film or
 mission may appear in the non-rendered prompt context only as a cue to

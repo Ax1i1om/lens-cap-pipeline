@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import os
 import re
 import shutil
@@ -770,6 +771,93 @@ def validate_job(
             cavity_ok = expected_cavity is None or (
                 actual_cavity is not None and abs(float(actual_cavity) - expected_cavity) < 1e-6
             )
+            # The geometry report is also the audit record for retention
+            # geometry.  Compare every current FitSpec value, not only the
+            # cavity diameter, so a report cannot silently claim a smooth wall
+            # while the SCAD still contains ribs (or vice versa).
+            expected_mechanical: dict[str, Any] = {}
+            if config.measured_diameter_mm is not None:
+                expected_mechanical = {
+                    "measured_diameter_mm": config.measured_diameter_mm,
+                    "foam_liner_status": config.fit.foam_liner_status,
+                    "liner_thickness_mm": config.fit.liner_thickness_mm,
+                    "compression_fraction": config.fit.compression_fraction,
+                    "bare_clearance_mm": config.fit.bare_clearance_mm,
+                    "cavity_diameter_mm": config.cavity_diameter_mm,
+                    "wall_thickness_mm": config.fit.wall_thickness_mm,
+                    "bottom_thickness_mm": config.fit.bottom_thickness_mm,
+                    "side_height_mm": config.fit.side_height_mm,
+                    "friction_ribs_enabled": config.fit.friction_ribs_enabled,
+                    "friction_ribs_explicit": config.fit.friction_ribs_explicit,
+                    "friction_rib_count": config.fit.friction_rib_count,
+                    "friction_rib_protrusion_mm": config.fit.friction_rib_protrusion_mm,
+                    "friction_rib_width_mm": config.fit.friction_rib_width_mm,
+                    "friction_rib_height_mm": config.fit.friction_rib_height_mm,
+                    "friction_rib_start_mm": config.fit.friction_rib_start_mm,
+                    "friction_rib_wall_overlap_mm": min(
+                        0.60, config.fit.wall_thickness_mm * 0.5
+                    ),
+                    "friction_rib_angle_deg": (
+                        min(
+                            8.0,
+                            360.0
+                            * config.fit.friction_rib_width_mm
+                            / (math.pi * config.cavity_diameter_mm),
+                            180.0 / config.fit.friction_rib_count,
+                        )
+                        if config.fit.friction_ribs_enabled
+                        else 0.0
+                    ),
+                    "friction_rib_tip_angle_deg": (
+                        min(
+                            8.0,
+                            360.0
+                            * config.fit.friction_rib_width_mm
+                            / (math.pi * config.cavity_diameter_mm),
+                            180.0 / config.fit.friction_rib_count,
+                        )
+                        * 0.55
+                        if config.fit.friction_ribs_enabled
+                        else 0.0
+                    ),
+                    "friction_rib_tip_diameter_mm": (
+                        config.cavity_diameter_mm
+                        - 2.0 * config.fit.friction_rib_protrusion_mm
+                        if config.fit.friction_ribs_enabled
+                        else None
+                    ),
+                    "friction_rib_bare_interference_mm": (
+                        config.measured_diameter_mm
+                        - (
+                            config.cavity_diameter_mm
+                            - 2.0 * config.fit.friction_rib_protrusion_mm
+                        )
+                        if config.fit.friction_ribs_enabled
+                        and config.fit.foam_liner_status == "none"
+                        else None
+                    ),
+                    "foam_local_compression_fraction": (
+                        config.fit.compression_fraction
+                        + config.fit.friction_rib_protrusion_mm / config.fit.liner_thickness_mm
+                        if config.fit.friction_ribs_enabled
+                        and config.fit.foam_liner_status == "foam"
+                        and config.fit.liner_thickness_mm
+                        else config.fit.compression_fraction
+                        if config.fit.foam_liner_status == "foam"
+                        else None
+                    ),
+                }
+            mechanical_matches: dict[str, bool] = {}
+            for key, expected in expected_mechanical.items():
+                actual = geometry_mechanical.get(key)
+                if isinstance(expected, (int, float)) and not isinstance(expected, bool):
+                    try:
+                        mechanical_matches[key] = actual is not None and abs(float(actual) - expected) < 1e-6
+                    except (TypeError, ValueError):
+                        mechanical_matches[key] = False
+                else:
+                    mechanical_matches[key] = actual == expected
+            mechanical_ok = all(mechanical_matches.values()) if mechanical_matches else True
             raw_scad_path = geometry.get("scad_path")
             if isinstance(raw_scad_path, str) and raw_scad_path:
                 scad_path = Path(raw_scad_path).expanduser()
@@ -796,6 +884,7 @@ def validate_job(
             }.issubset(set(selectors))
             geometry_ok = bool(
                 cavity_ok
+                and mechanical_ok
                 and geometry.get("status") == "passed"
                 and scad_hash_ok
                 and process_link_ok
@@ -806,6 +895,8 @@ def validate_job(
                 "status": "passed" if geometry_ok else "failed",
                 "cavity_diameter_mm": actual_cavity,
                 "expected_cavity_diameter_mm": expected_cavity,
+                "mechanical_parameters_match": mechanical_ok,
+                "mechanical_parameter_checks": mechanical_matches,
                 "scad_path": _portable_path(scad_path, output),
                 "scad_sha256": actual_scad_hash,
                 "declared_scad_sha256": declared_scad_hash,

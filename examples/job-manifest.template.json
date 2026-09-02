@@ -31,6 +31,13 @@
     "foam_liner_status": "foam",
     "liner_thickness_mm": 1.5,
     "compression_fraction": 0.2,
+    "friction_ribs_enabled": true,
+    "friction_ribs_explicit": false,
+    "friction_rib_count": 12,
+    "friction_rib_protrusion_mm": 0.1,
+    "friction_rib_width_mm": 1.2,
+    "friction_rib_height_mm": 8.0,
+    "friction_rib_start_mm": 1.0,
     "fit_coupon_verified": false
   },
   "print": {

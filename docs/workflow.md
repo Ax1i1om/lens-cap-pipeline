@@ -32,14 +32,22 @@ but it is not a byte-level environment pin.
 
 Run `lens-cap init jobs/name/job.toml --source ...` and edit the generated
 file. For a standalone relief, add `--face-diameter <mm>`; for a fitted cap,
-pass only `--measured-diameter <mm> --foam-thickness <mm>` (or fill the `[fit]`
-table), because the measured mating diameter automatically becomes the face
-diameter.
+`--measured-diameter <mm>` is required. Add `--foam-thickness <mm>` only when
+an uncompressed foam liner (including adhesive) is actually planned; for bare
+plastic, declare `foam_liner_status = "none"` (and the bare clearance) in the
+`[fit]` table. Add `--no-friction-ribs` only when a smooth wall is explicitly
+chosen; otherwise ribs remain enabled by the documented default (use
+`--friction-ribs` to record an explicit enabled choice). The measured
+mating diameter automatically becomes the face diameter.
 Record the current lens identity and artwork
 provenance in the accompanying manifest. For a fitted cap, the face diameter
 must come from the actual gripping outside diameter; do not copy a nominal
 filter standard or an older job's 95 mm value. Foam status, thickness and
-compression are mechanical inputs for the downstream cap generator.
+compression are mechanical inputs for the downstream cap generator. Inner-wall
+friction ribs are enabled by default; ask whether the user wants to retain
+them, record the answer, and use `--no-friction-ribs` (or
+`fit.friction_ribs_enabled = false`) for a smooth wall. With foam, the default
+ribs are only a light extra-grip aid, so a fit coupon remains mandatory.
 
 An opaque square source needs an explicit `[circle]` center/radius. A
 transparent source may use alpha as its exclusion mask only when that alpha is

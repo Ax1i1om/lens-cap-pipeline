@@ -21,10 +21,110 @@ job's asset by filename convention.
 * Treat `base` as a continuous substrate; only `relief` roles become positive
   heights. Do not turn `outside` pixels into geometry.
 * Keep face diameter, measured mating diameter, liner thickness, compression,
-  wall and bottom dimensions as explicit parameters.
+  wall and bottom dimensions as explicit parameters.  For fitted caps, the
+  inner-wall friction ribs are enabled by default; preserve their explicit
+  enabled/disabled decision and count/protrusion/width/axial-span parameters.
+  When foam is present, treat the default ribs as a light extra-grip feature,
+  not a substitute for sizing the compressed liner, and verify them with a fit
+  coupon.
 * Generate a fit ring/coupon and report its parameters before a full cap.
 * Preserve text/motif positions. Any mirror or print-orientation transform must
   be applied at the CAD/build layer and recorded, never baked into the art.
+
+### Inner-wall friction retention (optional opt-out)
+
+Retention ribs are mechanical geometry, not artwork relief. Keep them in a
+neutral, adapter-owned block so a job cannot inherit a maker-specific logo,
+coating mark, or lens assumption. The bundled one-piece adapter enables them by
+default; set `friction_ribs_enabled = false` for a deliberately smooth wall and
+record that choice. If an adapter supports a selectable diameter mode, document
+the mode explicitly:
+
+* In **inner-diameter mode**, the declared diameter is the effective opening
+  measured at the rib tips. The body must grow outward (or otherwise reserve
+  wall material) when a rib is added, so the rib does not silently shrink the
+  requested opening.
+* In **outer-diameter mode**, the declared diameter is the outside envelope.
+  Rib protrusion consumes cavity clearance and therefore reduces the local
+  effective opening. Report both the nominal cavity and the rib-tip diameter.
+
+The bundled adapter does not expose a `diameter_mode` switch: it starts from
+the measured gripping diameter, derives a nominal cavity from the liner (or
+bare clearance), and then reports the rib-tip diameter after the configured
+protrusion. Do not read `face_diameter_mm` as proof of the local rib-tip fit;
+use the mechanical values in `geometry-report.json` and the physical coupon.
+
+For the bundled one-piece adapter, the corresponding neutral fields are
+`friction_ribs_enabled`, `friction_ribs_explicit`,
+`friction_rib_count`, `friction_rib_protrusion_mm`,
+`friction_rib_width_mm`, `friction_rib_height_mm`, and
+`friction_rib_start_mm`. A geometry report should also retain the derived wall
+overlap, angular footprint (and narrowed tip angle when used), and rib-tip
+diameter.
+
+When ribs are disabled, the tip diameter and rib-angle fields are reported as
+not applicable (`null`/zero) rather than implying a hidden smooth-wall feature.
+
+The bundled default protrusion is 0.10 mm radially (it removes about 0.20 mm
+from the nominal cavity diameter at each rib). It is not automatically a
+0.20 mm interference fit: the resulting clearance/interference also depends
+on `bare_clearance_mm` or the liner stack-up. For a 95 mm mating diameter with
+a 1.5 mm liner at the provisional 20% compression, this changes the nominal
+97.4 mm cavity to a 97.2 mm rib-tip diameter, or roughly 26.7% local foam
+compression. Treat that as a conservative starting point rather than a
+universal fit prescription. The report's `foam_local_compression_fraction` is
+this linear stack-up estimate, not a material test; increase protrusion only
+after measuring a coupon.
+
+For a no-foam job the report also includes
+`friction_rib_bare_interference_mm`: positive values are nominal diametral
+interference against the measured barrel, while negative values mean clearance
+still remains. With the default 0.40 mm bare clearance and 0.10 mm radial
+protrusion, the nominal value is -0.20 mm, so the ribs are not a promise of a
+bare-plastic press fit. Tune the clearance/protrusion deliberately and verify
+the actual barrel on a coupon.
+
+When ribs are enabled, the current guards require:
+
+* 3--128 evenly spaced ribs;
+* positive radial protrusion, tangential width, and axial height;
+* `friction_rib_start_mm + friction_rib_height_mm <= side_height_mm`;
+* tangential width at least the declared nozzle diameter and below 90% of the
+  circumferential pitch; and
+* protrusion below one quarter of the measured mating diameter.
+
+These are validity/printability guards, not a universal fit recipe. The
+MakerWorld reference implementation linked below uses a different naming
+scheme (its `inner_rib_height` is radial intrusion). Its published parameter
+comments suggest 3--12 ribs and a 1 mm height, with evenly spaced ribs and an
+inner lead-in chamfer; its published SCAD parameter default leaves the rib
+switch off (a print profile may override it). Treat those as reference
+observations, not project defaults, and do not copy that name into a job
+manifest. There is no safe universal rib count or protrusion: vary one
+parameter at a time in a short fit coupon, using the same material, nozzle,
+layer height, wall and orientation as the final cap. Inspect first-layer
+elephant-foot expansion and anisotropy, deburr the opening, and measure the
+actual mating surface at several angular positions.
+
+If a foam liner is present, calculate the compressed liner stack-up before
+adding rib intrusion. Ribs can locally over-compress or cut the foam even when
+the nominal cavity diameter looks correct; a foam-plus-rib result remains
+`UNVERIFIABLE` until the coupon is fitted to the real lens/adapter. A lead-in
+chamfer and rounded/non-sharp rib edge are recommended where the printer and
+wall thickness permit them. Do not claim physical retention from a successful
+STL projection or slicer parse alone.
+
+The reference page is [MakerWorld “镜头闷盖生成”](https://makerworld.com.cn/zh/models/2619625-jing-tou-men-gai-sheng-cheng?from=search#profileId-3021275);
+its current page metadata lists one print profile with 0.16 mm layer height,
+two wall loops, 15% infill, PLA and 0.4 mm nozzle compatibility. Those settings
+are a snapshot for that model, not defaults for this project. The page is marked
+BY-NC; do not copy its SCAD/3MF into this Apache-2.0 repository or imply that
+the reference licence permits redistribution. Record URL, author, licence and
+any modifications in the job manifest when using it as a design reference. Its
+plate preview places the closed face on the bed with the opening upward; this
+is a sensible starting orientation for a cup-shaped cap, but support, first
+layer expansion and overhang behaviour still need a slicer preview on the
+target printer.
 
 ## Outputs and gates
 

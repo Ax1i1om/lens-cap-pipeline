@@ -115,6 +115,20 @@ class FitSpec:
     side_height_mm: float = 14.0
     bare_clearance_mm: float = 0.40
     retention_strategy: str = "auto"
+    # Vertical interference ribs are a generic retention aid for fitted caps.
+    # They are enabled by default, but the decision is explicit in the
+    # normalized manifest so a user can opt out for a smooth inner wall.
+    friction_ribs_enabled: bool = True
+    friction_ribs_explicit: bool = False
+    friction_rib_count: int = 12
+    # 0.10 mm radial intrusion removes about 0.20 mm from the nominal cavity
+    # diameter at each rib.  Whether that is actual interference (rather than
+    # residual clearance) depends on ``bare_clearance_mm``; with a liner it is
+    # only a light additional compression and must be checked on a coupon.
+    friction_rib_protrusion_mm: float = 0.10
+    friction_rib_width_mm: float = 1.20
+    friction_rib_height_mm: float = 8.0
+    friction_rib_start_mm: float = 1.0
 
     def public(self) -> dict[str, Any]:
         return {
@@ -127,6 +141,13 @@ class FitSpec:
             "bottom_thickness_mm": self.bottom_thickness_mm,
             "side_height_mm": self.side_height_mm,
             "bare_clearance_mm": self.bare_clearance_mm,
+            "friction_ribs_enabled": self.friction_ribs_enabled,
+            "friction_ribs_explicit": self.friction_ribs_explicit,
+            "friction_rib_count": self.friction_rib_count,
+            "friction_rib_protrusion_mm": self.friction_rib_protrusion_mm,
+            "friction_rib_width_mm": self.friction_rib_width_mm,
+            "friction_rib_height_mm": self.friction_rib_height_mm,
+            "friction_rib_start_mm": self.friction_rib_start_mm,
             "retention_strategy": self.retention_strategy,
         }
 
@@ -630,6 +651,79 @@ def load_config(path: str | Path) -> PipelineConfig:
     bare_clearance = float(_number(fit_raw.get("bare_clearance_mm", 0.40), "fit.bare_clearance_mm"))
     if wall < 0.4 or bottom < 0.8 or side < 1.0 or bare_clearance < 0:
         raise ConfigError("fit wall/bottom/side/clearance values are outside safe limits")
+    # Retention ribs are intentionally independent of optical identity.  The
+    # canonical spelling is ``friction_ribs_enabled``; the short ``friction_ribs``
+    # alias keeps hand-written jobs readable.  Missing values mean enabled,
+    # while ``friction_ribs_explicit`` lets the manifest distinguish a default
+    # from a deliberate opt-out.
+    friction_key = (
+        "friction_ribs_enabled"
+        if "friction_ribs_enabled" in fit_raw
+        else "friction_ribs"
+        if "friction_ribs" in fit_raw
+        else None
+    )
+    friction_enabled = _boolean(
+        fit_raw.get(friction_key) if friction_key is not None else None,
+        f"fit.{friction_key or 'friction_ribs_enabled'}",
+        default=True,
+    )
+    friction_explicit = _boolean(
+        fit_raw.get("friction_ribs_explicit"),
+        "fit.friction_ribs_explicit",
+        default=friction_key is not None,
+    )
+    rib_count = int(
+        _number(fit_raw.get("friction_rib_count", 12), "fit.friction_rib_count", integer=True)
+    )
+    rib_protrusion = float(
+        _number(
+            fit_raw.get("friction_rib_protrusion_mm", 0.10),
+            "fit.friction_rib_protrusion_mm",
+        )
+    )
+    rib_width = float(
+        _number(fit_raw.get("friction_rib_width_mm", 1.20), "fit.friction_rib_width_mm")
+    )
+    rib_height = float(
+        _number(fit_raw.get("friction_rib_height_mm", 8.0), "fit.friction_rib_height_mm")
+    )
+    rib_start = float(
+        _number(fit_raw.get("friction_rib_start_mm", 1.0), "fit.friction_rib_start_mm")
+    )
+    # A process-only artwork job has no fitted body yet, so do not reject it
+    # for a retention dimension that the model stage will never consume.  The
+    # full guards apply once an actual mating diameter is present.
+    if friction_enabled and measured is not None:
+        if rib_count < 3 or rib_count > 128:
+            raise ConfigError("fit.friction_rib_count must be an integer in [3,128]")
+        if rib_protrusion <= 0:
+            raise ConfigError("fit.friction_rib_protrusion_mm must be > 0")
+        if rib_width <= 0 or rib_height <= 0:
+            raise ConfigError("fit friction rib width/height must be > 0")
+        if rib_start < 0 or rib_start + rib_height > side:
+            raise ConfigError("fit friction ribs must lie within side_height_mm")
+        # A rib thinner than the declared nozzle is not a reliable printable
+        # feature.  Limit its width to a fraction of the angular pitch so
+        # adjacent ribs cannot merge into an accidental continuous ring.
+        if rib_width < nozzle:
+            raise ConfigError("fit.friction_rib_width_mm must be >= nozzle_mm")
+        # Use the actual mating diameter for the circumferential pitch.  A
+        # synthetic 1 mm floor would make tiny, otherwise valid fixtures pass
+        # the width/protrusion gate and then fail later in the model stage.
+        rib_diameter = float(measured if measured is not None else face)
+        pitch = math.pi * rib_diameter / rib_count
+        if rib_width >= pitch * 0.9:
+            raise ConfigError("fit.friction_rib_width_mm is too wide for the selected rib count")
+        if rib_protrusion >= rib_diameter / 4.0:
+            raise ConfigError("fit.friction_rib_protrusion_mm is too large for the mating diameter")
+        if foam_status == "foam":
+            assert liner is not None
+            compressed_radial_gap = liner * (1.0 - compression)
+            if rib_protrusion >= compressed_radial_gap - 1e-9:
+                raise ConfigError(
+                    "fit.friction_rib_protrusion_mm must stay below the compressed foam radial gap"
+                )
     fit = FitSpec(
         foam_liner_status=foam_status,
         liner_material=(str(fit_raw["liner_material"]) if fit_raw.get("liner_material") is not None else None),
@@ -644,6 +738,13 @@ def load_config(path: str | Path) -> PipelineConfig:
         bottom_thickness_mm=bottom,
         side_height_mm=side,
         bare_clearance_mm=bare_clearance,
+        friction_ribs_enabled=friction_enabled,
+        friction_ribs_explicit=friction_explicit,
+        friction_rib_count=rib_count,
+        friction_rib_protrusion_mm=rib_protrusion,
+        friction_rib_width_mm=rib_width,
+        friction_rib_height_mm=rib_height,
+        friction_rib_start_mm=rib_start,
         retention_strategy=str(fit_raw.get("retention_strategy", "auto")),
     )
 
@@ -742,6 +843,13 @@ def template_config(
             "bottom_thickness_mm": 2.0,
             "side_height_mm": 14.0,
             "bare_clearance_mm": 0.40,
+            "friction_ribs_enabled": True,
+            "friction_ribs_explicit": False,
+            "friction_rib_count": 12,
+            "friction_rib_protrusion_mm": 0.10,
+            "friction_rib_width_mm": 1.20,
+            "friction_rib_height_mm": 8.0,
+            "friction_rib_start_mm": 1.0,
             "retention_strategy": "auto",
         },
         "print": {"nozzle_mm": 0.2, "layer_height_mm": 0.1, "printer": "", "filament_slots": []},
