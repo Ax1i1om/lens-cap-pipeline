@@ -147,6 +147,9 @@ python3 scripts/smoke_rehouse.py --bambu auto --require-external --keep-workdir 
 做写回。输出中的 `fit_status` 仍是 `UNVERIFIABLE`，直到同材料试配环被实际
 打印并测量。
 
+测试矩阵、干净 Git/sdist 复演结果以及跨宿主已知边界，见
+`docs/clean-room-rehearsal.md` 的 **Latest audit snapshot**。
+
 需要直接检查 3MF Core 包时，可使用仓库内不依赖第三方库的适配器：
 
 ```sh

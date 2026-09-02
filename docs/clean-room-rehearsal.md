@@ -8,6 +8,27 @@ emulate every host's Skill discovery cache. After installing or syncing Skills,
 start a new Codex task/reload the host, and use an explicit `$lens-cap-*`
 invocation if automatic matching has not refreshed.
 
+## Latest audit snapshot
+
+The `6e1d112` Alpha snapshot was replayed from a fresh Git archive and a new
+Python virtual environment on the development host. The repository suite
+collected **92 tests**, all passed; Ruff, both official Skill validators, and
+the source/mirror hash check passed. The Mamiya-Sekor C 80mm F1.9 fixture then
+passed at 77, 85, and 95 mm with the native one-piece OpenSCAD route, including
+same-canvas projection audits and the default integrated friction ribs. A
+second run from `/tmp` through `bin/lens-cap-3mf` passed for the 85 mm job.
+The same route also passed from an extracted source distribution. With the
+local Bambu A1 mini 0.2 mm profiles, the 95 mm optional slice produced a
+non-empty-G-code 3MF and passed Core-package verification.
+
+This is a reproducibility result for the declared host/tool matrix, not a
+promise that every Codex host has the same Skill catalog, ImageGen save API,
+OpenSCAD installation, slicer profiles, or physical fit. A fresh ephemeral
+Codex CLI blind prompt for “Sigma 28–70mm F2.8 + circular image + printable
+model” selected `$lens-cap-imagegen` → `$lens-cap-production` and rejected
+parallel generic design Skills; hosts with a stale catalog still need the
+explicit invocation documented below.
+
 ## Simulated new-user interaction
 
 The rehearsal deliberately begins with an already approved raster and brief.
