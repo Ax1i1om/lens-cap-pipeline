@@ -38,7 +38,6 @@ python scripts/bootstrap.py --dev --locked
 ```sh
 lens-cap init jobs/my-lens/job.toml \
   --source jobs/my-lens/art/master.png \
-  --face-diameter 95 \
   --measured-diameter 95 \
   --foam-thickness 1.5 \
   --job-slug my-lens-cap

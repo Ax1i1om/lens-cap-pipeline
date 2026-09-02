@@ -29,9 +29,11 @@ but it is not a byte-level environment pin.
 
 ## 1. Declare one job
 
-Run `lens-cap init jobs/name/job.toml --source ... --face-diameter ...` and
-edit the generated file. For a fitted cap, also pass
-`--measured-diameter <mm> --foam-thickness <mm>` (or fill the `[fit]` table).
+Run `lens-cap init jobs/name/job.toml --source ...` and edit the generated
+file. For a standalone relief, add `--face-diameter <mm>`; for a fitted cap,
+pass only `--measured-diameter <mm> --foam-thickness <mm>` (or fill the `[fit]`
+table), because the measured mating diameter automatically becomes the face
+diameter.
 Record the current lens identity and artwork
 provenance in the accompanying manifest. For a fitted cap, the face diameter
 must come from the actual gripping outside diameter; do not copy a nominal

@@ -81,7 +81,7 @@ palette colour, source/config locks, and JSON reports. The bundled model stage
 imports those SVGs into one parameterised integrated cap; it never types the
 artwork again. OpenSCAD export and Bambu handoff are optional adapters:
 missing desktop tools are reported as UNVERIFIABLE, never as success. The
- Bambu handoff is a version-neutral manifest, not a claim that a 3MF was sliced.
+Bambu handoff is a version-neutral manifest, not a claim that a 3MF was sliced.
 The model stage re-hashes the current source and every relief SVG before
 writing SCAD, so a substituted source or hand-edited mask cannot pass merely
 because an old report says `passed`. If a forced model rebuild leaves
