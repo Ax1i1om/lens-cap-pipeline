@@ -155,6 +155,21 @@ def test_direct_mechanical_api_rejects_nonfinite_rib_parameter() -> None:
         raise AssertionError("non-finite direct API rib parameter was accepted")
 
 
+def test_direct_mechanical_api_rejects_overflowing_derived_height() -> None:
+    config = SimpleNamespace(
+        measured_diameter_mm=95.0,
+        nozzle_mm=0.2,
+        raw={},
+        fit=SimpleNamespace(bottom_thickness_mm=1e308, side_height_mm=1e308),
+    )
+    try:
+        _mechanical_values(config)
+    except ModelError as exc:
+        assert "derived cavity/outer diameter" in str(exc)
+    else:  # pragma: no cover
+        raise AssertionError("overflowing derived height was accepted")
+
+
 def test_friction_rib_cannot_consume_compressed_foam_gap(tmp_path: Path) -> None:
     config_path = _job(tmp_path)
     text = config_path.read_text(encoding="utf-8").replace(

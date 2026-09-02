@@ -226,7 +226,14 @@ def _mechanical_values(config: PipelineConfig) -> dict[str, Any]:
         rib_angle_deg = 0.0
         rib_tip_angle_deg = 0.0
     total = bottom + side
-    if cavity <= 0 or cavity + 2 * wall <= cavity:
+    outer = cavity + 2.0 * wall
+    if (
+        not math.isfinite(cavity)
+        or not math.isfinite(total)
+        or not math.isfinite(outer)
+        or cavity <= 0
+        or outer <= cavity
+    ):
         raise ModelError("derived cavity/outer diameter is invalid")
     rib_tip_diameter = cavity - 2.0 * rib_protrusion if friction_enabled else None
     # Positive means nominal bare-plastic interference; negative means that
