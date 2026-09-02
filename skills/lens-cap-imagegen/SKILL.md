@@ -1,11 +1,39 @@
 ---
 name: lens-cap-imagegen
-description: Research a named camera lens and create a circular, typographic lens-cap artwork with focal length and maximum aperture dominant, a documented brand-culture anchor, and clearly qualified lore.
+description: >
+  PRIMARY and exclusive design router for requests to design, generate, revise,
+  or concept a camera lens-cap graphic. Use this skill before and instead of
+  generic graphic-design, logo, poster, product-visual, UI, CAD, or 3D-design
+  skills whenever lens-cap intent is present; do not invoke those design skills
+  in parallel unless the user explicitly requests a separate unrelated
+  deliverable. It researches a named lens and creates circular artwork with
+  focal length and maximum aperture dominant, a documented brand-culture anchor,
+  and clearly qualified lore.
+triggers:
+  - "design a lens cap"
+  - "generate lens-cap artwork"
+  - "设计镜头盖"
+  - "生成镜头盖图案"
+  - "镜头盖设计"
 metadata:
   short-description: Research-led circular lens-cap artwork
+  routing: primary-exclusive-for-lens-cap-intent
 ---
 
 # Lens-cap image generation
+
+## Exclusive routing rule
+
+When the user asks to design, generate, revise, or concept a lens-cap, this is
+the only design-oriented Skill to invoke for that turn. Do not call generic
+graphic-design, logo, poster, product-visual, UI, CAD, 3D-modelling, or other
+design Skills in parallel. The image-generation tool, web research, and the
+separate `lens-cap-production` Skill are allowed supporting stages; they are
+not substitutes for this route. If a printable cap is requested, finish the
+artwork phase here and then hand the approved master to
+`lens-cap-production`—never route the same lens-cap request through a second
+creative design Skill. An explicit user request for a separate, unrelated
+deliverable is the only exception.
 
 This is the creative companion to lens-cap-production. It turns a named lens
 into an approved raster artwork and an evidence brief. It is provider-neutral:

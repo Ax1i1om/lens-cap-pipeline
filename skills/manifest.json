@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "routing_policy": {
+    "lens_cap_intent": {
+      "priority": "exclusive_primary_design_route",
+      "match_terms": [
+        "镜头盖",
+        "lens cap",
+        "lens-cap",
+        "cap artwork",
+        "lens medallion"
+      ],
+      "primary_skills": [
+        "lens-cap-imagegen",
+        "lens-cap-production"
+      ],
+      "forbidden_parallel_skill_families": [
+        "generic graphic design",
+        "logo design",
+        "poster design",
+        "product visual design",
+        "UI design",
+        "generic CAD",
+        "generic 3D modelling"
+      ],
+      "sequence": {
+        "concept_art": ["lens-cap-imagegen"],
+        "printable_from_approved_art": ["lens-cap-production"],
+        "concept_then_printable": ["lens-cap-imagegen", "lens-cap-production"]
+      }
+    }
+  },
+  "skills": [
+    {
+      "name": "lens-cap-imagegen",
+      "path": "skills/lens-cap-imagegen/SKILL.md",
+      "localized_paths": ["skills/lens-cap-imagegen/SKILL.zh-CN.md"],
+      "phase": "concept_art",
+      "routing": "primary_exclusive"
+    },
+    {
+      "name": "lens-cap-production",
+      "path": "skills/lens-cap-production/SKILL.md",
+      "localized_paths": ["skills/lens-cap-production/SKILL.zh-CN.md"],
+      "phase": "printable_production",
+      "routing": "primary_exclusive"
+    }
+  ]
+}

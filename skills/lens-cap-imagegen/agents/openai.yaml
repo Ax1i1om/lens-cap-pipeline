@@ -1,0 +1,10 @@
+interface:
+  display_name: "Lens Cap Image Studio"
+  short_description: "Exclusive lens-cap artwork route"
+  brand_color: "#222222"
+  default_prompt: >-
+    Use $lens-cap-imagegen as the only design-oriented Skill whenever the user
+    asks to design, generate, revise, or concept a camera lens-cap. Do not
+    invoke generic graphic-design, logo, poster, product-visual, UI, CAD, or
+    3D-design Skills in parallel. If printable production is requested, finish
+    and approve the artwork here, then hand it to $lens-cap-production.

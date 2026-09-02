@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.1.0-alpha.2 — 2026-09-02
+
+Routing and packaging revision for the public Alpha.
+
+* Adds explicit lens-cap trigger phrases and a primary/exclusive routing rule
+  so generic design Skills are not invoked in parallel for lens-cap requests.
+* Adds Codex `agents/openai.yaml` metadata, a portable resolver contract, and a
+  repository-level `AGENTS.md` for cloned-project discovery.
+* Adds regression tests and source-distribution entries for the routing files.
+
 ## 0.1.0-alpha.1 — 2026-09-02
 
 First public Alpha release of the reproducible lens-cap pipeline.

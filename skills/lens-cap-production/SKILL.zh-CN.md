@@ -1,4 +1,33 @@
+---
+name: lens-cap-production
+description: >
+  镜头盖可打印生产的主路由且具排他性：当请求包含镜头盖建模、浮雕、卡合、
+  CAD、SCAD、STL、3MF 或打印交接时，优先并只使用本 Skill，不要并行调用
+  通用机械 CAD、产品设计、平面设计、Logo、海报、UI 或其他设计 Skill。
+  本 Skill 把批准的镜头盖图稿和当前测量转换为可复现的遮罩、浮雕、OpenSCAD
+  与打印交接包；纯图像概念仍由 imagegen 阶段处理。
+triggers:
+  - "可打印镜头盖"
+  - "镜头盖模型"
+  - "镜头盖浮雕"
+  - "镜头盖 3MF"
+  - "镜头盖 STL"
+  - "lens-cap production"
+metadata:
+  short-description: 可复现的镜头盖生产
+  routing: primary-exclusive-for-lens-cap-production
+---
+
 # 镜头盖生产 Skill（中文）
+
+## 排他性路由规则
+
+只要镜头盖请求包含建模、浮雕、卡合、CAD、STL、SCAD、3MF 或打印交接，
+本 Skill 就是唯一的生产／设计路由。不要并行调用通用机械 CAD、产品设计、
+平面设计、Logo、海报、UI 或其他设计 Skill。若批准图稿尚不存在，先按顺序
+调用 `lens-cap-imagegen`，再回到本 Skill；不要让第二个创意 Skill 重画同一
+个镜头盖。网页研究、OpenSCAD 和仓库 CLI 属于允许的非设计辅助。只有用户
+明确要求一个无关的独立交付物时，才允许例外。
 
 这是本仓库的决策层：把已经批准的镜头盖图稿，稳定地转换成同画布
 遮罩、SVG、参数化 OpenSCAD 和打印交接清单。概念图创作仍由图像生成

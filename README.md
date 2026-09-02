@@ -2,7 +2,7 @@
 
 一个可审计、可复现的镜头盖图稿 → 浮雕遮罩／SVG → 后续建模与打印准备流程。
 
-> **ALPHA · v0.1.0-alpha.1**：这是首个公开预览版。配置 schema、模型适配器和
+> **ALPHA · v0.1.0-alpha.2**：这是首个公开预览版的路由修订版。配置 schema、模型适配器和
 > CLI 仍可能发生不兼容变化；文件检查不等于实体卡合或 Bambu 3MF 切片验证。
 
 本项目的核心原则是：**批准的图稿只读，模型化不重新绘图**。当前稳定核心负责在同一坐标画布上按声明的 palette 生成索引处理稿、材料遮罩和 SVG，并输出可复核 JSON 报告；OpenSCAD／3MF 是显式的后续适配层，不会隐藏在图像处理里。
@@ -174,6 +174,13 @@ base／relief STL）；`fit_coupon` 只用于先打印试配环。不要把一�
 * [`CONTRIBUTING.md`](CONTRIBUTING.md)／[`SECURITY.md`](SECURITY.md)
 
 ## Skill 集成
+
+当用户提出“设计／生成镜头盖”时，仓库路由规则将
+`lens-cap-imagegen` 设为唯一的创意设计 Skill；当请求包含可打印模型、浮雕、
+卡合、SCAD、STL 或 3MF 时，改由 `lens-cap-production` 负责生产阶段。不要把
+通用平面设计、Logo、海报、产品视觉、UI、CAD 或 3D 设计 Skill 与镜头盖路由
+并行调用。完整规则见 [AGENTS.md](AGENTS.md) 和
+[skills/RESOLVER.md](skills/RESOLVER.md)。
 
 概念创作阶段可加载
 [skills/lens-cap-imagegen/SKILL.md](skills/lens-cap-imagegen/SKILL.md)

@@ -1,11 +1,38 @@
 ---
 name: lens-cap-production
-description: Turn an approved lens-cap artwork and current fit measurements into a reproducible mask, relief, OpenSCAD, and printer-handoff package. Use for modelling or printable production; use an image-design skill for concept art only.
+description: >
+  PRIMARY production router for lens-cap requests that involve a printable
+  front, relief, fitted cap, CAD, SCAD, STL, 3MF, or printer handoff. When
+  lens-cap intent is present, use this skill instead of generic mechanical-CAD,
+  product-design, graphic-design, logo, poster, or other design skills; do not
+  invoke those skills in parallel. It turns approved lens-cap artwork and
+  current fit measurements into a reproducible mask, relief, OpenSCAD, and
+  printer-handoff package. It is not the route for image-only concept art.
+triggers:
+  - "make a printable lens cap"
+  - "lens-cap STL"
+  - "lens-cap SCAD"
+  - "镜头盖模型"
+  - "可打印镜头盖"
+  - "镜头盖浮雕"
+  - "镜头盖 3MF"
 metadata:
   short-description: Reproducible lens-cap production
+  routing: primary-exclusive-for-lens-cap-production
 ---
 
 # Lens-cap production
+
+## Exclusive routing rule
+
+For any lens-cap request that includes modelling, relief, fit, CAD, STL, SCAD,
+3MF, or printer handoff, this is the only production/design Skill to invoke.
+Do not add a generic mechanical-CAD, product-design, graphic-design, logo,
+poster, UI, or other design Skill in parallel. If the approved artwork is
+missing, sequence `lens-cap-imagegen` first and then return here; do not ask a
+second creative Skill to redraw the same cap. Non-design support such as web
+research, OpenSCAD, and the repository CLI is allowed. An explicit request for
+a separate unrelated deliverable is the only exception.
 
 This skill is the decision layer for the open-source lens-cap-pipeline
 repository. Keep research, approved artwork, deterministic processing,

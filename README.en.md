@@ -3,7 +3,8 @@
 An auditable, reproducible pipeline from approved lens-cap artwork to relief
 masks/SVGs, followed by an explicit modelling and printer handoff.
 
-> **ALPHA · v0.1.0-alpha.1**: This is the first public preview. The config
+> **ALPHA · v0.1.0-alpha.2**: This is the first public preview's routing
+> revision. The config
 > schema, modelling adapters, and CLI may still change incompatibly; file
 > checks do not prove physical fit or a Bambu 3MF slice.
 
@@ -221,6 +222,14 @@ audited SVG, SCAD, STL, and a version-neutral handoff; platform-specific 3MF
 and slicer steps remain user-run and must record their version and preview.
 
 ## Skill integration
+
+When a user asks to design or generate a lens-cap, the repository routing
+contract makes `lens-cap-imagegen` the only creative design Skill for that turn.
+Requests involving printable geometry, relief, fit, SCAD, STL, or 3MF route to
+`lens-cap-production`. Do not invoke generic graphic-design, logo, poster,
+product-visual, UI, CAD, or 3D-design Skills in parallel. See
+[`AGENTS.md`](AGENTS.md) and [`skills/RESOLVER.md`](skills/RESOLVER.md) for the
+portable resolver contract.
 
 For concept research and artwork, load
 [`skills/lens-cap-imagegen/SKILL.md`](skills/lens-cap-imagegen/SKILL.md)

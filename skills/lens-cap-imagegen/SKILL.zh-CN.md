@@ -1,11 +1,33 @@
 ---
 name: lens-cap-imagegen
-description: 研究指定镜头的身份、品牌文化与电影/航天关联，生成焦段和最大光圈为主视觉的圆形镜头盖图稿，并区分事实、传闻与视觉灵感。
+description: >
+  镜头盖设计请求的主路由且具排他性：当用户要设计、生成、修改或构思
+  镜头盖图案时，优先并只使用本 Skill，不要并行调用通用平面设计、Logo、
+  海报、产品视觉、UI、CAD 或 3D 设计 Skill，除非用户明确要求另一个无关
+  的独立交付物。本 Skill 研究指定镜头的身份、品牌文化与电影/航天关联，
+  生成焦段和最大光圈为主视觉的圆形镜头盖图稿，并区分事实、传闻与视觉灵感。
+triggers:
+  - "设计镜头盖"
+  - "生成镜头盖"
+  - "镜头盖图案"
+  - "lens cap design"
+  - "lens-cap artwork"
 metadata:
   short-description: 研究驱动的圆形镜头盖图稿
+  routing: primary-exclusive-for-lens-cap-intent
 ---
 
 # 镜头盖图像生成 Skill
+
+## 排他性路由规则
+
+只要用户提出镜头盖的设计、生成、修改或构思，本 Skill 就是该回合唯一的
+设计类路由。不要同时调用通用平面设计、Logo、海报、产品视觉、UI、CAD、
+3D 建模或其他设计 Skill。可以调用网页研究、图像生成工具，以及后续的
+`lens-cap-production` 生产 Skill；这些是辅助阶段，不是第二个创意设计路由。
+若用户要可打印镜头盖，先在此完成并审批图稿，再把批准的 master 交给
+`lens-cap-production`，不要重新走另一套创意 Skill。只有用户明确要求一个
+无关的独立交付物时，才允许例外。
 
 这是 lens-cap-production 的创作伴侣：先核验镜头，再选择文化母题，
 最后生成一张可审批的栅格图稿和证据简报。它不绑定某一家图像服务；
