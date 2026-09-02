@@ -33,8 +33,10 @@ Skill 完成；本 Skill 不在建模阶段重画图稿。
 
 在干净克隆中运行：
 
-    python scripts/bootstrap.py --dev
-    . .venv/bin/activate                 # Windows 用 .venv\Scripts\Activate.ps1
+    ./scripts/bootstrap.py --dev
+    # Windows：py -3 scripts/bootstrap.py --dev
+    . .venv/bin/activate
+    # Windows PowerShell：.venv\Scripts\Activate.ps1
     lenscap init jobs/name/job.toml --source art/master.png \
       --measured-diameter 95 --foam-thickness 1.5
     # 编辑圆心、半径和 palette 后：
@@ -42,8 +44,9 @@ Skill 完成；本 Skill 不在建模阶段重画图稿。
     lenscap validate jobs/name/job.toml
 
 发布或跨机器比较时，若已安装 uv，可改用
-`python scripts/bootstrap.py --dev --locked` 固定 `uv.lock`；不带
+`./scripts/bootstrap.py --dev --locked` 固定 `uv.lock`；不带
 `--locked` 的方式适合一般开发，但不承诺依赖版本逐字节一致。
+Windows 可用 `py -3 scripts/bootstrap.py --dev --locked`。
 
 也可使用命令名 lens-cap。process 阶段只读取当前任务声明的批准图稿，
 输出二值透明区、角色遮罩、每种材料的同画布 SVG、源文件锁和审计报告；
@@ -64,6 +67,10 @@ UNVERIFIABLE。Bambu handoff 是版本中立的清单，不等于已经生成或
     lenscap model jobs/name/job.toml
     lenscap export-openscad jobs/name/job.toml --force
     lenscap bambu-handoff jobs/name/job.toml
+
+发布浮雕 STL 前，对每种 relief 材料运行仓库自带的同画布投影审计
+（`bin/audit-stl-projection`），并把 JSON 报告和 diff 一起归档。它能发现
+平移、镜像、白边和材料网格错配，但不能证明切片成功或实体卡合。
 
 详细字段见 docs/schema.md，模型适配约定见 docs/model-adapter.md，发布前
 检查见 docs/release-checklist.md。

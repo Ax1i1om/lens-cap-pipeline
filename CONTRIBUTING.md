@@ -7,12 +7,14 @@ job manifest.  A normal contribution is:
    extras (no global package installation):
 
    ```sh
-   python scripts/bootstrap.py --dev
+   ./scripts/bootstrap.py --dev
    . .venv/bin/activate
    ```
 
    On Windows, activate with `.venv\Scripts\activate`; or use the manual
-   `python -m venv .venv` plus `python -m pip install -e '.[test]'` sequence.
+   `python3 -m venv .venv` plus `python3 -m pip install -e '.[test]'` on
+   macOS/Linux (Windows: `py -3 -m venv .venv`, activate it, then use
+   `python -m pip ...` so packages stay in the project environment).
 
 2. Run `python -m pytest`, `python -m compileall -q lens_cap_pipeline`, and
    `python scripts/smoke.py` (the equivalent Make targets are `make test`,

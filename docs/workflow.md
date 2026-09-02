@@ -17,12 +17,13 @@ approved PNG + job.toml
   slicer preview + fit coupon ──► independently recorded release evidence
 ```
 
-From a fresh checkout, run `python scripts/bootstrap.py --dev` to create a
+From a fresh checkout, run `./scripts/bootstrap.py --dev` (or
+`py -3 scripts/bootstrap.py --dev` on Windows) to create a
 project-local `.venv` and install the CLI without touching the system Python.
 Activate `.venv/bin/activate` on macOS/Linux or
 `.venv\Scripts\Activate.ps1` in Windows PowerShell; the script is idempotent
 and may be run again after dependency changes.
-For release comparisons, run `python scripts/bootstrap.py --dev --locked`
+For release comparisons, run `./scripts/bootstrap.py --dev --locked`
 with `uv` installed; this uses the committed `uv.lock`. The unlocked helper
 uses the compatible version ranges and is convenient for ordinary development,
 but it is not a byte-level environment pin.

@@ -14,6 +14,8 @@ The repository separates pipeline code from job assets on purpose.
   contribute to them.  A job may therefore be Apache-2.0, CC BY, CC BY-NC, or
   otherwise restricted even though the generator itself is open source.
 
-The example configuration intentionally points to a local `art/master.png`
-that is not included in the repository.  Contributors should use synthetic
-test art or an explicitly redistributable sample when adding fixtures.
+The reproduction examples use the small synthetic `examples/art/master.ppm`
+fixture. Real job configurations should point to a local approved image and
+must not commit it unless it is explicitly redistributable. Contributors
+should use synthetic test art or an explicitly redistributable sample when
+adding fixtures.

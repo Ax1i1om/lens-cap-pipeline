@@ -10,15 +10,18 @@
 
 ```sh
 cd lens-cap-pipeline
-python scripts/bootstrap.py --dev
+./scripts/bootstrap.py --dev
+# macOS/Linux alternative: python3 scripts/bootstrap.py --dev
+# Windows alternative: py -3 scripts/bootstrap.py --dev
 # macOS/Linux:
 . .venv/bin/activate
 # Windows PowerShell: .venv\Scripts\Activate.ps1
 ```
 
 `bootstrap.py` 只在仓库内创建 `.venv`，不会安装全局包。若不使用脚本，也可
-手动运行 `python -m venv .venv`、激活它，再执行
-`python -m pip install -e '.[test]'`。
+手动运行 `python3 -m venv .venv`、激活它，再执行
+`python3 -m pip install -e '.[test]'`（Windows 先用 `py -3 -m venv .venv`，激活后
+用 `python -m pip ...`，确保安装在项目环境中）。
 在 macOS/Linux 上也可使用 `make bootstrap`；Windows 无 GNU Make 时直接运行
 Python 脚本即可。
 
@@ -26,8 +29,9 @@ Python 脚本即可。
 [uv](https://docs.astral.sh/uv/)）：
 
 ```sh
-python scripts/bootstrap.py --dev --locked
+./scripts/bootstrap.py --dev --locked
 # 等价于：uv sync --locked --extra dev
+# Windows：py -3 scripts/bootstrap.py --dev --locked
 ```
 
 不带 `--locked` 的脚本是兼容性优先的便捷安装，会使用 `pyproject.toml` 的
@@ -94,6 +98,20 @@ base／relief STL）；`fit_coupon` 只用于先打印试配环。不要把一�
 `measured_diameter_mm`（实际卡合外径）；只有图稿处理时可以只提供
 `face_diameter_mm`。
 
+导出 STL 后，可用公开的投影审计脚本把每个浮雕网格与同画布遮罩逐色比对：
+
+~~~sh
+./bin/audit-stl-projection \
+  --mesh ivory=build/model/mesh/my-lens-cap-ivory_relief.stl \
+  --expected-mask ivory=build/masks/ivory.png \
+  --canvas-size-mm 95 --tolerance-pixels 1 \
+  --output-report build/model/projection-report.json \
+  --output-dir build/model/projection-diff
+~~~
+
+它能发现平移、镜像、白边和颜色网格错位，但不会把文件检查冒充成实体
+卡合或切片成功。
+
 ## 卡合参数规则
 
 卡合式任务只需要确认：
@@ -125,12 +143,17 @@ base／relief STL）；`fit_coupon` 只用于先打印试配环。不要把一�
 可将 [`examples/job-manifest.template.json`](examples/job-manifest.template.json)
 复制到任务目录，填写允许文字、旧任务禁用词、图稿哈希、品牌／电影典故来源和
 许可证；它与 TOML 分工，前者锁定语义与来源，后者锁定像素处理和几何参数。
+当前 `validate` 主要审计确定性文件；缺少 manifest 的身份／授权字段时，核心
+仍可用于私人试验，但公开发布必须把语义来源状态标为 `UNVERIFIABLE`，不能把
+核心 `PASS` 当成品牌或电影履历已核验。
 
 `examples/build/` 若出现在本地 checkout 中，只是一次运行产生的派生物；它可能
 包含机器相关路径和 STL，不应作为公开 fixture 提交。发布前请从干净 checkout
 重跑并只保留经过审计、可重现且获授权的资产。
 
 详细 schema、模型适配和外部工具说明见：
+
+概念图阶段说明见 [docs/concept-art.md](docs/concept-art.md)。
 
 * [`docs/workflow.md`](docs/workflow.md)
 * [`docs/schema.md`](docs/schema.md)
@@ -142,15 +165,24 @@ base／relief STL）；`fit_coupon` 只用于先打印试配环。不要把一�
 
 ## Skill 集成
 
-希望由 Codex 按这套门禁协助生产时，可加载仓库内的
-[`skills/lens-cap-production/SKILL.md`](skills/lens-cap-production/SKILL.md)；
-中文说明在
-[`skills/lens-cap-production/SKILL.zh-CN.md`](skills/lens-cap-production/SKILL.zh-CN.md)。
-Skill 只负责路由和决策，实际文件生成仍由本仓库的 `lens-cap` CLI 完成。
+概念创作阶段可加载
+[skills/lens-cap-imagegen/SKILL.md](skills/lens-cap-imagegen/SKILL.md)
+（中文：[SKILL.zh-CN.md](skills/lens-cap-imagegen/SKILL.zh-CN.md)），它负责研究、
+提示词、品牌文化锚点、传闻限定和人工审批记录。生产阶段加载
+[skills/lens-cap-production/SKILL.md](skills/lens-cap-production/SKILL.md)
+（中文：[SKILL.zh-CN.md](skills/lens-cap-production/SKILL.zh-CN.md)）。两个 Skill
+只负责路由和决策，实际文件生成仍由本仓库的 lens-cap CLI 完成；概念图
+生成器本身不承诺逐字节复现。
+
+Skill、docs 和示例是仓库／source distribution 的 companion 文档，不是
+安装版 CLI wheel 的运行时依赖。只安装 wheel 时请从同一仓库另取 Skill；
+这避免把某一家专有图像 SDK 假装成开源依赖。
 
 ## 开源边界
 
 代码和模板采用 [Apache-2.0](LICENSE)。镜头品牌、商标、电影参考、用户图稿和下载的镜头盖模型不自动转移到该许可证；每个任务都应在 manifest 中记录来源、作者、许可证和修改说明。仓库默认忽略私有图稿、STL、3MF 和 G-code。
+
+本仓库不会自动登录 MakerWorld、调用 ChromaCanvas、上传云端项目或声称已经生成／切片 3MF；稳定核心公开到 SVG、SCAD、STL 和可审计 handoff，平台专用的 3MF／切片步骤必须由用户在相应软件中完成并记录版本与预览。
 
 ## 开发与测试
 

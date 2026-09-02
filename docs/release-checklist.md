@@ -15,7 +15,7 @@ Use this checklist for each tagged release and for each published lens job.
       import/entry-point metadata is intact. Rebuild (do not hand-edit) any
       `*.egg-info` metadata before tagging.
 - [ ] For byte-level artifact comparisons, build and test with
-      `python scripts/bootstrap.py --dev --locked`; record the Python,
+      `./scripts/bootstrap.py --dev --locked`; record the Python,
       NumPy/Pillow, OpenSCAD and slicer versions in the release note.
 - [ ] `python -m pytest`, `python -m compileall -q lens_cap_pipeline` and CI
       pass on all supported Python versions.
@@ -76,6 +76,11 @@ Use this checklist for each tagged release and for each published lens job.
       support, purge tower and preview are recorded.
 - [ ] STL projection/geometry audit passes, or the job is clearly marked
       `UNVERIFIABLE` with the reason.
+
+The public same-canvas projection audit (or an equivalent adapter) must be
+run for every relief STL, with its diff/report archived beside the job. A
+model/validation PASS without this footprint check is not a claim that T* or
+any other text stayed in place.
 
 ## Publication
 

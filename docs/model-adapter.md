@@ -53,6 +53,25 @@ The per-part report records the result under
 `format_check.canonicalization` (including whether the order changed); use the
 post-canonicalization SHA-256 for provenance.
 
+Before a printable release, run the public
+scripts/audit_stl_projection.py (or an equivalent recorded adapter) once for
+each positive-relief STL:
+
+~~~sh
+./bin/audit-stl-projection \
+  --mesh ivory=model/mesh/job-ivory_relief.stl \
+  --expected-mask ivory=masks/ivory.png \
+  --canvas-size-mm 95 --tolerance-pixels 1 \
+  --output-report model/projection-report.json \
+  --output-dir model/projection-diff
+~~~
+
+The report compares the top-view XY footprint and writes a red/green diff for
+missing or extra pixels. Use the same canvas size as the process/model report,
+and record any intentional mirror in the command and report. This gate catches
+the common white-border, translation, mirror, and wrong-color-mesh failures;
+it does not prove manifoldness, slicing, or physical fit.
+
 ## Suggested adapter CLI
 
 The bundled adapter exposes this stable shape without changing the process

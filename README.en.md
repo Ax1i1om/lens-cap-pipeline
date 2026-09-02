@@ -14,15 +14,19 @@ Python 3.11 or newer is required:
 
 ```sh
 cd lens-cap-pipeline
-python scripts/bootstrap.py --dev
+./scripts/bootstrap.py --dev
+# macOS/Linux alternative: python3 scripts/bootstrap.py --dev
+# Windows alternative: py -3 scripts/bootstrap.py --dev
 # macOS/Linux:
 . .venv/bin/activate
 # Windows PowerShell: .venv\Scripts\Activate.ps1
 ```
 
 `bootstrap.py` writes only the project-local `.venv` and never installs into
-the system interpreter. If you prefer a manual setup, run `python -m venv
-.venv`, activate it, then install with `python -m pip install -e '.[test]'`.
+the system interpreter. If you prefer a manual setup on macOS/Linux, run
+`python3 -m venv .venv`, activate it, then install with `python3 -m pip install
+-e '.[test]'`; on Windows use `py -3 -m venv .venv`, activate it, and then use
+`python -m pip ...` so packages stay inside the project environment.
 On macOS/Linux, `make bootstrap` is an equivalent convenience entry point;
 on Windows without GNU Make, run the Python script directly.
 
@@ -30,8 +34,9 @@ For release-grade byte-for-byte reproduction, use the committed lockfile (after
 installing [uv](https://docs.astral.sh/uv/)):
 
 ```sh
-python scripts/bootstrap.py --dev --locked
+./scripts/bootstrap.py --dev --locked
 # equivalent to: uv sync --locked --extra dev
+# Windows alternative: py -3 scripts/bootstrap.py --dev --locked
 ```
 
 Without `--locked`, the helper is a compatibility-first convenience and uses
@@ -102,6 +107,22 @@ relief-only process can stop after `process` with `face_diameter_mm` alone.
 job artifacts. `validate` is a full artifact audit and therefore requires a
 successful process run; it is not a config-only lint command.
 
+After exporting meshes, use the public projection audit to compare each relief
+STL with its same-canvas mask and catch translation, mirroring, white borders,
+or a color-mesh swap:
+
+~~~sh
+./bin/audit-stl-projection \
+  --mesh ivory=build/model/mesh/my-lens-cap-ivory_relief.stl \
+  --expected-mask ivory=build/masks/ivory.png \
+  --canvas-size-mm 95 --tolerance-pixels 1 \
+  --output-report build/model/projection-report.json \
+  --output-dir build/model/projection-diff
+~~~
+
+This is a file/footprint audit only; it does not prove physical fit or a
+successful slicer preview.
+
 ## Fitted-cap intake
 
 Ask only for the actual outside diameter of the cylindrical surface being
@@ -138,13 +159,17 @@ cannot make different decoders yield identical pixels.
 The repository examples use a tiny redistributable geometric PPM fixture;
 replace `source_art` with artwork you are authorised to use and re-measure its
 circle. See [`docs/workflow.md`](docs/workflow.md), [`docs/schema.md`](docs/schema.md),
-[`docs/model-adapter.md`](docs/model-adapter.md), and
-[`docs/release-checklist.md`](docs/release-checklist.md) for the full contract.
+[`docs/concept-art.md`](docs/concept-art.md), [`docs/model-adapter.md`](docs/model-adapter.md),
+and [`docs/release-checklist.md`](docs/release-checklist.md) for the full contract.
 
 Copy [`examples/job-manifest.template.json`](examples/job-manifest.template.json)
 beside a job and fill in the allowed text/marks, legacy-token deny-list,
 artwork hash, brand/film provenance, licences, and fit evidence. The manifest
-locks semantic identity; the TOML locks pixel processing and geometry.
+locks semantic identity; the TOML locks pixel processing and geometry. The
+current `validate` command primarily audits deterministic files: a private
+experiment may run without a completed manifest, but a public release must
+mark missing identity/licence evidence `UNVERIFIABLE` rather than treating a
+core `PASS` as verified brand or film history.
 
 If `examples/build/` exists in a checkout, treat it as local derived output:
 old reports may contain machine-specific paths and STL files. Do not publish
@@ -160,10 +185,20 @@ The repository ignores private artwork and large printer outputs by default.
 See [`CONTRIBUTING.md`](CONTRIBUTING.md), [`SECURITY.md`](SECURITY.md), and
 [`THIRD_PARTY.md`](THIRD_PARTY.md) for contribution and release boundaries.
 
+This repository does not log into MakerWorld, call ChromaCanvas, upload a cloud
+project, or claim to generate or slice a 3MF. The stable public boundary is
+audited SVG, SCAD, STL, and a version-neutral handoff; platform-specific 3MF
+and slicer steps remain user-run and must record their version and preview.
+
 ## Skill integration
 
-For Codex-assisted production, load
-[`skills/lens-cap-production/SKILL.md`](skills/lens-cap-production/SKILL.md)
-(`SKILL.zh-CN.md` is the Chinese translation). The Skill only routes decisions
-and gates; the repository's `lens-cap` CLI remains the implementation and
-artifact writer.
+For concept research and artwork, load
+[`skills/lens-cap-imagegen/SKILL.md`](skills/lens-cap-imagegen/SKILL.md)
+(`SKILL.zh-CN.md` is the Chinese translation). For deterministic processing
+and modelling, load
+[`skills/lens-cap-production/SKILL.md`](skills/lens-cap-production/SKILL.md).
+These companion Skills only route decisions and gates; the repository's
+`lens-cap` CLI remains the implementation and artifact writer. The Skills,
+docs, and examples are distributed from the source repository/source
+distribution; the CLI wheel intentionally does not bundle a proprietary image
+SDK or require the Skill files at runtime.

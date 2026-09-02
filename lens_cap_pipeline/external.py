@@ -612,13 +612,19 @@ def write_bambu_handoff(config: PipelineConfig, model: ModelResult) -> ExternalR
         else None
     )
     tool_status = "passed" if executable and bambu_version and bambu_version.get("status") == "passed" else "unverifiable"
+    # A manual STL directory is useful as a handoff input, but file presence
+    # alone cannot prove that the mesh came from the current SCAD.  Keep the
+    # top-level status pending until the external export report has verified
+    # every selector; this prevents a slicer-installed machine from turning
+    # an untracked mesh into an apparent production PASS.
+    handoff_status = "available" if stl_paths and provenance_status == "passed" else "unverifiable"
     payload = {
         "schema_version": 1,
         "adapter": "bambu-handoff",
         # STL availability is independent from whether Bambu Studio is
         # installed.  A portable handoff is useful on a second machine even
         # when the originating host has no desktop slicer.
-        "status": "available" if stl_paths else "unverifiable",
+        "status": handoff_status,
         "tool_status": tool_status,
         "bambu_executable": Path(executable).name if executable else None,
         "bambu_version": bambu_version,
@@ -680,10 +686,13 @@ def write_bambu_handoff(config: PipelineConfig, model: ModelResult) -> ExternalR
         ],
         "note": (
             "No 3MF or slice success is claimed by this handoff alone."
-            if stl_paths and not executable
-            else "No STL inputs were found; export the assembly and fit_ring selectors first."
-            if not stl_paths
+            if stl_paths and provenance_status == "passed" and not executable
+            else "STL inputs are present but their current-model provenance is unverified; "
+            "run export-openscad or provide a matching external-openscad-report before slicing."
+            if stl_paths and provenance_status != "passed"
             else "STL inputs are ready; open Bambu Studio to place and slice them."
+            if stl_paths
+            else "No STL inputs were found; export the assembly and fit_ring selectors first."
         ),
     }
     _atomic_json(path, payload)

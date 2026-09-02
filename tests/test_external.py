@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 
 from test_pipeline import _job
 
+import lens_cap_pipeline.external as external_module
 from lens_cap_pipeline.config import load_config
 from lens_cap_pipeline.external import write_bambu_handoff
 from lens_cap_pipeline.model import generate_model
@@ -36,7 +38,11 @@ def test_bambu_handoff_filters_stale_meshes_and_exposes_exclusive_sets(tmp_path:
 
     handoff = write_bambu_handoff(config, model)
     payload = json.loads(handoff.report_path.read_text(encoding="utf-8"))
-    assert payload["status"] == "available"
+    # Manual/legacy STL files are listed for inspection, but without a
+    # matching OpenSCAD report they are not claimed as current production
+    # inputs.
+    assert payload["status"] == "unverifiable"
+    assert payload["mesh_provenance"]["status"] == "unverifiable"
     assert payload["declared_selectors"] == model.report["render_part_selectors"]
     assert {item["selector"] for item in payload["assembly_stls"]} == {"assembly"}
     assert {item["selector"] for item in payload["coupon_stls"]} == {"fit_ring"}
@@ -85,3 +91,60 @@ def test_bambu_handoff_rejects_meshes_from_a_previous_model(tmp_path: Path) -> N
     assert handoff.report["ignored_stl_inputs"][0]["reason"].startswith(
         "external-openscad-report belongs"
     )
+
+
+def test_manual_stl_is_not_passed_even_when_bambu_is_available(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """A slicer being installed cannot certify an untracked manual mesh."""
+    config = load_config(_fitted_job(tmp_path))
+    process_report = process(config)
+    model = generate_model(config, process_report)
+    mesh_dir = model.model_dir / "mesh"
+    mesh_dir.mkdir(parents=True, exist_ok=True)
+    (mesh_dir / f"{config.job_slug}-assembly.stl").write_bytes(b"manual-stl")
+
+    monkeypatch.setattr(external_module, "_resolve_tool", lambda *args, **kwargs: "/bin/echo")
+    handoff = write_bambu_handoff(config, model)
+
+    assert handoff.report["tool_status"] == "passed"
+    assert handoff.report["status"] == "unverifiable"
+    assert handoff.report["mesh_provenance"]["status"] == "unverifiable"
+
+
+def test_verified_handoff_note_reflects_ready_stl_inputs(tmp_path: Path, monkeypatch) -> None:
+    """A verified mesh with an available slicer gets the actionable note."""
+    config = load_config(_fitted_job(tmp_path))
+    process_report = process(config)
+    model = generate_model(config, process_report)
+    mesh_dir = model.model_dir / "mesh"
+    mesh_dir.mkdir(parents=True, exist_ok=True)
+    assembly = mesh_dir / f"{config.job_slug}-assembly.stl"
+    assembly.write_bytes(b"verified-stl")
+    model_hash = hashlib.sha256(model.scad_path.read_bytes()).hexdigest()
+    assembly_hash = hashlib.sha256(assembly.read_bytes()).hexdigest()
+    (model.model_dir / "external-openscad-report.json").write_text(
+        json.dumps(
+            {
+                "schema_version": 1,
+                "status": "passed",
+                "model_sha256": model_hash,
+                "parts": {
+                    "assembly": {
+                        "status": "passed",
+                        "path": "mesh/" + assembly.name,
+                        "sha256": assembly_hash,
+                    }
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(external_module, "_resolve_tool", lambda *args, **kwargs: "/bin/echo")
+
+    handoff = write_bambu_handoff(config, model)
+
+    assert handoff.report["tool_status"] == "passed"
+    assert handoff.report["status"] == "available"
+    assert handoff.report["mesh_provenance"]["status"] == "passed"
+    assert handoff.report["note"].startswith("STL inputs are ready")

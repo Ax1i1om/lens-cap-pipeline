@@ -63,17 +63,20 @@ licence; a cultural motif is not proof that this exact lens was used.
 
 From a clean clone:
 
-    python scripts/bootstrap.py --dev
-    . .venv/bin/activate                 # Windows: .venv\Scripts\Activate.ps1
+    ./scripts/bootstrap.py --dev
+    # Windows: py -3 scripts/bootstrap.py --dev
+    . .venv/bin/activate
+    # Windows PowerShell: .venv\Scripts\Activate.ps1
     lenscap init jobs/name/job.toml --source art/master.png \
       --measured-diameter 95 --foam-thickness 1.5
     # edit circle and palette, then:
     lenscap build jobs/name/job.toml --force --export-openscad --bambu-handoff
     lenscap validate jobs/name/job.toml
 
-For release comparisons, use `python scripts/bootstrap.py --dev --locked`
+For release comparisons, use `./scripts/bootstrap.py --dev --locked`
 when `uv` is installed; the unlocked helper is fine for ordinary development
 but does not pin dependency versions byte-for-byte.
+On Windows, use `py -3 scripts/bootstrap.py --dev --locked`.
 
 Use lens-cap as an equivalent command name. The stable process stage emits a
 binary-alpha process master, role masks, one same-canvas mask and SVG per
@@ -95,6 +98,11 @@ Run stages independently when debugging:
     lenscap model jobs/name/job.toml
     lenscap export-openscad jobs/name/job.toml --force
     lenscap bambu-handoff jobs/name/job.toml
+
+Before publishing a relief STL, run the repository's same-canvas projection
+audit (`bin/audit-stl-projection`) for every relief material and archive its
+JSON report and diff. It catches translation, mirroring, white borders, and
+wrong-material meshes; it does not prove slicing or physical fit.
 
 Read docs/schema.md for fields, docs/model-adapter.md for adapter contracts,
 and docs/release-checklist.md before publishing. Do not use old job-local

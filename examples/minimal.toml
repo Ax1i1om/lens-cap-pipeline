@@ -1,4 +1,4 @@
-# Minimal transparent/flat-art example. Put a redistributable master.png in
+# Minimal transparent/flat-art example. Put a redistributable master.ppm in
 # the adjacent art/ directory before running `lens-cap process`.
 job_slug = "minimal-cap"
 source_art = "art/master.ppm"

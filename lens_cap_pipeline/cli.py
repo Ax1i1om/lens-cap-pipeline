@@ -382,6 +382,7 @@ def main(argv: list[str] | None = None) -> int:
             if (
                 handoff.report.get("status") == "unverifiable"
                 or handoff.report.get("tool_status") != "passed"
+                or (handoff.report.get("mesh_provenance") or {}).get("status") != "passed"
             ):
                 external_pending = True
                 payload["status"] = "unverifiable"
@@ -400,6 +401,7 @@ def main(argv: list[str] | None = None) -> int:
                     external_pending
                     or handoff.report.get("status") == "unverifiable"
                     or handoff.report.get("tool_status") != "passed"
+                    or (handoff.report.get("mesh_provenance") or {}).get("status") != "passed"
                 )
             validation = validate_job(
                 config,

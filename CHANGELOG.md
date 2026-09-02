@@ -9,3 +9,6 @@
 * Added locked-environment bootstrap support, runtime fingerprints, chunked
   palette classification, source/SVG hash gates, and stale-STL filtering for
   safer repeated builds.
+* Added the provider-neutral concept-art Skill and design-brief template,
+  plus a same-canvas STL projection audit that exposes translation, mirroring,
+  white-border, and wrong-material regressions before slicing.

@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "job_slug": "replace-with-lens-slug",
+  "lens_identity": {
+    "brand": "REPLACE",
+    "model": "REPLACE",
+    "focal_length_mm": null,
+    "maximum_aperture": "REPLACE",
+    "mount_or_revision": null,
+    "era": null
+  },
+  "display_text": [
+    "REPLACE WITH EXACT FOCAL LENGTH",
+    "REPLACE WITH EXACT F-VALUE"
+  ],
+  "allowed_text": [],
+  "allowed_marks": [],
+  "forbidden_legacy_tokens": [],
+  "object_mode": "typographic_medallion",
+  "narrative_mode": "balanced",
+  "production_target": "concept_art",
+  "visual_direction": {
+    "aspect_ratio": "1:1",
+    "palette": ["black", "charcoal", "gray", "ivory"],
+    "medium": "linocut or screen print",
+    "dominant_hierarchy": ["focal_length", "maximum_aperture"],
+    "omissions": ["lens barrel", "glass", "iris blades", "photographic clutter"]
+  },
+  "anchors": [
+    {
+      "claim_kind": "brand_culture",
+      "subject_scope": "brand",
+      "evidence_state": "verified",
+      "source_role": "proof",
+      "source": "URL OR ARCHIVE IDENTIFIER",
+      "summary": "A source-backed manufacturer or lens-system culture fact.",
+      "render_role": "visual_metaphor",
+      "anchor_context": "What the source establishes.",
+      "motif_commitment": "symbolic",
+      "anchor_visual_motif": "Original geometry that carries the association.",
+      "recognition_cue": "What remains perceptible when secondary words are hidden.",
+      "qualifier": null
+    }
+  ],
+  "approved_references": [],
+  "generation": {
+    "provider": null,
+    "mode": null,
+    "model": null,
+    "model_version": null,
+    "prompt": null,
+    "reference_hashes": [],
+    "candidate_path": null,
+    "candidate_sha256": null,
+    "approved": false,
+    "approval_note": null
+  },
+  "physical_fit": {
+    "measured_diameter_mm": null,
+    "face_target_mm": null,
+    "foam_liner_status": null,
+    "liner_thickness_mm": null,
+    "compression_fraction": null,
+    "nozzle_mm": null
+  },
+  "provenance": {
+    "artwork_license": "REPLACE",
+    "brand_mark_license": "REPLACE OR NONE",
+    "film_or_history_permissions": "REPLACE OR NONE",
+    "notes": "Keep third-party terms separate from the Apache-2.0 code licence."
+  }
+}
