@@ -4,7 +4,6 @@ schema_version = 1
 job_slug = "czj-jena-135-f3-5-repro"
 source_art = "art/master.ppm"
 output_dir = "build"
-face_diameter_mm = 95.0
 measured_diameter_mm = 95.0
 grid_size = 1000
 nozzle_mm = 0.2
