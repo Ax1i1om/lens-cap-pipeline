@@ -64,6 +64,19 @@ SHA-256），重复执行不改动未变化文件。检测到用户改动时不�
 `--allow-global`，否则只检查／预览。`bin/lens-cap-skills` 和
 `scripts/sync_skills.py` 是同一入口的便携别名。
 
+> **分发边界（Alpha）**：只用 `pip install` 安装 CLI wheel 不会带上两个
+> companion Skills、`bin/lens-cap-3mf` 或 `tools/3mf_adapter`。要走完整的
+> “图稿审批 → 3MF”链路，请使用 Git checkout 或 source distribution，并从
+> 仓库运行 Skill 同步器和 3MF bridge；wheel 只覆盖核心 Python 处理 API。
+
+Codex 通常在任务启动时缓存 Skill 目录；完成同步后请新建任务或刷新宿主，
+再测试自动路由。仓库的 clean-room 脚本能验证文件生产链，但不能替代某一
+宿主的 Skill 发现器；若目录尚未刷新，可在任务中明确调用
+`$lens-cap-imagegen`，再按顺序调用 `$lens-cap-production`。
+本仓库 frontmatter 按当前 Codex 校验器把触发词放在 `metadata.triggers`；只会
+扫描顶层 `triggers` 的旧路由器需要显式调用这两个 Skill 或使用宿主适配器，不能
+因此把非法字段加回正式 Skill。
+
 创建一个新任务（`init` 的第一个参数是配置文件，而不是目录）：
 
 ```sh
@@ -206,8 +219,8 @@ base／relief STL）；`fit_coupon` 只用于先打印试配环。不要把一�
    `--no-friction-ribs` 或 `fit.friction_ribs_enabled = false`，需要显式开启时可用
    `--friction-ribs`）。
 
-成品正面／浮雕直径从实测卡合外径派生，除非明确写入 `face_diameter_mm` 覆盖。未提供压缩率时模型暂按 20% 并标为假设；内壁凸条有两个中性预设：`light_tapered`（默认，12 条窄而浅的渐缩凸条，径向侵入 0.10 mm）用于兼容性和轻微增摩，`wide_tapered`（6 条宽楔形、8° 基部角／4.4° 端部角、接近全侧壁高度）用于接近参考图中粗壮凸起的视觉与机械轮廓。两者都不是品牌元素；可用 `--friction-rib-profile wide_tapered` 或在 `[fit]` 写入 `friction_rib_profile` 选择，显式填写的数量、侵入量、宽度和高度优先于预设。带泡棉时凸条仍可能局部增加压缩，必须先打印试配环，不能把文件检查当成实物配合证明。
-以 95 mm 卡合外径、1.5 mm 泡棉、20% 临时压缩的参考测试为例，`wide_tapered` 使用约 0.55 mm 径向侵入、6.8 mm 宽度和 12.5 mm 高度，局部线性压缩估算约 56.7%；这只是试配起点，不能替代同材料、同喷嘴的 coupon 实测。不贴泡棉时，报告还会给出带符号的裸壁名义干涉量（正值为过盈、负值为余隙）。
+成品正面／浮雕直径从实测卡合外径派生，除非明确写入 `face_diameter_mm` 覆盖。贴泡棉且未提供压缩率时模型暂按 20% 并标为假设；不贴泡棉时默认压缩率为 0。内壁凸条有两个中性预设：`light_tapered`（默认，12 条窄而浅的渐缩凸条，径向侵入 0.10 mm）用于兼容性和轻微增摩，`wide_tapered`（6 条宽楔形、8° 基部角／4.4° 端部角、接近全侧壁高度）用于接近参考图中粗壮凸起的视觉与机械轮廓。两者都不是品牌元素；可用 `--friction-rib-profile wide_tapered` 或在 `[fit]` 写入 `friction_rib_profile` 选择，显式填写的数量、侵入量、宽度和高度优先于预设。带泡棉时凸条仍可能局部增加压缩，必须先打印试配环，不能把文件检查当成实物配合证明。
+以 95 mm 卡合外径、1.5 mm 泡棉、20% 临时压缩的参考测试为例，`wide_tapered` **显式覆盖**为约 0.55 mm 径向侵入、6.8 mm 宽度和 12.5 mm 高度（该预设本身默认侵入量为 0.30 mm），局部线性压缩估算约 56.7%；这只是试配起点，不能替代同材料、同喷嘴的 coupon 实测。不贴泡棉时，报告还会给出带符号的裸壁名义干涉量（正值为过盈、负值为余隙）。
 旧版未声明凸条的配置在重建时会继承这一新默认；若要复现旧的光滑内壁，请显式写入 `friction_ribs_enabled = false`，并重新跑 process/model，不能继续使用旧模型文件冒充当前配置。
 
 ## 图稿保真和安全门

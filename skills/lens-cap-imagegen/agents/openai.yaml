@@ -4,11 +4,16 @@ interface:
   brand_color: "#222222"
   default_prompt: >-
     Use $lens-cap-imagegen as the only design-oriented Skill whenever the user
-    asks to design, generate, revise, or concept a camera lens-cap. Do not
+    asks to design, generate, revise, or concept a camera lens-cap. A named
+    camera lens plus a circular front graphic, badge, or relief is the same
+    intent even when “lens cap” is omitted; optical design, repair, and
+    unrelated product photos are excluded. Do not
     invoke generic graphic-design, logo, poster, product-visual, UI, CAD, or
     3D-design Skills—or any other design Skill—in parallel. Make focal length the first visual read and
     maximum aperture (F-stop/F-number/F value) the second. For fitted caps,
     ask one grouped question covering mating diameter, foam and uncompressed
     thickness, and friction ribs (enabled by default). If printable production
     is requested, finish and approve the artwork here, then hand it to
-    $lens-cap-production.
+    $lens-cap-production. Treat saving the provider attachment, recording its
+    hash, and marking human approval as an explicit handoff gate; never invent
+    those fields.

@@ -43,7 +43,15 @@ def test_cross_context_trigger_and_intake_contract_is_present() -> None:
     production_zh = (ROOT / "skills/lens-cap-production/SKILL.zh-CN.md").read_text(encoding="utf-8")
     # Keep common host wording covered so a trigger list cannot regress to one
     # punctuation/language variant after a localized edit.
-    for phrase in ("lens cap design", "lens-cap artwork", "lens cap artwork", "lens medallion"):
+    for phrase in (
+        "lens cap design",
+        "lens-cap artwork",
+        "lens cap artwork",
+        "lens medallion",
+        "lens front graphic",
+        "lens artwork",
+        "circular lens graphic",
+    ):
         assert phrase in imagegen
     for phrase in (
         "printable lens cap",
@@ -51,8 +59,11 @@ def test_cross_context_trigger_and_intake_contract_is_present() -> None:
         "lens cap STL",
         "lens cap 3MF",
         "lens cap production",
+        "lens front relief",
+        "lens front 3mf",
+        "circular lens relief",
     ):
-        assert phrase in production
+        assert phrase.lower() in production.lower()
     for document in (imagegen, production):
         lowered = document.lower()
         assert "focal length" in lowered
@@ -103,6 +114,78 @@ def test_manifest_records_artwork_hierarchy_and_fitted_cap_intake() -> None:
     ]
 
 
+def test_manifest_named_lens_surface_semantic_route_is_scoped() -> None:
+    import json
+
+    data = json.loads((ROOT / "skills/manifest.json").read_text(encoding="utf-8"))
+    semantic = data["routing_policy"]["lens_cap_intent"]["semantic_match"]
+    assert semantic["requires_named_lens"] is True
+    assert {
+        "front graphic",
+        "front surface",
+        "relief",
+        "3mf",
+        "镜头盖",
+        "正面图案",
+        "正面浮雕",
+        "浮雕",
+    } <= set(semantic["surface_terms"])
+    assert "circular" not in semantic["surface_terms"]
+    assert "圆形" not in semantic["surface_terms"]
+    assert {"design", "generate", "设计", "生成"} <= set(semantic["verbs"])
+    assert "optical design" in semantic["exclude_without_surface_intent"]
+    assert "optical" in semantic["exclude_without_surface_intent"]
+    assert "circular front pattern" in semantic["explicit_cap_surface_terms"]
+
+
+def test_named_lens_surface_route_positive_and_negative_matrix() -> None:
+    """Exercise the documented host-neutral semantic rule, not just its prose."""
+
+    import json
+
+    data = json.loads((ROOT / "skills/manifest.json").read_text(encoding="utf-8"))
+    semantic = data["routing_policy"]["lens_cap_intent"]["semantic_match"]
+    surfaces = tuple(str(item).lower() for item in semantic["surface_terms"])
+    verbs = tuple(str(item).lower() for item in semantic["verbs"])
+    exclusions = tuple(str(item).lower() for item in semantic["exclude_without_surface_intent"])
+    explicit_cap = tuple(
+        str(item).lower() for item in semantic["explicit_cap_surface_terms"]
+    )
+
+    def matches(prompt: str, *, named_lens: bool = True) -> bool:
+        text = prompt.casefold()
+        if not named_lens or not any(verb in text for verb in verbs):
+            return False
+        has_surface = any(term.casefold() in text for term in surfaces)
+        if not has_surface:
+            return False
+        # An optical-design/repair exclusion wins unless the user also states
+        # an explicit cap/relief surface deliverable.
+        has_explicit_cap = any(term in text for term in explicit_cap)
+        if any(term in text for term in exclusions) and not has_explicit_cap:
+            return False
+        return True
+
+    assert matches("Design a circular front pattern for Zeiss Planar 50mm F1.4 and export a 3MF")
+    assert matches("用康泰时 50mm F1.4 设计圆形正面图案")
+    assert matches("Sigma 28-70mm F2.8 做镜头浮雕")
+    assert not matches("Design an optical diagram for a Zeiss Planar 50mm F1.4")
+    assert not matches("Design an optical relief map for a Zeiss Planar 50mm F1.4")
+    assert not matches("为 Zeiss 50mm 镜片设计圆形产品照片")
+    assert not matches("为圆形镜片产品照片设计一张海报")
+    assert not matches("Repair a Zeiss 50mm F1.4 lens")
+
+
+def test_resolver_documents_catalog_reload_and_named_lens_surface_route() -> None:
+    resolver = (ROOT / "skills/RESOLVER.md").read_text(encoding="utf-8")
+    agents = (ROOT / "AGENTS.md").read_text(encoding="utf-8")
+    for document in (resolver, agents):
+        lowered = document.lower()
+        assert "named camera lens" in lowered
+        assert "front" in lowered and "3mf" in lowered
+    assert "new Codex task" in resolver
+
+
 def test_host_metadata_keeps_the_same_exclusive_hierarchy_and_intake() -> None:
     imagegen_agent = (ROOT / "skills/lens-cap-imagegen/agents/openai.yaml").read_text(encoding="utf-8").lower()
     production_agent = (ROOT / "skills/lens-cap-production/agents/openai.yaml").read_text(encoding="utf-8").lower()
@@ -112,6 +195,8 @@ def test_host_metadata_keeps_the_same_exclusive_hierarchy_and_intake() -> None:
         assert "f-stop" in document and "f-number" in document
         assert "friction" in document and "enabled by default" in document
         assert "do not" in document and "design" in document
+        assert "circular" in document and "optical design" in document
+        assert "approval" in document and "hash" in document
     assert "mating diameter" in imagegen_agent
     assert "foam" in imagegen_agent and "uncompressed" in imagegen_agent
     assert "mating diameter" in production_agent

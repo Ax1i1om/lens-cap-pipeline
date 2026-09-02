@@ -74,6 +74,25 @@ def test_model_includes_default_inner_friction_ribs_in_body_and_coupon(tmp_path:
     assert mechanical["foam_local_compression_fraction"] == (0.20 + 0.10 / 1.5)
 
 
+def test_bare_wall_omits_foam_compression_assumption(tmp_path: Path) -> None:
+    """A hand-written no-foam job must not inherit the foam default."""
+
+    config_path = _job(tmp_path)
+    text = config_path.read_text(encoding="utf-8").replace(
+        "face_diameter_mm = 52.0",
+        "face_diameter_mm = 95.0\nmeasured_diameter_mm = 95.0",
+    )
+    text += '\n[fit]\nfoam_liner_status = "none"\n'
+    config_path.write_text(text, encoding="utf-8")
+    config = load_config(config_path)
+    assert config.fit.compression_fraction == 0.0
+    assert config.fit.compression_is_assumption is False
+    mechanical = _mechanical_values(config)
+    assert mechanical["compression_fraction"] == 0.0
+    assert mechanical["compression_is_assumption"] is False
+    assert mechanical["foam_local_compression_fraction"] is None
+
+
 def test_wide_tapered_profile_matches_reference_proportions(tmp_path: Path) -> None:
     """The opt-in wide profile resolves six broad, 8-degree wedges."""
     config_path = _job(tmp_path)

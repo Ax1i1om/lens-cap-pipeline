@@ -2,10 +2,19 @@
 
 This document is the acceptance record for the public Alpha route. It answers
 one question: can a new Codex task, with no previous conversation history,
-take an approved named-lens artwork through the repository Skill route and
-finish at a checked 3MF?
+take an approved named-lens artwork through the repository production route
+and finish at a checked 3MF? The file runner can prove the latter; it cannot
+emulate every host's Skill discovery cache. After installing or syncing Skills,
+start a new Codex task/reload the host, and use an explicit `$lens-cap-*`
+invocation if automatic matching has not refreshed.
 
 ## Simulated new-user interaction
+
+The rehearsal deliberately begins with an already approved raster and brief.
+That is the reproducibility boundary: the provider-dependent generation and
+human approval happen before the file runner, while every downstream byte and
+hash gate is exercised in a clean directory. It therefore must not be read as
+a claim that every Codex host can automatically save an ImageGen attachment.
 
 Use a fresh task and provide only a lens identity and the requested endpoint:
 
@@ -44,6 +53,12 @@ The expected agent behaviour is deterministic and short:
 If any required external program is unavailable, the response must say
 `UNVERIFIABLE` and stop at the last verified stage. A SCAD file or handoff JSON
 must never be described as a 3MF.
+
+The routing assertions are intentionally split: `tests/test_skill_routing.py`
+checks the repository contract and manifest, while a real Codex host must
+still confirm that its catalog has loaded the synced files. This is a host
+integration prerequisite, not evidence that a generic design Skill may run in
+parallel.
 
 ## Matrix exercised on the development host
 

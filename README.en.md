@@ -63,6 +63,21 @@ remove stale files. Use `--environment codex|claude` for host defaults, with
 `--allow-global` required before writing an inferred global directory.
 `bin/lens-cap-skills` is a repository-local alias.
 
+> **Alpha distribution boundary:** installing only the CLI wheel does not
+> include the two companion Skills, `bin/lens-cap-3mf`, or
+> `tools/3mf_adapter`. Use a Git checkout or the source distribution for the
+> complete “approved artwork → 3MF” route, and run the repository Skill sync
+> and bridge from there. The wheel covers the core Python processing API only.
+
+Codex commonly caches its Skill catalog when a task starts. After applying a
+sync, start a new task or reload the host before testing automatic routing. If
+the catalog is still stale, invoke `$lens-cap-imagegen` and then
+`$lens-cap-production` explicitly; the clean-room runner validates the file
+route, not every host's catalog or image-provider save API.
+The checked-in frontmatter follows the current Codex validator and keeps
+trigger vocabulary under `metadata.triggers`; a legacy host that scans only a
+top-level `triggers` key needs an explicit Skill invocation or a host adapter.
+
 On Windows, use `py -3 scripts/install_skills.py ...` or the companion
 `bin/lens-cap-skills.cmd` launcher.
 
@@ -231,9 +246,10 @@ count, intrusion, width, and height values override profile defaults. Profiles
 are neutral mechanical geometry, not brand artwork. With foam, either profile
 may locally compress the liner, so mechanical fit remains unverified until a
 same-material coupon is printed and measured. For a 95 mm mating diameter,
-1.5 mm foam, and provisional 20% compression, the reference test uses
-`wide_tapered` at about 0.55 mm intrusion, 6.8 mm width, and 12.5 mm height
-(estimated local compression 56.7%), not a universal fit prescription.
+1.5 mm foam, and provisional 20% compression, the reference test explicitly
+overrides `wide_tapered` to about 0.55 mm intrusion, 6.8 mm width, and 12.5 mm
+height (estimated local compression 56.7%); the preset's own default intrusion
+is 0.30 mm, and neither value is a universal fit prescription.
 Pre-rib configurations inherit the new enabled default when rebuilt; to
 reproduce a legacy smooth wall, set `friction_ribs_enabled = false`, rerun the
 process/model stages, and do not reuse an old model as if it matched the new

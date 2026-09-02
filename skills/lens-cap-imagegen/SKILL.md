@@ -8,7 +8,9 @@ description: >
   in parallel unless the user explicitly requests a separate unrelated
   deliverable. It researches a named lens and creates circular artwork with
   focal length and maximum aperture (F-stop/F-number) dominant, a documented brand-culture anchor,
-  and clearly qualified lore.
+  and clearly qualified lore. A named camera lens plus a requested circular
+  front graphic, badge, or relief is the same route even when “lens cap” is
+  omitted; optical design, repair, and an unrelated product photograph are not.
 metadata:
   short-description: Research-led circular lens-cap artwork
   routing: primary-exclusive-for-lens-cap-intent
@@ -23,12 +25,27 @@ metadata:
     - "lens cap artwork"
     - "camera lens-cap artwork"
     - "lens medallion"
+    - "lens artwork"
+    - "lens front graphic"
+    - "lens relief"
+    - "lens front badge"
+    - "circular lens graphic"
+    - "circular lens relief"
+    - "circular front pattern"
     - "设计镜头盖"
     - "生成镜头盖图案"
     - "生成镜头盖"
     - "镜头盖图稿"
     - "制作镜头盖"
     - "镜头盖设计"
+    - "镜头图稿"
+    - "镜头图案"
+    - "镜头正面"
+    - "镜头浮雕"
+    - "圆形镜头图案"
+    - "圆形镜头浮雕"
+    - "圆形正面图案"
+    - "圆形正面浮雕"
 ---
 
 # Lens-cap image generation
@@ -46,6 +63,12 @@ artwork phase here and then hand the approved master to
 `lens-cap-production`—never route the same lens-cap request through a second
 creative design Skill. An explicit user request for a separate, unrelated
 deliverable is the only exception.
+
+A named camera lens plus a request for its circular front graphic, medallion,
+relief, fitted cap, or 3MF counts as the same lens-cap intent even when the
+literal phrase “lens cap” is omitted. Do not apply this semantic shortcut to
+optical design, lens repair, or a general product photograph without a
+cap/front-surface deliverable.
 
 This is the creative companion to lens-cap-production. It turns a named lens
 into an approved raster artwork and an evidence brief. It is provider-neutral:
@@ -171,6 +194,14 @@ Once approved, freeze the raster, exact strings, positions, orientation, and
 hash. Production may create named alpha, palette, mask, and scale derivatives,
 but may not redraw, OCR/retype, recenter, mirror, content-crop, or regenerate
 the interior. Route those derivatives through the lens-cap-pipeline CLI.
+
+Provider handoff is an explicit human boundary: an ImageGen conversation
+attachment is not a filesystem path until it has been saved. Before invoking
+production, leave a minimum packet in the job—approved raster and SHA-256,
+`design-brief.json` with `approved=true` and exact text/anchor/provenance
+fields, and a TOML with the reviewed circle and palette. Never invent approval,
+hashes, or circle coordinates to make a provider-specific result look
+reproducible.
 
 Save a provider-neutral design brief beside the job. It should include:
 

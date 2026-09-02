@@ -7,10 +7,18 @@ for hosts that discover Skills directly.
 ## Priority rule
 
 The presence of lens-cap intent wins over generic design intent. Match terms
-such as `镜头盖`, `lens cap`, `lens-cap`, `cap artwork`, `lens medallion`, or a
-named lens paired with “design/generate/create”. Once matched, suppress generic
+such as `镜头盖`, `lens cap`, `lens-cap`, `cap artwork`, `lens medallion`,
+`镜头正面`, `镜头浮雕`, `lens front graphic`, or a named camera lens paired with
+“design/generate/create” and a cap/front/relief/3MF deliverable. Once matched, suppress generic
 graphic-design, logo, poster, product-visual, UI, CAD, 3D-modelling, and other
 design Skills for the same turn.
+
+Do not classify optical design, repair, or a general lens product photograph as
+this route merely because a lens name is present; the named-lens semantic rule
+requires a cap/front-surface/medallion/relief/3MF intent. When an optical or
+repair exclusion appears, it wins unless the same request contains an explicit
+cap-surface phrase (for example `lens cap`, `front graphic`, `lens relief`,
+`镜头盖`, or `正面浮雕`).
 
 ## Phase routing
 
@@ -60,3 +68,21 @@ requires explicit `--force` (plus `--prune` for removals) before destructive
 updates. Use `--environment codex` or `--environment claude` only when the
 corresponding host directory is intended; inferred global destinations remain
 read-only unless `--allow-global` is supplied.
+
+Codex usually loads its Skill catalog when a task starts. After applying a
+global or project-local sync, start a new Codex task or reload the host before
+expecting automatic Skill matching; if the catalog is still stale, invoke the
+installed `$lens-cap-imagegen` or `$lens-cap-production` explicitly.
+
+The image provider/approval handoff is a separate human boundary. A provider
+attachment is not a filesystem path until the user or agent explicitly saves
+it; do not invent `approved=true`, a hash, or circle coordinates. Once the
+approved raster, brief, and job TOML exist, the production route is the
+deterministic bridge documented above.
+
+The checked-in frontmatter follows the current Codex Skill validator: custom
+trigger vocabulary lives under `metadata.triggers`, not as a top-level key.
+Legacy routers that only scan top-level `triggers` may therefore need an
+explicit `$lens-cap-imagegen`/`$lens-cap-production` invocation (or a small
+host adapter); do not weaken the validated Skill format just to satisfy that
+legacy scanner.

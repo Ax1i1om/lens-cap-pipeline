@@ -139,8 +139,10 @@ def _mechanical_values(config: PipelineConfig) -> dict[str, Any]:
     if foam_status not in {"none", "foam"}:
         raise ModelError("foam_liner_status must be 'none' or 'foam'")
     liner = fit_value("liner_thickness_mm", raw.get("liner_thickness_mm"))
+    compression_default = 0.20 if foam_status == "foam" else 0.0
     compression = number_value(
-        "compression_fraction", fit_value("compression_fraction", raw.get("compression_fraction", 0.20))
+        "compression_fraction",
+        fit_value("compression_fraction", raw.get("compression_fraction", compression_default)),
     )
     bare_clearance = number_value(
         "bare_clearance_mm", fit_value("bare_clearance_mm", raw.get("bare_clearance_mm", 0.40))
@@ -299,7 +301,9 @@ def _mechanical_values(config: PipelineConfig) -> dict[str, Any]:
             else None
         ),
         "retention_strategy": str(fit_value("retention_strategy", "auto")),
-        "compression_is_assumption": bool_value("compression_is_assumption", True),
+        "compression_is_assumption": bool_value(
+            "compression_is_assumption", foam_status == "foam"
+        ),
     }
 
 

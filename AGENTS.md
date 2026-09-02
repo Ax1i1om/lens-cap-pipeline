@@ -9,6 +9,14 @@ user asks to design, generate, revise, or concept a camera lens-cap (including
 invoke generic graphic-design, logo, poster, product-visual, UI, CAD, 3D
 modelling, or other design Skills in parallel.
 
+A named camera lens plus an explicit request for its circular front graphic,
+medallion, relief, fitted cap, or 3MF is the same intent even when the user
+does not literally say “lens cap”/“镜头盖”. Do not apply this rule to optical
+design, lens repair, or an unrelated product image without a cap/front-surface
+deliverable. If optical/repair language is present, it wins unless the same
+request also contains an explicit cap-surface phrase such as `lens cap`,
+`front graphic`, `lens relief`, `镜头盖`, or `正面浮雕`.
+
 When the request includes printable production, relief, fit, SCAD, STL, 3MF, or
 printer handoff, use `$lens-cap-production` as the only production/design
 route. If artwork is not yet approved, sequence `$lens-cap-imagegen` first and

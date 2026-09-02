@@ -14,6 +14,10 @@ Use this checklist for each tagged release and for each published lens job.
       `skills/`, `docs/`, and `uv.lock` are present in the source archive, and the wheel's
       import/entry-point metadata is intact. Rebuild (do not hand-edit) any
       `*.egg-info` metadata before tagging.
+- [ ] Publish the distribution boundary clearly: a wheel-only install does not
+      provide the companion Skills or `bin/lens-cap-3mf`; a complete route uses
+      the source checkout/sdist. Confirm the target Codex host has loaded the
+      synced Skill catalog (or record an explicit `$lens-cap-*` fallback).
 - [ ] For byte-level artifact comparisons, build and test with
       `./scripts/bootstrap.py --dev --locked`; record the Python,
       NumPy/Pillow, OpenSCAD and slicer versions in the release note.
@@ -80,8 +84,9 @@ Use this checklist for each tagged release and for each published lens job.
       `light_tapered` for the compatibility default or `wide_tapered` for the
       broad, reference-like six-wedge profile; explicit numeric rib overrides
       are documented. For the 95 mm / 1.5 mm foam fixture, the 0.55 mm,
-      6.8 mm-wide, 12.5 mm-high wide profile is only a coupon starting point
-      (estimated local compression 56.7%).
+      6.8 mm-wide, 12.5 mm-high wide profile is an explicit override (the
+      preset default is 0.30 mm) and only a coupon starting point (estimated
+      local compression 56.7%).
 - [ ] A fit ring/coupon was printed and physically measured before claiming fit.
 - [ ] `lens-cap model` emits the SCAD and geometry report;
       `lens-cap export-openscad` and `lens-cap bambu-handoff` outputs are

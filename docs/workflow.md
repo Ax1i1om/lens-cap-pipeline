@@ -80,6 +80,13 @@ requested target is invalid. A `sync` plan exits successfully while showing
 the pending actions. `bin/lens-cap-skills` and `scripts/sync_skills.py` are
 portable aliases for the same entry point.
 
+Skill discovery is host state, not a production-file gate: Codex commonly
+loads the catalog at task start. After an applied sync, start a new task or
+reload the host; if automatic matching still does not show the two Skills,
+invoke `$lens-cap-imagegen` or `$lens-cap-production` explicitly. The
+clean-room rehearsal below validates the repository route, not every host's
+catalog cache.
+
 ## 1. Declare one job
 
 Run `lens-cap init jobs/name/job.toml --source ...` and edit the generated

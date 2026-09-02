@@ -48,8 +48,10 @@ versions on the host; the source lock still detects substitution, but it cannot
 make two different decoders produce identical pixels.
 
 `fit` and `print` are optional nested tables. Their complete mechanical and
-printer fields are shown below; omitting `fit` uses conservative defaults, but
-an actual fitted-cap release should record the liner decision explicitly.
+printer fields are shown below; omitting `fit` uses conservative defaults. The
+20% provisional compression default applies only when a foam liner is present;
+a bare-wall job defaults to zero compression. An actual fitted-cap release
+should still record the liner decision explicitly.
 Configs created before the friction-rib fields were introduced inherit the new
 default (`friction_ribs_enabled=true`) when rebuilt; set it explicitly to
 `false` if you need to reproduce a legacy smooth-wall model, then rerun the

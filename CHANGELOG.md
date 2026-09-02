@@ -31,6 +31,16 @@ film references, and generated artwork require separate provenance and rights.
 
 ## Unreleased
 
+* Tightens cross-host lens-cap routing for named-lens circular/front/relief
+  requests, adds optical-design/repair negative cases, and documents Codex
+  catalog-cache plus legacy top-level-trigger limitations.
+* Makes omitted compression semantic: foam jobs retain the provisional 20%
+  assumption, while bare-wall jobs default to zero; companion Skill mirrors and
+  receipts are refreshed together.
+* Documents the provider-dependent ImageGen approval handoff as an explicit
+  human gate, including the minimum raster/hash/brief/circle/fit packet needed
+  before the deterministic 3MF bridge.
+
 * Adds `scripts/build_3mf.py` and `bin/lens-cap-3mf`, the canonical one-command
   endpoint from a job file to a verified integrated native 3MF, with an
   explicit optional Bambu slice path and machine-readable release report.

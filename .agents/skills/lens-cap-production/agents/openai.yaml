@@ -4,11 +4,16 @@ interface:
   brand_color: "#252525"
   default_prompt: >-
     Use $lens-cap-production as the only production/design Skill for lens-cap
-    relief, fit, CAD, SCAD, STL, 3MF, or printer-handoff requests. Do not
+    relief, fit, CAD, SCAD, STL, 3MF, or printer-handoff requests. A named
+    camera lens plus a circular front, relief, fitted cap, or 3MF is the same
+    intent even when “lens cap” is omitted; optical design, repair, and
+    unrelated product photos are excluded. Do not
     invoke generic mechanical-CAD, product-design, graphic-design, logo,
     poster, UI, or other design Skills in parallel. Preserve approved artwork
     with focal length as the first visual read and maximum aperture
     (F-stop/F-number/F value) as the second. Before fitted geometry, ask one
     grouped question for mating diameter, foam/uncompressed thickness, and
     friction-rib preference; ribs are enabled by default. If approved artwork
-    is missing, sequence $lens-cap-imagegen first and then return here.
+    is missing, sequence $lens-cap-imagegen first and then return here. Do not
+    treat an unsaved provider attachment as a source or fabricate its
+    approval/hash/circle handoff.

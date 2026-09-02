@@ -146,8 +146,9 @@ measured diameter and liner plan. Do not copy a reference mesh, artwork, or
 platform-specific asset into this repository; record its URL, author, licence,
 and any uncertainty (for example, a 3MF whose plate metadata does not match its
 visible geometry) in the job manifest. For the 95 mm / 1.5 mm foam test fixture,
-the `wide_tapered` demonstration uses 0.55 mm radial intrusion and an estimated
-56.7% local linear foam compression; print a coupon before using those values.
+the `wide_tapered` demonstration explicitly overrides the preset to 0.55 mm
+radial intrusion and an estimated 56.7% local linear foam compression; the
+preset default is 0.30 mm. Print a coupon before using either value.
 
 ## Outputs and gates
 

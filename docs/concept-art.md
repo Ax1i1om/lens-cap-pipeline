@@ -70,6 +70,27 @@ After approval:
 4. run the production CLI from the repository;
 5. compare the process master and role masks before any external adapter.
 
+This approval handoff is an intentional human gate in Alpha. Image-generation
+providers expose their result differently (a conversation attachment, a local
+file, or a download), so the repository does not pretend it can discover or
+approve an arbitrary provider result automatically. The minimum handoff packet
+for a new Codex task is:
+
+1. the approved raster copied inside the job (normally `art/master.png`), with
+   its SHA-256;
+2. `design-brief.json` containing `approved=true`, the exact `display_text`,
+   `allowed_text`/`allowed_marks`, the prompt/provider record, anchor evidence,
+   and licence/provenance notes;
+3. a job TOML containing the current palette and, for an opaque raster, the
+   reviewed `[circle].center_px` and `radius_px`;
+4. for a fitted cap, the measured mating diameter, foam status/thickness, and
+   rib choice in the same job.
+
+Do not mark a candidate approved, invent a missing hash, or infer circle
+coordinates from a cropped preview merely to keep the chain moving. The
+clean-room rehearsal starts *after* this packet exists; it proves the
+deterministic packet-to-3MF route, not a provider-specific save/download API.
+
 For a standalone printable front, ask for the finished face diameter and
 nozzle/minimum-feature limit. For a fitted cap, ask for the actual mating
 outside diameter (前口径), the foam plan, and whether to retain the inner-wall

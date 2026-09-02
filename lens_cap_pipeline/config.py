@@ -725,7 +725,13 @@ def load_config(path: str | Path) -> PipelineConfig:
         raise ConfigError("fit.liner_thickness_mm must be > 0")
     if foam_status == "foam" and liner is None:
         raise ConfigError("fit.liner_thickness_mm is required when foam_liner_status='foam'")
-    compression = float(_number(fit_raw.get("compression_fraction", 0.20), "fit.compression_fraction"))
+    # A compression fraction has physical meaning only for a compressible
+    # liner.  Keep the historical 20% provisional assumption for foam jobs,
+    # but make a bare-wall job unambiguously zero when the field is omitted.
+    compression_default = 0.20 if foam_status == "foam" else 0.0
+    compression = float(
+        _number(fit_raw.get("compression_fraction", compression_default), "fit.compression_fraction")
+    )
     if compression < 0 or compression >= 1:
         raise ConfigError("fit.compression_fraction must be in [0,1)")
     wall = float(_number(fit_raw.get("wall_thickness_mm", 2.4), "fit.wall_thickness_mm"))
@@ -876,7 +882,7 @@ def load_config(path: str | Path) -> PipelineConfig:
         compression_is_assumption=_boolean(
             fit_raw.get("compression_is_assumption"),
             "fit.compression_is_assumption",
-            default="compression_fraction" not in fit_raw,
+            default="compression_fraction" not in fit_raw and foam_status == "foam",
         ),
         wall_thickness_mm=wall,
         bottom_thickness_mm=bottom,
@@ -982,8 +988,8 @@ def template_config(
         "cleanup": {"enabled": True, "max_area_px": 8, "max_dimension_px": 3, "ring_px": 2, "dominance": 0.6, "apply_to": ["relief"]},
         "fit": {
             "foam_liner_status": "none",
-            "compression_fraction": 0.20,
-            "compression_is_assumption": True,
+            "compression_fraction": 0.0,
+            "compression_is_assumption": False,
             "wall_thickness_mm": 2.4,
             "bottom_thickness_mm": 2.0,
             "side_height_mm": 14.0,
