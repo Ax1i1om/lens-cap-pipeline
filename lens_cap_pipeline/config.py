@@ -724,6 +724,21 @@ def load_config(path: str | Path) -> PipelineConfig:
                 raise ConfigError(
                     "fit.friction_rib_protrusion_mm must stay below the compressed foam radial gap"
                 )
+    # Guard derived dimensions as well as their individual finite inputs. A
+    # pair of very large, individually finite TOML values can overflow when
+    # summed and would otherwise produce an invalid OpenSCAD literal later.
+    if measured is not None:
+        derived_cavity = (
+            measured + 2.0 * liner * (1.0 - compression)
+            if foam_status == "foam" and liner is not None
+            else measured + bare_clearance
+        )
+        derived_outer = derived_cavity + 2.0 * wall
+        derived_height = bottom + side
+        if not all(math.isfinite(value) for value in (derived_cavity, derived_outer, derived_height)):
+            raise ConfigError("derived fitted-cap dimensions must be finite")
+        if derived_outer <= derived_cavity or derived_height <= 0:
+            raise ConfigError("derived fitted-cap dimensions are invalid")
     fit = FitSpec(
         foam_liner_status=foam_status,
         liner_material=(str(fit_raw["liner_material"]) if fit_raw.get("liner_material") is not None else None),
