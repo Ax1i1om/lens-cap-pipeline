@@ -1,0 +1,47 @@
+{
+  "schema_version": 1,
+  "job_slug": "replace-me",
+  "lens_identity": "Brand model focal-length aperture mount",
+  "allowed_text": [
+    "BRAND",
+    "MODEL",
+    "50mm",
+    "F1.4"
+  ],
+  "allowed_marks": [
+    "approved logo/coating mark, if licensed"
+  ],
+  "forbidden_legacy_tokens": [],
+  "approved_source": {
+    "path": "art/master.png",
+    "sha256": "replace-with-64-hex-digest",
+    "permission": "replace-with-author/licence-or-private-note"
+  },
+  "approved_references": [],
+  "brand_history_or_film_provenance": [
+    {
+      "claim": "replace with a qualified historical/cultural reference",
+      "source": "URL, book, catalogue, or archive record",
+      "licence": "copyright/trademark terms",
+      "notes": "distinguish verified lens use from a visual inspiration"
+    }
+  ],
+  "mechanical": {
+    "measured_diameter_mm": 95.0,
+    "foam_liner_status": "foam",
+    "liner_thickness_mm": 1.5,
+    "compression_fraction": 0.2,
+    "fit_coupon_verified": false
+  },
+  "print": {
+    "nozzle_mm": 0.2,
+    "printer": "",
+    "filament_slots": []
+  },
+  "cap_body_source": {
+    "path_or_url": "",
+    "author": "",
+    "licence": "",
+    "modifications": ""
+  }
+}

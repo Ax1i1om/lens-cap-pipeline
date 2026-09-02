@@ -1,0 +1,41 @@
+# Minimal transparent/flat-art example. Put a redistributable master.png in
+# the adjacent art/ directory before running `lens-cap process`.
+job_slug = "minimal-cap"
+source_art = "art/master.ppm"
+output_dir = "build"
+face_diameter_mm = 52.0
+grid_size = 512
+nozzle_mm = 0.2
+safe_border_mm = 0.3
+
+[circle]
+center_px = [15.5, 15.5]
+radius_px = 14
+allow_outside = false
+
+[prefilter]
+name = "median"
+size = 5
+radius = 0.8
+
+[cleanup]
+enabled = true
+max_area_px = 8
+max_dimension_px = 3
+ring_px = 2
+dominance = 0.6
+apply_to = ["relief"]
+
+[palette.black]
+index = 0
+rgb = [17, 17, 17]
+role = "base"
+height_mm = 0.0
+required = true
+
+[palette.white]
+index = 1
+rgb = [238, 238, 238]
+role = "relief"
+height_mm = 0.4
+required = true

@@ -1,0 +1,60 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lens-cap-pipeline"
+version = "0.1.0"
+description = "Reproducible, coordinate-preserving camera lens-cap artwork and relief pipeline"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
+authors = [
+  { name = "Lens Cinemod contributors" },
+]
+keywords = ["3d-printing", "openscad", "camera", "lens-cap", "relief"]
+dependencies = [
+  "numpy>=1.26,<3",
+  "Pillow>=10.0,<13",
+]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Manufacturing",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Multimedia :: Graphics",
+]
+
+[project.optional-dependencies]
+test = [
+  "pytest>=8.0",
+]
+dev = [
+  "pytest>=8.0",
+  "ruff>=0.6",
+]
+
+[project.scripts]
+lens-cap = "lens_cap_pipeline.cli:main"
+lenscap = "lens_cap_pipeline.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["lens_cap_pipeline*"]
+exclude = ["src*", "tests*", "examples*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+
+[tool.ruff]
+line-length = 110
+target-version = "py311"
+
+[tool.ruff.lint]
+# Keep CI focused on correctness and import hygiene.  Optional preview rules
+# should not turn a supported Python release into a formatting gate.
+select = ["E4", "E7", "E9", "F", "I"]

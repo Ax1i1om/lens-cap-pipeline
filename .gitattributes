@@ -1,0 +1,15 @@
+* text=auto
+*.py text eol=lf
+*.md text eol=lf
+*.toml text eol=lf
+*.json text eol=lf
+*.scad text eol=lf
+*.sh text eol=lf
+bin/lens-cap text eol=lf
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.ppm binary
+*.stl binary
+*.3mf binary
+*.gcode binary

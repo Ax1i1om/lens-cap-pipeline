@@ -1,0 +1,80 @@
+# Reproduction example for the Carl Zeiss Jena job.  Paths are relative to
+# this file so the example remains portable when the repository is cloned.
+schema_version = 1
+job_slug = "czj-jena-135-f3-5-repro"
+source_art = "art/master.ppm"
+output_dir = "build"
+face_diameter_mm = 95.0
+measured_diameter_mm = 95.0
+grid_size = 1000
+nozzle_mm = 0.2
+safe_border_mm = 0.4
+assembly_mode = "auto"
+
+[fit]
+foam_liner_status = "foam"
+liner_material = "closed-cell foam"
+liner_thickness_mm = 1.5
+compression_fraction = 0.20
+compression_is_assumption = true
+wall_thickness_mm = 2.4
+bottom_thickness_mm = 2.0
+side_height_mm = 14.0
+bare_clearance_mm = 0.40
+retention_strategy = "continuous_foam"
+
+[print]
+layer_height_mm = 0.1
+printer = "Bambu Lab A1 mini"
+filament_slots = ["black", "gray", "ivory", "red"]
+
+[circle]
+center_px = [15.5, 15.5]
+radius_px = 14
+allow_outside = false
+
+[prefilter]
+name = "median"
+size = 5
+radius = 0.8
+
+[cleanup]
+enabled = true
+max_area_px = 8
+max_dimension_px = 3
+ring_px = 2
+dominance = 0.6
+apply_to = ["relief"]
+
+[palette.black]
+index = 0
+rgb = [17, 18, 17]
+role = "base"
+height_mm = 0.0
+required = true
+
+[palette.gray]
+index = 1
+rgb = [116, 116, 113]
+role = "relief"
+height_mm = 0.4
+required = false
+
+[palette.ivory]
+index = 2
+rgb = [242, 231, 211]
+role = "relief"
+height_mm = 0.6
+required = true
+
+[palette.red]
+index = 3
+rgb = [190, 31, 35]
+role = "relief"
+height_mm = 0.8
+required = false
+
+[palette.red.detect]
+channel = "r"
+minimum = 80
+deltas = { g = 45, b = 40 }

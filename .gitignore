@@ -1,0 +1,21 @@
+# Generated job outputs
+build/
+dist/
+*.egg-info/
+.pytest_cache/
+__pycache__/
+*.py[cod]
+
+# Local editor/OS files
+.DS_Store
+.venv/
+venv/
+.env
+
+# Large slicer exports and private source art should be kept out of commits.
+*.gcode
+*.3mf
+*.stl
+result.json
+art/master.png
+art/master.jpg
