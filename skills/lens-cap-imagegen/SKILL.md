@@ -41,6 +41,10 @@ are enabled by default; no preference records `friction_ribs_enabled=true` and
 retention/liner/printability re-checks. Use that diameter as the default
 face/relief diameter; do not ask for a second relief diameter or a structure
 choice.
+If the user asks for an inner-wall shape closer to an attached reference, the
+physical stage may select production Skill's neutral `wide_tapered` rib profile;
+this changes only cap mechanics and must not redraw, degrade, or re-layout the
+approved focal-length/aperture artwork.
 
 ## Evidence and cultural anchors
 

@@ -154,6 +154,7 @@ side_height_mm = 14.0
 bare_clearance_mm = 0.40            # used when no foam
 friction_ribs_enabled = true        # default; set false for a smooth inner wall
 friction_ribs_explicit = false      # true when the user answered this choice
+friction_rib_profile = "light_tapered" # light_tapered or wide_tapered
 friction_rib_count = 12
 friction_rib_protrusion_mm = 0.10   # radial intrusion; conservative light default
 friction_rib_width_mm = 1.20        # tangential width of each rib
@@ -170,11 +171,16 @@ filament_slots = ["black", "gray", "ivory", "red"]
 The fitted-cap intake asks for the actual mating outside diameter, whether/how
 thick the foam liner is, and whether to keep the inner-wall friction ribs. The
 rib choice defaults to enabled and is recorded in `friction_ribs_explicit` when
-the user answers it; `--no-friction-ribs` produces a smooth wall. Structure is
-resolved as `auto` by the model adapter. Physical fit is `UNVERIFIABLE` until a
-test ring/coupon is printed and measured. The model report also records the
-derived rib-tip diameter, signed bare-wall interference (when no foam is used),
-and local foam compression; an intrusion that consumes
+the user answers it; `--no-friction-ribs` produces a smooth wall.
+`friction_rib_profile` selects a neutral parameter preset: `light_tapered` is
+the compatibility default (12 ribs, 0.10 mm radial intrusion, 1.20 mm width,
+8 mm axial span), while `wide_tapered` is a reference-like broad-wedge option
+(6 ribs, 8° base angle narrowing to 4.4°, near-full side-wall span). Omitted
+numeric rib fields are derived from the selected profile; explicit numeric
+values win. Structure is resolved as `auto` by the model adapter. Physical fit
+is `UNVERIFIABLE` until a test ring/coupon is printed and measured. The model
+report also records the derived rib-tip diameter, signed bare-wall interference
+(when no foam is used), and local foam compression; an intrusion that consumes
 the entire compressed foam gap is rejected before geometry generation. When
 ribs are disabled, rib-tip geometry is reported as not applicable rather than
 as an implied hidden feature.

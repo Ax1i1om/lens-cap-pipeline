@@ -48,6 +48,12 @@ friction ribs are enabled by default; ask whether the user wants to retain
 them, record the answer, and use `--no-friction-ribs` (or
 `fit.friction_ribs_enabled = false`) for a smooth wall. With foam, the default
 ribs are only a light extra-grip aid, so a fit coupon remains mandatory.
+Choose the neutral `fit.friction_rib_profile` when the rib silhouette matters:
+`light_tapered` is the compatibility default, while `wide_tapered` gives six
+broad, tapered wedges for a reference-like result. Explicit rib dimensions
+override a profile's omitted defaults. A user-supplied SCAD/3MF or platform
+page is reference material only; record provenance and regenerate geometry from
+the current measurements rather than copying its mesh.
 
 An opaque square source needs an explicit `[circle]` center/radius. A
 transparent source may use alpha as its exclusion mask only when that alpha is
@@ -94,7 +100,9 @@ the explicitly installed OpenSCAD executable to export selectors, while
 `handoff` are compatibility aliases.) Never redraw or
 retype artwork in a CAD script. Keep the mechanical body parameterized by the
 current measured diameter and liner plan. Generate and measure a short fit
-ring before a full multicolour print.
+ring before a full multicolour print. The bundled `wide_tapered` profile is
+mechanical geometry only and must not alter the approved focal-length/aperture
+artwork or introduce brand marks.
 
 For binary STL exports, the OpenSCAD adapter sorts complete triangle records
 into a deterministic order after the renderer finishes. Geometry, normals and

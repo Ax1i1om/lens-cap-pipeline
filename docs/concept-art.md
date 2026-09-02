@@ -75,6 +75,11 @@ friction ribs. Ribs default to on; only an explicit smooth-wall request
 disables them. The confirmed diameter also sets the face/relief diameter by
 default. The production Skill asks this gate before modeling and does not ask
 users to choose an assembly structure.
+If a supplied reference shows chunky internal projections, record the neutral
+`wide_tapered` profile request for production; keep the default
+`light_tapered` profile for ordinary compatibility. This mechanical choice
+must not alter the approved focal-length/aperture artwork, and the reference
+archive remains provenance-only rather than a mesh to copy.
 
 The design brief is a human/provenance contract. The CLI does not infer or
 silently fill its semantic fields: `validate` proves deterministic file

@@ -18,11 +18,15 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from .config import PipelineConfig
+from .config import (
+    PipelineConfig,
+    friction_rib_profile_defaults,
+    normalize_friction_rib_profile,
+)
 
-# Geometry contract version: the 0.2 series adds the default, parameterized
-# inner-wall retention wedges and their report fields.
-MODEL_VERSION = "0.2.0"
+# Geometry contract version: the 0.3 series adds named, generic retention
+# profiles while keeping the resolved numeric fields backwards compatible.
+MODEL_VERSION = "0.3.0"
 
 
 class ModelError(RuntimeError):
@@ -164,8 +168,20 @@ def _mechanical_values(config: PipelineConfig) -> dict[str, Any]:
     side = number_value("side_height_mm", fit_value("side_height_mm", 14.0))
     if wall < 0.4 or bottom <= 0 or side <= 0:
         raise ModelError("wall, bottom, and side dimensions are invalid")
+    try:
+        rib_profile = normalize_friction_rib_profile(
+            fit_value("friction_rib_profile", "light_tapered")
+        )
+        profile_defaults = friction_rib_profile_defaults(rib_profile, cavity, side)
+    except ValueError as exc:
+        raise ModelError(str(exc)) from exc
+
+    def rib_value(name: str) -> Any:
+        value = fit_value(name, None)
+        return profile_defaults[name] if value is None else value
+
     friction_enabled = bool_value("friction_ribs_enabled", True)
-    rib_count_raw = fit_value("friction_rib_count", 12)
+    rib_count_raw = rib_value("friction_rib_count")
     if isinstance(rib_count_raw, bool):
         raise ModelError("friction_rib_count must be an integer in [3,128]")
     try:
@@ -174,11 +190,11 @@ def _mechanical_values(config: PipelineConfig) -> dict[str, Any]:
     except (TypeError, ValueError, OverflowError) as exc:
         raise ModelError("friction_rib_count must be an integer in [3,128]") from exc
     rib_protrusion = number_value(
-        "friction_rib_protrusion_mm", fit_value("friction_rib_protrusion_mm", 0.10)
+        "friction_rib_protrusion_mm", rib_value("friction_rib_protrusion_mm")
     )
-    rib_width = number_value("friction_rib_width_mm", fit_value("friction_rib_width_mm", 1.20))
-    rib_height = number_value("friction_rib_height_mm", fit_value("friction_rib_height_mm", 8.0))
-    rib_start = number_value("friction_rib_start_mm", fit_value("friction_rib_start_mm", 1.0))
+    rib_width = number_value("friction_rib_width_mm", rib_value("friction_rib_width_mm"))
+    rib_height = number_value("friction_rib_height_mm", rib_value("friction_rib_height_mm"))
+    rib_start = number_value("friction_rib_start_mm", rib_value("friction_rib_start_mm"))
     nozzle = number_value("nozzle_mm", getattr(config, "nozzle_mm", 0.2))
     if nozzle <= 0:
         raise ModelError("nozzle_mm must be positive")
@@ -191,7 +207,12 @@ def _mechanical_values(config: PipelineConfig) -> dict[str, Any]:
             raise ModelError("friction ribs must lie within side_height_mm")
         if rib_width < nozzle:
             raise ModelError("friction_rib_width_mm must be >= nozzle_mm")
-        if rib_width >= math.pi * measured / rib_count * 0.9:
+        # Width is a tangential footprint on the actual cavity.  Use the
+        # same derived diameter as the SCAD angle calculation and config
+        # gate; using the bare measured barrel here made foam-lined jobs
+        # disagree at this boundary and could accept a config only to reject
+        # it during model generation.
+        if rib_width >= math.pi * cavity / rib_count * 0.9:
             raise ModelError("friction_rib_width_mm is too wide for the selected rib count")
         if rib_protrusion >= measured / 4.0:
             raise ModelError("friction_rib_protrusion_mm is too large for the mating diameter")
@@ -257,6 +278,7 @@ def _mechanical_values(config: PipelineConfig) -> dict[str, Any]:
         "bottom_thickness_mm": bottom,
         "side_height_mm": side,
         "total_height_mm": total,
+        "friction_rib_profile": rib_profile,
         "friction_ribs_enabled": friction_enabled,
         "friction_ribs_explicit": bool_value("friction_ribs_explicit", False),
         "friction_rib_count": rib_count,
@@ -500,6 +522,7 @@ eps = 0.001;
 base_color = {_scad_string(base_hex)};
 friction_ribs_enabled = {str(bool(fit["friction_ribs_enabled"])).lower()};
 friction_ribs_explicit = {str(bool(fit["friction_ribs_explicit"])).lower()};
+friction_rib_profile = {_scad_string(str(fit["friction_rib_profile"]))};
 friction_rib_count = {int(fit["friction_rib_count"])};
 friction_rib_protrusion_mm = {fit["friction_rib_protrusion_mm"]:.6g};
 friction_rib_width_mm = {fit["friction_rib_width_mm"]:.6g};
@@ -521,7 +544,9 @@ module cap_body() {{
     }}
 }}
 
-// Short, tapered vertical interference ribs are fused into the inner wall.
+// Profiled, tapered vertical interference ribs are fused into the inner wall.
+// `friction_rib_profile` records the generic shape family used to resolve
+// omitted dimensions; all resolved numeric values remain explicit below.
 // Each neutral wedge overlaps the wall by a derived amount and narrows toward
 // its circumferential contact tip.  It enters the nominal cavity only by
 // friction_rib_protrusion_mm.  The short smooth span at the open edge provides

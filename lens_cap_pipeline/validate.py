@@ -787,6 +787,7 @@ def validate_job(
                     "wall_thickness_mm": config.fit.wall_thickness_mm,
                     "bottom_thickness_mm": config.fit.bottom_thickness_mm,
                     "side_height_mm": config.fit.side_height_mm,
+                    "friction_rib_profile": config.fit.friction_rib_profile,
                     "friction_ribs_enabled": config.fit.friction_ribs_enabled,
                     "friction_ribs_explicit": config.fit.friction_ribs_explicit,
                     "friction_rib_count": config.fit.friction_rib_count,

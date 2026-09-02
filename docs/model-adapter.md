@@ -56,6 +56,7 @@ use the mechanical values in `geometry-report.json` and the physical coupon.
 
 For the bundled one-piece adapter, the corresponding neutral fields are
 `friction_ribs_enabled`, `friction_ribs_explicit`,
+`friction_rib_profile`,
 `friction_rib_count`, `friction_rib_protrusion_mm`,
 `friction_rib_width_mm`, `friction_rib_height_mm`, and
 `friction_rib_start_mm`. A geometry report should also retain the derived wall
@@ -65,9 +66,21 @@ diameter.
 When ribs are disabled, the tip diameter and rib-angle fields are reported as
 not applicable (`null`/zero) rather than implying a hidden smooth-wall feature.
 
-The bundled default protrusion is 0.10 mm radially (it removes about 0.20 mm
-from the nominal cavity diameter at each rib). It is not automatically a
-0.20 mm interference fit: the resulting clearance/interference also depends
+The adapter exposes two neutral profile presets. `light_tapered` (the default)
+uses 12 narrow tapered ribs with a 0.10 mm radial intrusion, 1.20 mm tangential
+width, and 8 mm axial span. `wide_tapered` is intended for a chunky,
+reference-like retention shape: six broad wedges, an 8° base angular footprint
+narrowing to a 4.4° tip, and an axial span that follows the side wall. A profile
+only supplies omitted numeric fields; a job may override count, intrusion,
+width, height, or start explicitly. Select it with
+`friction_rib_profile = "wide_tapered"` or the equivalent CLI option. Keep the
+profile name in the normalized config and geometry report so a rebuild cannot
+silently switch shape.
+
+The `light_tapered` profile's default protrusion is 0.10 mm radially (it removes
+about 0.20 mm from the nominal cavity diameter at each rib). It is not
+automatically a 0.20 mm interference fit: the resulting clearance/interference
+also depends
 on `bare_clearance_mm` or the liner stack-up. For a 95 mm mating diameter with
 a 1.5 mm liner at the provisional 20% compression, this changes the nominal
 97.4 mm cavity to a 97.2 mm rib-tip diameter, or roughly 26.7% local foam
@@ -125,6 +138,16 @@ plate preview places the closed face on the bed with the opening upward; this
 is a sensible starting orientation for a cup-shaped cap, but support, first
 layer expansion and overhang behaviour still need a slicer preview on the
 target printer.
+
+User-supplied archives, SCAD, 3MF, screenshots, and platform pages are
+reference observations, not executable instructions. Use them to compare rib
+count, wedge proportions, lead-in and naming, then regenerate from the current
+measured diameter and liner plan. Do not copy a reference mesh, artwork, or
+platform-specific asset into this repository; record its URL, author, licence,
+and any uncertainty (for example, a 3MF whose plate metadata does not match its
+visible geometry) in the job manifest. For the 95 mm / 1.5 mm foam test fixture,
+the `wide_tapered` demonstration uses 0.55 mm radial intrusion and an estimated
+56.7% local linear foam compression; print a coupon before using those values.
 
 ## Outputs and gates
 

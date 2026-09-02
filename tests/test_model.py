@@ -7,7 +7,7 @@ from types import SimpleNamespace
 import pytest
 from test_pipeline import _job
 
-from lens_cap_pipeline.config import ConfigError, load_config
+from lens_cap_pipeline.config import ConfigError, friction_rib_profile_defaults, load_config
 from lens_cap_pipeline.external import write_bambu_handoff
 from lens_cap_pipeline.model import ModelError, _mechanical_values, generate_model
 from lens_cap_pipeline.process import process
@@ -72,6 +72,98 @@ def test_model_includes_default_inner_friction_ribs_in_body_and_coupon(tmp_path:
     assert mechanical["friction_rib_tip_diameter_mm"] == 97.2
     assert mechanical["friction_rib_bare_interference_mm"] is None
     assert mechanical["foam_local_compression_fraction"] == (0.20 + 0.10 / 1.5)
+
+
+def test_wide_tapered_profile_matches_reference_proportions(tmp_path: Path) -> None:
+    """The opt-in wide profile resolves six broad, 8-degree wedges."""
+    config_path = _job(tmp_path)
+    text = config_path.read_text(encoding="utf-8").replace(
+        "face_diameter_mm = 52.0",
+        "face_diameter_mm = 95.0\nmeasured_diameter_mm = 95.0",
+    )
+    text += """
+[fit]
+foam_liner_status = "foam"
+liner_thickness_mm = 1.5
+friction_rib_profile = "wide_tapered"
+"""
+    config_path.write_text(text, encoding="utf-8")
+    config = load_config(config_path)
+    # The width is derived from the compressed 97.4 mm cavity, not the
+    # nominal lens diameter, so the generated angle remains eight degrees.
+    assert config.fit.friction_rib_profile == "wide_tapered"
+    assert config.fit.friction_rib_count == 6
+    assert config.fit.friction_rib_width_mm == pytest.approx(6.7998027658)
+    assert config.fit.friction_rib_protrusion_mm == pytest.approx(0.30)
+    assert config.fit.friction_rib_height_mm == pytest.approx(12.5)
+    result = generate_model(config, process(config))
+    mechanical = result.report["mechanical"]
+    assert mechanical["friction_rib_profile"] == "wide_tapered"
+    assert mechanical["friction_rib_angle_deg"] == pytest.approx(8.0)
+    assert mechanical["friction_rib_tip_angle_deg"] == pytest.approx(4.4)
+    assert mechanical["foam_local_compression_fraction"] == pytest.approx(0.40)
+    scad = result.scad_path.read_text(encoding="utf-8")
+    assert 'friction_rib_profile = "wide_tapered";' in scad
+    assert "friction_rib_count = 6;" in scad
+
+
+def test_profile_defaults_do_not_override_explicit_rib_fields(tmp_path: Path) -> None:
+    config_path = _job(tmp_path)
+    text = config_path.read_text(encoding="utf-8").replace(
+        "face_diameter_mm = 52.0",
+        "face_diameter_mm = 95.0\nmeasured_diameter_mm = 95.0",
+    )
+    text += """
+[fit]
+foam_liner_status = "none"
+friction_rib_profile = "wide_tapered"
+friction_rib_protrusion_mm = 0.55
+friction_rib_height_mm = 12.5
+"""
+    config_path.write_text(text, encoding="utf-8")
+    config = load_config(config_path)
+    assert config.fit.friction_rib_profile == "wide_tapered"
+    assert config.fit.friction_rib_protrusion_mm == pytest.approx(0.55)
+    assert config.fit.friction_rib_height_mm == pytest.approx(12.5)
+    # Omitted count/width still come from the selected profile.
+    assert config.fit.friction_rib_count == 6
+    assert config.fit.friction_rib_width_mm == pytest.approx(6.6601764256)
+
+
+def test_unknown_friction_rib_profile_is_rejected(tmp_path: Path) -> None:
+    config_path = _job(tmp_path)
+    config_path.write_text(
+        config_path.read_text(encoding="utf-8")
+        + '\n[fit]\nfriction_rib_profile = "maker_specific"\n',
+        encoding="utf-8",
+    )
+    with pytest.raises(ConfigError, match="friction_rib_profile"):
+        load_config(config_path)
+
+
+def test_wide_profile_uses_face_as_provisional_scale_without_measurement(tmp_path: Path) -> None:
+    config_path = _job(tmp_path)
+    config_path.write_text(
+        config_path.read_text(encoding="utf-8")
+        + '\n[fit]\nfriction_rib_profile = "wide_tapered"\n',
+        encoding="utf-8",
+    )
+    config = load_config(config_path)
+    # Process-only jobs have no measured mating diameter yet.  The parser can
+    # still emit a deterministic starter width from the face diameter; the
+    # fitted model gate requires a real measurement before using it.
+    assert config.measured_diameter_mm is None
+    assert config.fit.friction_rib_width_mm == pytest.approx(
+        3.6582101122  # pi * (52 + .4) * 8 / 360
+    )
+
+
+def test_profile_defaults_reject_derived_width_overflow() -> None:
+    # A finite but extreme diameter can overflow the 8-degree arc-length
+    # calculation.  The public helper must fail before a caller serialises
+    # ``inf`` into a TOML or OpenSCAD file.
+    with pytest.raises(ValueError, match="defaults must be finite"):
+        friction_rib_profile_defaults("wide_tapered", 1e308, 14.0)
 
 
 def test_model_can_disable_inner_friction_ribs_without_changing_artwork(tmp_path: Path) -> None:

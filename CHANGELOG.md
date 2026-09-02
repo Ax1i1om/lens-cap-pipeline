@@ -3,7 +3,8 @@
 ## Unreleased
 
 * Added generic, manifest-recorded inner-wall friction wedges to fitted caps.
-  They are enabled by default with a conservative 0.10 mm radial intrusion,
+  They are enabled by default; the `light_tapered` compatibility profile uses a
+  conservative 0.10 mm radial intrusion,
   can be explicitly disabled for a smooth wall, and are reused in fit coupons.
   Geometry reports now record the rib parameters, signed bare-wall clearance /
   interference, and provisional local-foam compression estimate; physical fit
@@ -14,6 +15,12 @@
 * Generalized brand/coating/series marks so no maker-specific glyph is a
   built-in default. The image-generation and
   production Skills now collect the rib preference in the same grouped intake.
+* Added neutral `light_tapered` and `wide_tapered` rib profiles. The former is
+  the compatibility default; the latter provides six broad, tapered wedges for
+  reference-like inner-wall geometry while remaining brand-agnostic. Explicit
+  rib dimensions override a profile's defaults. User-supplied SCAD/3MF archives
+  are documented as reference observations only and are never copied into the
+  project; the 95 mm / 1.5 mm foam wide-profile example remains coupon-gated.
 
 * Initial public project skeleton with a deterministic artwork process stage,
   role/mask reports, portable CLI, examples, tests and CI.

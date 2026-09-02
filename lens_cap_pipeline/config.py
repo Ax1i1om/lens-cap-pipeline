@@ -26,6 +26,84 @@ class ConfigError(ValueError):
 _NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]*$")
 _CHANNELS = {"r": 0, "g": 1, "b": 2}
 
+# Mechanical retention profiles are deliberately generic.  They describe
+# the *shape family* of an inner-wall friction feature, not a particular
+# maker, lens, or third-party model.  The numeric values are only defaults;
+# every field remains directly overridable in a job's ``[fit]`` table.
+FRICTION_RIB_PROFILE_NAMES = ("light_tapered", "wide_tapered")
+
+
+def normalize_friction_rib_profile(value: Any) -> str:
+    """Return a canonical retention profile name.
+
+    Keeping this small parser shared by config/model/CLI prevents spelling
+    drift at the boundaries.  We intentionally accept only the two canonical
+    names so a typo cannot silently select a different mechanical preset.
+    """
+
+    if value is None:
+        return "light_tapered"
+    profile = str(value).strip().lower()
+    if profile not in FRICTION_RIB_PROFILE_NAMES:
+        choices = ", ".join(FRICTION_RIB_PROFILE_NAMES)
+        raise ValueError(f"friction_rib_profile must be one of: {choices}")
+    return profile
+
+
+def friction_rib_profile_defaults(
+    profile: str,
+    cavity_diameter_mm: float,
+    side_height_mm: float,
+) -> dict[str, float | int]:
+    """Resolve defaults for fields omitted from a ``[fit]`` table.
+
+    ``wide_tapered`` uses an 8-degree *angular* base footprint.  Its
+    tangential width is therefore derived from the current cavity diameter,
+    which keeps the visual/mechanical proportion stable across lens sizes.
+    The caller is responsible for applying these values only to keys that
+    were not explicitly supplied by the user.
+    """
+
+    canonical = normalize_friction_rib_profile(profile)
+    try:
+        cavity = float(cavity_diameter_mm)
+        side = float(side_height_mm)
+    except (TypeError, ValueError, OverflowError) as exc:
+        raise ValueError("cavity_diameter_mm and side_height_mm must be finite numbers") from exc
+    if not math.isfinite(cavity) or cavity <= 0:
+        raise ValueError("cavity_diameter_mm must be a positive finite number")
+    if not math.isfinite(side):
+        raise ValueError("side_height_mm must be finite")
+    if canonical == "wide_tapered":
+        # Arc length at the cavity radius for an 8-degree base angle.  The
+        # model later recomputes/records the actual angle after any explicit
+        # width override.
+        defaults: dict[str, float | int] = {
+            "friction_rib_count": 6,
+            "friction_rib_protrusion_mm": 0.30,
+            "friction_rib_width_mm": math.pi * cavity * 8.0 / 360.0,
+            "friction_rib_height_mm": side - 1.50,
+            "friction_rib_start_mm": 1.0,
+        }
+    else:
+        defaults = {
+            "friction_rib_count": 12,
+            "friction_rib_protrusion_mm": 0.10,
+            "friction_rib_width_mm": 1.20,
+            "friction_rib_height_mm": 8.0,
+            "friction_rib_start_mm": 1.0,
+        }
+    # Inputs are individually finite, but the derived arc length can still
+    # overflow for an extreme (yet syntactically valid) diameter.  Reject it
+    # here so direct callers and ``init`` cannot emit ``inf`` into TOML/SCAD.
+    if not all(
+        math.isfinite(float(value))
+        for value in defaults.values()
+        if isinstance(value, (int, float))
+    ):
+        raise ValueError("friction rib profile defaults must be finite")
+    return defaults
+
 
 @dataclass(frozen=True)
 class PaletteSpec:
@@ -129,6 +207,10 @@ class FitSpec:
     friction_rib_width_mm: float = 1.20
     friction_rib_height_mm: float = 8.0
     friction_rib_start_mm: float = 1.0
+    # Canonical shape family used only for omitted rib fields.  Kept at the
+    # end of the dataclass to preserve positional compatibility with the
+    # original FitSpec constructor.
+    friction_rib_profile: str = "light_tapered"
 
     def public(self) -> dict[str, Any]:
         return {
@@ -148,6 +230,7 @@ class FitSpec:
             "friction_rib_width_mm": self.friction_rib_width_mm,
             "friction_rib_height_mm": self.friction_rib_height_mm,
             "friction_rib_start_mm": self.friction_rib_start_mm,
+            "friction_rib_profile": self.friction_rib_profile,
             "retention_strategy": self.retention_strategy,
         }
 
@@ -651,6 +734,12 @@ def load_config(path: str | Path) -> PipelineConfig:
     bare_clearance = float(_number(fit_raw.get("bare_clearance_mm", 0.40), "fit.bare_clearance_mm"))
     if wall < 0.4 or bottom < 0.8 or side < 1.0 or bare_clearance < 0:
         raise ConfigError("fit wall/bottom/side/clearance values are outside safe limits")
+    try:
+        rib_profile = normalize_friction_rib_profile(
+            fit_raw.get("friction_rib_profile", "light_tapered")
+        )
+    except ValueError as exc:
+        raise ConfigError(str(exc)) from exc
     # Retention ribs are intentionally independent of optical identity.  The
     # canonical spelling is ``friction_ribs_enabled``; the short ``friction_ribs``
     # alias keeps hand-written jobs readable.  Missing values mean enabled,
@@ -673,23 +762,59 @@ def load_config(path: str | Path) -> PipelineConfig:
         "fit.friction_ribs_explicit",
         default=friction_key is not None,
     )
+    # Resolve the profile against the derived cavity, while preserving the
+    # precedence rule that an explicitly supplied field always wins.  A
+    # process-only config has no measured mating diameter yet; its face size
+    # is a provisional scale for the width default and will be recomputed at
+    # the model gate once a measurement is present.
+    profile_diameter = float(measured if measured is not None else face)
+    profile_cavity = (
+        profile_diameter + 2.0 * liner * (1.0 - compression)
+        if foam_status == "foam" and liner is not None
+        else profile_diameter + bare_clearance
+    )
+    try:
+        profile_defaults = friction_rib_profile_defaults(
+            rib_profile,
+            profile_cavity,
+            side,
+        )
+    except ValueError as exc:
+        raise ConfigError(str(exc)) from exc
+
     rib_count = int(
-        _number(fit_raw.get("friction_rib_count", 12), "fit.friction_rib_count", integer=True)
+        _number(
+            fit_raw.get("friction_rib_count", profile_defaults["friction_rib_count"]),
+            "fit.friction_rib_count",
+            integer=True,
+        )
     )
     rib_protrusion = float(
         _number(
-            fit_raw.get("friction_rib_protrusion_mm", 0.10),
+            fit_raw.get(
+                "friction_rib_protrusion_mm",
+                profile_defaults["friction_rib_protrusion_mm"],
+            ),
             "fit.friction_rib_protrusion_mm",
         )
     )
     rib_width = float(
-        _number(fit_raw.get("friction_rib_width_mm", 1.20), "fit.friction_rib_width_mm")
+        _number(
+            fit_raw.get("friction_rib_width_mm", profile_defaults["friction_rib_width_mm"]),
+            "fit.friction_rib_width_mm",
+        )
     )
     rib_height = float(
-        _number(fit_raw.get("friction_rib_height_mm", 8.0), "fit.friction_rib_height_mm")
+        _number(
+            fit_raw.get("friction_rib_height_mm", profile_defaults["friction_rib_height_mm"]),
+            "fit.friction_rib_height_mm",
+        )
     )
     rib_start = float(
-        _number(fit_raw.get("friction_rib_start_mm", 1.0), "fit.friction_rib_start_mm")
+        _number(
+            fit_raw.get("friction_rib_start_mm", profile_defaults["friction_rib_start_mm"]),
+            "fit.friction_rib_start_mm",
+        )
     )
     # A process-only artwork job has no fitted body yet, so do not reject it
     # for a retention dimension that the model stage will never consume.  The
@@ -711,11 +836,15 @@ def load_config(path: str | Path) -> PipelineConfig:
         # Use the actual mating diameter for the circumferential pitch.  A
         # synthetic 1 mm floor would make tiny, otherwise valid fixtures pass
         # the width/protrusion gate and then fail later in the model stage.
-        rib_diameter = float(measured if measured is not None else face)
-        pitch = math.pi * rib_diameter / rib_count
+        # Angular width follows the derived cavity, while the broad
+        # intrusion sanity bound remains tied to the actual mating diameter
+        # (or the declared face scale for a process-only job).
+        pitch_diameter = profile_cavity
+        mating_diameter = float(measured if measured is not None else face)
+        pitch = math.pi * pitch_diameter / rib_count
         if rib_width >= pitch * 0.9:
             raise ConfigError("fit.friction_rib_width_mm is too wide for the selected rib count")
-        if rib_protrusion >= rib_diameter / 4.0:
+        if rib_protrusion >= mating_diameter / 4.0:
             raise ConfigError("fit.friction_rib_protrusion_mm is too large for the mating diameter")
         if foam_status == "foam":
             assert liner is not None
@@ -761,6 +890,7 @@ def load_config(path: str | Path) -> PipelineConfig:
         friction_rib_height_mm=rib_height,
         friction_rib_start_mm=rib_start,
         retention_strategy=str(fit_raw.get("retention_strategy", "auto")),
+        friction_rib_profile=rib_profile,
     )
 
     layer = float(_number(print_section.get("layer_height_mm", 0.1), "print.layer_height_mm"))
@@ -860,6 +990,7 @@ def template_config(
             "bare_clearance_mm": 0.40,
             "friction_ribs_enabled": True,
             "friction_ribs_explicit": False,
+            "friction_rib_profile": "light_tapered",
             "friction_rib_count": 12,
             "friction_rib_protrusion_mm": 0.10,
             "friction_rib_width_mm": 1.20,

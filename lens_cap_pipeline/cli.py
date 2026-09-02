@@ -8,7 +8,14 @@ import os
 import sys
 from pathlib import Path
 
-from .config import ConfigError, load_config, template_config
+from .config import (
+    FRICTION_RIB_PROFILE_NAMES,
+    ConfigError,
+    friction_rib_profile_defaults,
+    load_config,
+    normalize_friction_rib_profile,
+    template_config,
+)
 from .external import ExternalToolError, doctor, export_openscad, write_bambu_handoff
 from .model import ModelError, ModelResult, generate_model
 from .process import ProcessError, process, sha256_file
@@ -95,7 +102,7 @@ def _write_config(path: Path, data: dict) -> None:
             "liner_material", "liner_thickness_mm", "compression_fraction",
             "compression_is_assumption", "wall_thickness_mm", "bottom_thickness_mm",
             "side_height_mm", "bare_clearance_mm", "friction_ribs_enabled",
-            "friction_ribs_explicit", "friction_rib_count", "friction_rib_protrusion_mm",
+            "friction_ribs_explicit", "friction_rib_profile", "friction_rib_count", "friction_rib_protrusion_mm",
             "friction_rib_width_mm", "friction_rib_height_mm", "friction_rib_start_mm",
             "retention_strategy",
         ):
@@ -178,6 +185,12 @@ def _parser() -> argparse.ArgumentParser:
         action=argparse.BooleanOptionalAction,
         default=None,
         help="enable inner-wall friction ribs (default: enabled; use --no-friction-ribs to disable)",
+    )
+    init_parser.add_argument(
+        "--friction-rib-profile",
+        choices=FRICTION_RIB_PROFILE_NAMES,
+        default=None,
+        help="generic rib shape preset; explicit fit dimensions still override it",
     )
     init_parser.add_argument("--nozzle", type=float, default=0.2)
     init_parser.add_argument("--output-dir", default="build")
@@ -311,6 +324,11 @@ def main(argv: list[str] | None = None) -> int:
             data = template_config(_init_source_for_config(args.source, target), face, args.output_dir)
             data["job_slug"] = args.job_slug
             data["nozzle_mm"] = args.nozzle
+            # Keep one fit mapping alive for all optional mechanical flags.
+            # Previously this was created only inside the foam branch, so
+            # ``init --friction-rib-profile ...`` without ``--foam-thickness``
+            # raised UnboundLocalError before it could write a starter job.
+            fit_data = data.setdefault("fit", {})
             if args.measured_diameter is not None:
                 data["measured_diameter_mm"] = args.measured_diameter
                 if args.face_diameter is None:
@@ -320,7 +338,6 @@ def main(argv: list[str] | None = None) -> int:
                 # Keeping wall, rib, and printability defaults in the emitted
                 # file makes the job self-describing and prevents a future
                 # schema change from silently changing an old starter job.
-                fit_data = data.setdefault("fit", {})
                 fit_data.update(
                     {
                         "foam_liner_status": "foam",
@@ -330,6 +347,30 @@ def main(argv: list[str] | None = None) -> int:
                         "retention_strategy": "continuous_foam",
                     }
                 )
+            if args.friction_rib_profile is not None:
+                # Apply the selected preset to the starter values.  The
+                # emitted TOML remains fully editable: any later explicit
+                # field overrides the profile on reload.
+                profile = normalize_friction_rib_profile(args.friction_rib_profile)
+                profile_base = (
+                    float(args.measured_diameter)
+                    if args.measured_diameter is not None
+                    else float(face)
+                )
+                if fit_data.get("foam_liner_status") == "foam" and fit_data.get("liner_thickness_mm") is not None:
+                    profile_cavity = profile_base + 2.0 * float(fit_data["liner_thickness_mm"]) * (
+                        1.0 - float(fit_data.get("compression_fraction", 0.20))
+                    )
+                else:
+                    profile_cavity = profile_base + float(fit_data.get("bare_clearance_mm", 0.40))
+                defaults = friction_rib_profile_defaults(
+                    profile,
+                    profile_cavity,
+                    float(fit_data.get("side_height_mm", 14.0)),
+                )
+                fit_data["friction_rib_profile"] = profile
+                for key, value in defaults.items():
+                    fit_data[key] = value
             # Keep the default in the generated config so a job is portable
             # and self-describing.  If the user explicitly chose a flag, mark
             # that decision separately from the enabled/disabled value.

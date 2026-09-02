@@ -76,6 +76,12 @@ Use this checklist for each tagged release and for each published lens job.
       radial protrusion, tangential width, and axial start/height. When foam and
       ribs are combined, check local rib interference on the coupon; nominal
       cavity diameter alone is not evidence of safe compression or retention.
+- [ ] The selected neutral `friction_rib_profile` is recorded. Use
+      `light_tapered` for the compatibility default or `wide_tapered` for the
+      broad, reference-like six-wedge profile; explicit numeric rib overrides
+      are documented. For the 95 mm / 1.5 mm foam fixture, the 0.55 mm,
+      6.8 mm-wide, 12.5 mm-high wide profile is only a coupon starting point
+      (estimated local compression 56.7%).
 - [ ] A fit ring/coupon was printed and physically measured before claiming fit.
 - [ ] `lens-cap model` emits the SCAD and geometry report;
       `lens-cap export-openscad` and `lens-cap bambu-handoff` outputs are

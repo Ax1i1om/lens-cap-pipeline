@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
 from PIL import Image, ImageDraw
 
 from lens_cap_pipeline.cli import main
@@ -85,6 +86,62 @@ def test_init_defaults_to_inner_friction_ribs_and_records_default(tmp_path: Path
     assert config.fit.friction_ribs_explicit is False
     assert config.fit.friction_rib_count == 12
     assert config.fit.friction_rib_protrusion_mm == 0.10
+
+
+def test_init_can_select_wide_tapered_profile(tmp_path: Path) -> None:
+    source = tmp_path / "master.png"
+    image = Image.new("RGBA", (64, 64), (0, 0, 0, 0))
+    ImageDraw.Draw(image).ellipse((4, 4, 59, 59), fill=(17, 18, 17, 255))
+    image.save(source)
+    config_path = tmp_path / "jobs" / "wide.toml"
+    assert main(
+        [
+            "init",
+            str(config_path),
+            "--source",
+            str(source),
+            "--measured-diameter",
+            "95",
+            "--foam-thickness",
+            "1.5",
+            "--friction-rib-profile",
+            "wide_tapered",
+        ]
+    ) == 0
+    config = load_config(config_path)
+    assert config.fit.friction_rib_profile == "wide_tapered"
+    assert config.fit.friction_rib_count == 6
+    assert config.fit.friction_rib_protrusion_mm == 0.30
+    assert config.fit.friction_rib_width_mm == pytest.approx(6.7998027658)
+    assert config.fit.friction_rib_height_mm == 12.5
+    generated = config_path.read_text(encoding="utf-8")
+    assert 'friction_rib_profile = "wide_tapered"' in generated
+
+
+def test_init_can_select_profile_without_foam_option(tmp_path: Path) -> None:
+    """Profile selection must work for a bare fitted cap as well as foam."""
+    source = tmp_path / "master.png"
+    image = Image.new("RGBA", (64, 64), (0, 0, 0, 0))
+    ImageDraw.Draw(image).ellipse((4, 4, 59, 59), fill=(17, 18, 17, 255))
+    image.save(source)
+    config_path = tmp_path / "jobs" / "wide-bare.toml"
+    assert main(
+        [
+            "init",
+            str(config_path),
+            "--source",
+            str(source),
+            "--measured-diameter",
+            "95",
+            "--friction-rib-profile",
+            "wide_tapered",
+        ]
+    ) == 0
+    config = load_config(config_path)
+    assert config.fit.friction_rib_profile == "wide_tapered"
+    # Bare cavity = measured diameter + 0.40 mm clearance.
+    assert config.fit.friction_rib_width_mm == pytest.approx(6.6601764256)
+    assert config.fit.friction_rib_count == 6
 
 
 def test_init_can_explicitly_disable_inner_friction_ribs(tmp_path: Path) -> None:

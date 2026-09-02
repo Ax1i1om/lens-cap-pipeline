@@ -132,17 +132,25 @@ default; record an explicit smooth-wall choice with `--no-friction-ribs` or
 `fit.friction_ribs_enabled = false` (use `--friction-ribs` to make the enabled
 choice explicit). A fitted job derives the face/relief
 diameter from `measured_diameter_mm` unless an explicit `face_diameter_mm` override is
-documented. The default radial rib intrusion is a conservative 0.10 mm. With
-foam, ribs are only a light extra-grip aid and may still locally compress the
-liner. For a bare wall, the report also records signed nominal diametral
-interference (positive means interference, negative means clearance); with the
-default 0.40 mm bare clearance and 0.10 mm intrusion, about 0.20 mm of
-diametral clearance remains. Mechanical fit remains unverified until a coupon
-is printed and measured.
+documented. Two neutral rib profiles are available. `light_tapered` (the
+default) keeps 12 narrow, shallow tapered ribs with 0.10 mm radial intrusion
+for compatibility and light extra grip. `wide_tapered` uses six broad wedge
+ribs with an 8° base angle, a 4.4° tip angle, and near-full side-wall span when
+a reference-like chunky profile is desired. Select it with
+`--friction-rib-profile wide_tapered` or `[fit].friction_rib_profile`; explicit
+count, intrusion, width, and height values override profile defaults. Profiles
+are neutral mechanical geometry, not brand artwork. With foam, either profile
+may locally compress the liner, so mechanical fit remains unverified until a
+same-material coupon is printed and measured. For a 95 mm mating diameter,
+1.5 mm foam, and provisional 20% compression, the reference test uses
+`wide_tapered` at about 0.55 mm intrusion, 6.8 mm width, and 12.5 mm height
+(estimated local compression 56.7%), not a universal fit prescription.
 Pre-rib configurations inherit the new enabled default when rebuilt; to
 reproduce a legacy smooth wall, set `friction_ribs_enabled = false`, rerun the
 process/model stages, and do not reuse an old model as if it matched the new
-configuration.
+configuration. User-supplied SCAD/3MF archives and MakerWorld pages are
+reference observations only: record their provenance and licence, but regenerate
+current geometry from measured inputs instead of copying meshes or assets.
 
 ## Fidelity and safety gates
 
