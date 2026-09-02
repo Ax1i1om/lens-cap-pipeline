@@ -66,8 +66,9 @@ SHA-256），重复执行不改动未变化文件。检测到用户改动时不�
 
 > **分发边界（Alpha）**：只用 `pip install` 安装 CLI wheel 不会带上两个
 > companion Skills、`bin/lens-cap-3mf` 或 `tools/3mf_adapter`。要走完整的
-> “图稿审批 → 3MF”链路，请使用 Git checkout 或 source distribution，并从
-> 仓库运行 Skill 同步器和 3MF bridge；wheel 只覆盖核心 Python 处理 API。
+> “图稿审批 → 3MF”链路，请使用 Git checkout，或先**解压 source distribution
+> 并从解压目录运行** Skill 同步器和 3MF bridge；仅执行 `pip install` 仍不会
+> 安装这些 companion 文件。wheel 只覆盖核心 Python 处理 API。
 
 Codex 通常在任务启动时缓存 Skill 目录；完成同步后请新建任务或刷新宿主，
 再测试自动路由。仓库的 clean-room 脚本能验证文件生产链，但不能替代某一

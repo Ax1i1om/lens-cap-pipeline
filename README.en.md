@@ -65,9 +65,10 @@ remove stale files. Use `--environment codex|claude` for host defaults, with
 
 > **Alpha distribution boundary:** installing only the CLI wheel does not
 > include the two companion Skills, `bin/lens-cap-3mf`, or
-> `tools/3mf_adapter`. Use a Git checkout or the source distribution for the
-> complete “approved artwork → 3MF” route, and run the repository Skill sync
-> and bridge from there. The wheel covers the core Python processing API only.
+> `tools/3mf_adapter`. Use a Git checkout, or unpack the source distribution
+> and run the repository Skill sync and bridge from the unpacked tree for the
+> complete “approved artwork → 3MF” route; `pip install` alone does not install
+> those companion files. The wheel covers the core Python processing API only.
 
 Codex commonly caches its Skill catalog when a task starts. After applying a
 sync, start a new task or reload the host before testing automatic routing. If
