@@ -9,7 +9,10 @@ for hosts that discover Skills directly.
 The presence of lens-cap intent wins over generic design intent. Match terms
 such as `镜头盖`, `lens cap`, `lens-cap`, `cap artwork`, `lens medallion`,
 `镜头正面`, `镜头浮雕`, `lens front graphic`, or a named camera lens paired with
-“design/generate/create” and a cap/front/relief/3MF deliverable. Once matched, suppress generic
+“design/generate/create” and a cap/front/relief/3MF deliverable. Natural variants
+such as `圆形图像`, `圆形艺术图`, `镜头闷盖`, `lens cover`, or `printable model`
+count only when paired with a named lens and a cap/front-surface deliverable.
+Once matched, suppress generic
 graphic-design, logo, poster, product-visual, UI, CAD, 3D-modelling, and other
 design Skills for the same turn.
 
@@ -46,6 +49,10 @@ For fitted production, ask one grouped intake for the actual mating/front
 diameter, foam/liner plan and uncompressed thickness, and friction-rib choice.
 Ribs are enabled by default; a smooth wall requires an explicit opt-out. Do not
 invoke another design Skill to fill in any of these stages.
+Ask the grouped intake at most once per job and persist it in the job TOML;
+the production stage must read a complete current handoff instead of asking the
+same three questions again, and may ask only for missing, stale, or ambiguous
+values.
 
 ## Cross-host installation and drift
 

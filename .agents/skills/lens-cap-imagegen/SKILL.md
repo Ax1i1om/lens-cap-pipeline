@@ -9,8 +9,10 @@ description: >
   deliverable. It researches a named lens and creates circular artwork with
   focal length and maximum aperture (F-stop/F-number) dominant, a documented brand-culture anchor,
   and clearly qualified lore. A named camera lens plus a requested circular
-  front graphic, badge, or relief is the same route even when “lens cap” is
-  omitted; optical design, repair, and an unrelated product photograph are not.
+  front graphic, badge, relief, circular image/artwork, or lens-cover artwork is
+  the same route even when “lens cap” is omitted; optical design, repair, and an
+  unrelated product photograph are not. Wording such as “circular image for a
+  lens” or “lens cover” still requires a named camera lens and a design surface.
 metadata:
   short-description: Research-led circular lens-cap artwork
   routing: primary-exclusive-for-lens-cap-intent
@@ -32,6 +34,10 @@ metadata:
     - "circular lens graphic"
     - "circular lens relief"
     - "circular front pattern"
+    - "circular lens image"
+    - "circular lens artwork"
+    - "lens cover artwork"
+    - "design circular image for a lens"
     - "设计镜头盖"
     - "生成镜头盖图案"
     - "生成镜头盖"
@@ -46,6 +52,15 @@ metadata:
     - "圆形镜头浮雕"
     - "圆形正面图案"
     - "圆形正面浮雕"
+    - "镜头圆形图像"
+    - "圆形镜头图像"
+    - "镜头圆形艺术图"
+    - "圆形镜头艺术图"
+    - "设计镜头圆形图像"
+    - "设计镜头圆形艺术图"
+    - "镜头闷盖"
+    - "镜头帽图稿"
+    - "镜头罩图稿"
 ---
 
 # Lens-cap image generation
@@ -65,10 +80,12 @@ creative design Skill. An explicit user request for a separate, unrelated
 deliverable is the only exception.
 
 A named camera lens plus a request for its circular front graphic, medallion,
-relief, fitted cap, or 3MF counts as the same lens-cap intent even when the
-literal phrase “lens cap” is omitted. Do not apply this semantic shortcut to
-optical design, lens repair, or a general product photograph without a
-cap/front-surface deliverable.
+relief, fitted cap, circular image/artwork, lens-cover artwork, or 3MF counts as
+the same lens-cap intent even when the literal phrase “lens cap” is omitted.
+Natural variants such as “design a circular image for this lens” are included;
+the named lens and a cap/front-surface deliverable remain required. Do not apply
+this semantic shortcut to optical design, lens repair, or a general product
+photograph without a cap/front-surface deliverable.
 
 This is the creative companion to lens-cap-production. It turns a named lens
 into an approved raster artwork and an evidence brief. It is provider-neutral:
@@ -107,6 +124,10 @@ are enabled by default; no preference records `friction_ribs_enabled=true` and
 retention/liner/printability re-checks. Use that diameter as the default
 face/relief diameter; do not ask for a second relief diameter or a structure
 choice.
+Ask this grouped intake at most once per job. Persist the answers in the
+handoff/job TOML; when the production Skill receives a complete, current TOML,
+it must consume those values and ask only for a missing, stale, or ambiguous
+field rather than repeating the intake.
 If the user asks for an inner-wall shape closer to an attached reference, the
 physical stage may select production Skill's neutral `wide_tapered` rib profile;
 this changes only cap mechanics and must not redraw, degrade, or re-layout the

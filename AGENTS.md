@@ -16,6 +16,9 @@ design, lens repair, or an unrelated product image without a cap/front-surface
 deliverable. If optical/repair language is present, it wins unless the same
 request also contains an explicit cap-surface phrase such as `lens cap`,
 `front graphic`, `lens relief`, `镜头盖`, or `正面浮雕`.
+Natural variants such as “为这颗镜头设计圆形图像／圆形艺术图”、“镜头闷盖”，
+or “make a printable model for this lens” follow the same rule only when the
+named lens and cap/front-surface deliverable are both clear.
 
 When the request includes printable production, relief, fit, SCAD, STL, 3MF, or
 printer handoff, use `$lens-cap-production` as the only production/design
@@ -40,6 +43,8 @@ liner plan and uncompressed thickness, and friction-rib preference as one
 grouped intake. Ribs are on by default; a smooth-wall choice must be explicit.
 The confirmed diameter drives the default face/relief size, and focal length
 and maximum aperture remain the artwork's first and second visual reads.
+Ask this intake once, persist it in the job TOML, and have the production stage
+reuse a complete current handoff instead of repeating the same questions.
 
 When a host stores Skills outside this checkout, use the repository's
 read-only-by-default `scripts/install_skills.py` (or `bin/lens-cap-skills`) to

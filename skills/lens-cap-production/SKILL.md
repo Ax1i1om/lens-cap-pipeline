@@ -8,9 +8,11 @@ description: >
   invoke those skills in parallel. It turns approved lens-cap artwork and
   current fit measurements into a reproducible mask, relief, OpenSCAD, and
   printer-handoff package. A named camera lens plus a requested circular front,
-  relief, fitted cap, or 3MF is the same route even when “lens cap” is omitted;
-  optical design, repair, and an unrelated product photograph are not. It is
-  not the route for image-only concept art.
+  relief, fitted cap, circular image/artwork, lens-cover model, printable model,
+  or 3MF is the same route even when “lens cap” is omitted; optical design,
+  repair, and an unrelated product photograph are not. Natural wording such as
+  “make a printable model for this lens” still requires a named lens and a
+  front/cap deliverable. It is not the route for image-only concept art.
 metadata:
   short-description: Reproducible lens-cap production
   routing: primary-exclusive-for-lens-cap-production
@@ -40,6 +42,11 @@ metadata:
     - "lens relief model"
     - "circular lens relief"
     - "circular front pattern"
+    - "circular lens image"
+    - "circular lens artwork"
+    - "lens cover model"
+    - "printable model for a lens"
+    - "printable lens model"
     - "镜头盖模型"
     - "镜头盖卡合"
     - "可打印镜头盖"
@@ -53,6 +60,17 @@ metadata:
     - "镜头浮雕模型"
     - "圆形镜头浮雕"
     - "圆形正面浮雕"
+    - "镜头圆形图像"
+    - "圆形镜头图像"
+    - "镜头圆形艺术图"
+    - "圆形镜头艺术图"
+    - "设计镜头圆形图像"
+    - "设计镜头圆形艺术图"
+    - "镜头闷盖模型"
+    - "镜头帽模型"
+    - "镜头罩模型"
+    - "可打印镜头模型"
+    - "镜头可打印模型"
 ---
 
 # Lens-cap production
@@ -70,9 +88,12 @@ research, OpenSCAD, and the repository CLI is allowed. An explicit request for
 a separate unrelated deliverable is the only exception.
 
 A named camera lens plus a request for a circular front surface, relief, fitted
-cap, or 3MF is production intent even when the literal phrase “lens cap” is
-omitted. Do not route optical design, lens repair, or an unrelated product
-photograph through this Skill solely because a lens name appears.
+cap, circular image/artwork, lens-cover model, printable model, or 3MF is
+production intent even when the literal phrase “lens cap” is omitted. Natural
+variants such as “make a printable model for this lens” are included only when
+the requested object is the cap/front surface. Do not route optical design,
+lens repair, or an unrelated product photograph through this Skill solely
+because a lens name appears.
 
 This skill is the decision layer for the open-source lens-cap-pipeline
 repository. Keep research, approved artwork, deterministic processing,
@@ -85,7 +106,9 @@ production checks.
 ## Intake contract
 
 For concept art only, do not invent mechanical dimensions. For a fitted cap,
-ask one compact grouped question before generating geometry:
+inspect the current job TOML/handoff first. Ask the grouped intake at most once per job: if the current job already contains all three physical fields below,
+consume them without asking again; otherwise ask one compact grouped question
+before generating geometry:
 
 1. What is the actual outside diameter of the cylindrical surface the cap
    grips (前口径, in millimetres)?

@@ -51,6 +51,10 @@ def test_cross_context_trigger_and_intake_contract_is_present() -> None:
         "lens front graphic",
         "lens artwork",
         "circular lens graphic",
+        "circular lens image",
+        "circular lens artwork",
+        "lens cover artwork",
+        "design circular image for a lens",
     ):
         assert phrase in imagegen
     for phrase in (
@@ -62,6 +66,10 @@ def test_cross_context_trigger_and_intake_contract_is_present() -> None:
         "lens front relief",
         "lens front 3mf",
         "circular lens relief",
+        "circular lens image",
+        "lens cover model",
+        "printable model for a lens",
+        "printable lens model",
     ):
         assert phrase.lower() in production.lower()
     for document in (imagegen, production):
@@ -71,6 +79,7 @@ def test_cross_context_trigger_and_intake_contract_is_present() -> None:
         assert "actual" in lowered and "diameter" in lowered
         assert "foam" in lowered and "friction" in lowered and "default" in lowered
         assert "only" in lowered and "design skill" in lowered
+        assert "once per job" in lowered or "每个任务最多询问一次" in document
     assert "焦段是最大、第一阅读层级" in imagegen_zh
     assert "最大光圈（F 值）是第二大阅读层级" in imagegen_zh
     assert "镜头实际卡合的圆柱外径" in production_zh
@@ -125,17 +134,33 @@ def test_manifest_named_lens_surface_semantic_route_is_scoped() -> None:
         "front surface",
         "relief",
         "3mf",
+        "circular image",
+        "circular artwork",
+        "lens cover",
+        "printable model",
         "镜头盖",
         "正面图案",
         "正面浮雕",
         "浮雕",
+        "圆形图像",
+        "圆形艺术图",
+        "镜头闷盖",
+        "镜头帽",
+        "可打印模型",
     } <= set(semantic["surface_terms"])
     assert "circular" not in semantic["surface_terms"]
     assert "圆形" not in semantic["surface_terms"]
+    assert "image" not in semantic["surface_terms"]
+    assert "artwork" not in semantic["surface_terms"]
+    assert "model" not in semantic["surface_terms"]
     assert {"design", "generate", "设计", "生成"} <= set(semantic["verbs"])
     assert "optical design" in semantic["exclude_without_surface_intent"]
     assert "optical" in semantic["exclude_without_surface_intent"]
+    assert "product photo" in semantic["exclude_without_surface_intent"]
+    assert "产品照片" in semantic["exclude_without_surface_intent"]
     assert "circular front pattern" in semantic["explicit_cap_surface_terms"]
+    assert "circular lens image" in semantic["explicit_cap_surface_terms"]
+    assert "镜头闷盖" in semantic["explicit_cap_surface_terms"]
 
 
 def test_named_lens_surface_route_positive_and_negative_matrix() -> None:
@@ -169,10 +194,22 @@ def test_named_lens_surface_route_positive_and_negative_matrix() -> None:
     assert matches("Design a circular front pattern for Zeiss Planar 50mm F1.4 and export a 3MF")
     assert matches("用康泰时 50mm F1.4 设计圆形正面图案")
     assert matches("Sigma 28-70mm F2.8 做镜头浮雕")
+    assert matches("Design a circular image for the Sigma 28-70mm F2.8 lens")
+    assert matches("Design a circular artwork for Zeiss Planar 50mm F1.4")
+    assert matches("为适马 28-70mm F2.8 设计圆形图像")
+    assert matches("为蔡司 Planar 50mm F1.4 设计圆形艺术图")
+    assert matches("为康泰时 50mm F1.4 设计镜头闷盖图稿")
+    assert matches("Make a printable model for the Sigma 28-70mm F2.8 lens")
+    assert matches("为适马 28-70mm F2.8 生成可打印模型")
+    assert matches("为康泰时 50mm F1.4 制作镜头帽模型")
     assert not matches("Design an optical diagram for a Zeiss Planar 50mm F1.4")
     assert not matches("Design an optical relief map for a Zeiss Planar 50mm F1.4")
+    assert not matches("Design an optical circular image for a Zeiss Planar 50mm F1.4")
     assert not matches("为 Zeiss 50mm 镜片设计圆形产品照片")
+    assert not matches("为 Zeiss 50mm F1.4 设计圆形图像产品照片")
+    assert not matches("为 Zeiss 50mm F1.4 设计圆形艺术图产品海报")
     assert not matches("为圆形镜片产品照片设计一张海报")
+    assert not matches("设计圆形图像", named_lens=False)
     assert not matches("Repair a Zeiss 50mm F1.4 lens")
 
 

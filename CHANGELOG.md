@@ -32,8 +32,11 @@ film references, and generated artwork require separate provenance and rights.
 ## Unreleased
 
 * Tightens cross-host lens-cap routing for named-lens circular/front/relief
-  requests, adds optical-design/repair negative cases, and documents Codex
-  catalog-cache plus legacy top-level-trigger limitations.
+  requests and natural variants such as circular image, lens cover, and
+  printable model; adds optical-design/repair/product-photo negative cases,
+  and documents Codex catalog-cache plus legacy top-level-trigger limitations.
+  The grouped diameter/foam/rib intake is now explicitly one-per-job and is
+  persisted for the production handoff instead of being repeated.
 * Makes omitted compression semantic: foam jobs retain the provisional 20%
   assumption, while bare-wall jobs default to zero; companion Skill mirrors and
   receipts are refreshed together.
