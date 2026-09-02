@@ -7,10 +7,12 @@ The repository has two deliberately separate contracts:
 2. The lens-cap-production Skill accepts the human-approved raster and
    deterministically produces masks, SVGs, SCAD and printer handoff files.
 
-This boundary matters. A generative image provider can change typography,
-texture, or composition between runs; no prompt can make that output a
-reproducible CAD input. Once a candidate is approved, copy it into the job,
-compute its SHA-256, and never let a downstream tool redraw it.
+This boundary matters. “High quality” means equivalence of the declared lens
+specification, text hierarchy, and visual style—not pixel-identical generation.
+A generative image provider can change typography, texture, or composition
+between runs; no prompt can make that output a reproducible CAD input. Once a
+candidate is approved, copy it into the job, compute its SHA-256, and never let
+a downstream tool redraw it.
 
 ## Design brief
 

@@ -1,0 +1,111 @@
+{
+  "schema_version": 1,
+  "job_slug": "mamiya-sekor-c-80-f1-9-rehouse",
+  "lens_identity": {
+    "brand": "Mamiya",
+    "model": "Mamiya-Sekor C 80mm F1.9",
+    "focal_length_mm": 80,
+    "maximum_aperture": "F1.9",
+    "mount_or_revision": "Mamiya M645 bayonet; original C variant",
+    "era": "late-1970s M645 medium-format still lens; later cinema rehousings"
+  },
+  "display_text": ["80", "F1.9", "MAMIYA-SEKOR C", "645", "REHOUSED MEDIUM FORMAT"],
+  "allowed_text": ["80", "F1.9", "MAMIYA-SEKOR C", "645", "REHOUSED MEDIUM FORMAT"],
+  "allowed_marks": [],
+  "forbidden_legacy_tokens": ["T*", "T1.6", "N", "PL", "M42", "ZEISS", "HELIOS", "SIGMA", "CANON", "OLYMPUS", "CONTAX", "BATMAN", "DUNE"],
+  "object_mode": "typographic_medallion",
+  "narrative_mode": "balanced",
+  "production_target": "printable_front",
+  "visual_direction": {
+    "aspect_ratio": "1:1",
+    "palette": ["black", "charcoal", "gray", "ivory"],
+    "medium": "linocut / screen print / letterpress",
+    "dominant_hierarchy": ["focal_length", "maximum_aperture"],
+    "omissions": ["lens barrel", "glass", "iris blades", "photographic clutter", "pointillism", "gradients"]
+  },
+  "anchors": [
+    {
+      "claim_kind": "lens_specification",
+      "subject_scope": "Mamiya M645 standard lens",
+      "evidence_state": "verified",
+      "source_role": "proof",
+      "source": "https://www.suaudeau.eu/memo/Manuels/Mamiya_M645_Service_Manual.pdf",
+      "summary": "The Mamiya M645 service instructions list the multi-coated Mamiya-Sekor C 80mm f/1.9, automatic diaphragm, 67mm filter size, and Mamiya M645 bayonet mount.",
+      "render_role": "exact_text",
+      "anchor_context": "Original medium-format system identity; 67mm is a filter specification, not an assumed cap-gripping diameter.",
+      "motif_commitment": "structural",
+      "anchor_visual_motif": "6x4.5 frame proportions, calibration grid, and modular registration blocks",
+      "recognition_cue": "the frame-grid remains legible with all lore text hidden",
+      "qualifier": null
+    },
+    {
+      "claim_kind": "manufacturer_culture",
+      "subject_scope": "Mamiya M645 lens system",
+      "evidence_state": "verified_period_system_brochure",
+      "source_role": "context",
+      "source": "https://www.pacificrimcamera.com/rl/00302/00302.pdf",
+      "summary": "The period Mamiya 645 lens-series brochure presents the 80mm f/1.9 C as part of a broad interchangeable medium-format system.",
+      "render_role": "visual_metaphor",
+      "anchor_context": "System breadth, modularity, and fast medium-format optics rather than a luxury logo treatment.",
+      "motif_commitment": "structural",
+      "anchor_visual_motif": "repeated gate marks and stepped concentric mechanical bands",
+      "recognition_cue": "a measured film-gate grid survives when the words are covered",
+      "qualifier": "period product literature describes the system; it does not establish a specific film credit"
+    },
+    {
+      "claim_kind": "rehousing_cinema_association",
+      "subject_scope": "Mamiya 645 80mm f/1.9 donor optics",
+      "evidence_state": "sourced_rehouse_industry_account",
+      "source_role": "context",
+      "source": "https://www.truelens.co.uk/my-mamiya-645-lenses-nathan-thompson-dop",
+      "summary": "True Lens Services describes a Mamiya 645 rehouse and identifies the 80mm f/1.9 donor as a 57mm T1.6 rehoused cinema lens.",
+      "render_role": "visual_metaphor",
+      "anchor_context": "The artwork keeps the donor's exact F1.9 identity and uses REHOUSED MEDIUM FORMAT as a qualified family-level cue; it does not claim the donor itself was shot at T1.6.",
+      "motif_commitment": "symbolic",
+      "anchor_visual_motif": "clean segmented rings and precision metal registration geometry",
+      "recognition_cue": "mechanical renewal is visible without a maker logo or film still",
+      "qualifier": "rehouse family context; exact housing, iris, and production credits vary by conversion"
+    }
+  ],
+  "approved_references": [
+    {"path_or_url": "https://www.suaudeau.eu/memo/Manuels/Mamiya_M645_Service_Manual.pdf", "role": "style_reference", "notes": "period specification source"},
+    {"path_or_url": "https://www.pacificrimcamera.com/rl/00302/00302.pdf", "role": "style_reference", "notes": "period Mamiya 645 lens-series brochure"},
+    {"path_or_url": "https://www.truelens.co.uk/my-mamiya-645-lenses-nathan-thompson-dop", "role": "style_reference", "notes": "qualified modern rehouse account"}
+  ],
+  "generation": {
+    "provider": "OpenAI built-in image_gen",
+    "mode": "generate",
+    "model": "gpt-image-2",
+    "model_version": "2.0",
+    "prompt": "prompt.txt",
+    "prompt_sha256": "cfe6ab1ca45c9df449423e9bb30a98ab49d39ee9a7b4552e9adb9e9c4ac96374",
+    "required_prompt_tokens": ["80", "F1.9", "MAMIYA-SEKOR C", "645", "REHOUSED MEDIUM FORMAT"],
+    "reference_hashes": [],
+    "candidate_path": "art/master.png",
+    "candidate_sha256": "3cd44afcc61eaa8793c3a4dfbb92ff7bbf657026ad53be39601bba533c3004ab",
+    "approved": true,
+    "approval_note": "Agent-reviewed smoke-test master: 80 is first read and F1.9 second; broad flat frame-grid forms pass; no lens barrel, glass, iris, or photo clutter. Re-review before public branding use."
+  },
+  "physical_fit": {
+    "measured_diameter_mm": null,
+    "face_target_mm": null,
+    "foam_liner_status": "foam",
+    "liner_thickness_mm": 1.5,
+    "compression_fraction": 0.2,
+    "friction_ribs_enabled": true,
+    "friction_ribs_explicit": false,
+    "friction_rib_profile": "light_tapered",
+    "friction_rib_count": 12,
+    "friction_rib_protrusion_mm": 0.1,
+    "friction_rib_width_mm": 1.2,
+    "friction_rib_height_mm": 8.0,
+    "friction_rib_start_mm": 1.0,
+    "nozzle_mm": 0.2
+  },
+  "provenance": {
+    "artwork_license": "OpenAI-generated test artwork; verify current provider terms before redistribution",
+    "brand_mark_license": "Mamiya name is a third-party mark; fixture is a non-commercial test",
+    "film_or_history_permissions": "No film stills, logos, actors, spacecraft, or official production marks are included; rehouse references are qualified industry context",
+    "notes": "Third-party sources and marks remain separate from the Apache-2.0 code licence."
+  }
+}

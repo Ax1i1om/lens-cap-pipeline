@@ -1,0 +1,61 @@
+{
+  "adapter": "openscad-native-3mf",
+  "adapter_version": 1,
+  "command": [
+    "<OpenSCAD.app>/Contents/MacOS/OpenSCAD",
+    "--backend",
+    "Manifold",
+    "-o",
+    "<temporary-workdir>/helios-44-2-rehouse-77mm-native.3mf",
+    "<external>/helios-44-2-rehouse-77mm.scad"
+  ],
+  "command_exit_code": 0,
+  "determinism": "geometry/command reproducible; OpenSCAD may vary UUIDs, XML metadata, and exporter details by release",
+  "generated_at_utc": "2026-09-02T19:56:45.234148+00:00",
+  "input": "<external>/helios-44-2-rehouse-77mm.scad",
+  "input_sha256": "b90307ecd9d4ff568c582eb43cc2dfc793c872ed978034ab89b981cb856825e9",
+  "openscad": "<OpenSCAD.app>/Contents/MacOS/OpenSCAD",
+  "openscad_version": "OpenSCAD version 2026.06.12",
+  "output": "<external>/helios-44-2-rehouse-77mm-native.3mf",
+  "python": "3.11.15",
+  "render_part": "assembly (SCAD default)",
+  "stderr_tail": "Geometries in cache: 27\nGeometry cache size in bytes: 34820000\nCGAL Polyhedrons in cache: 6\nCGAL cache size in bytes: 25878750\nTotal rendering time: 0:00:00.542\n   Top level object is a 3D object (manifold):\n   Status:     NoError\n   Genus:      0\n   Vertices:    95859\n   Facets:     191714\n",
+  "stdout_tail": "",
+  "verification": {
+    "bytes": 2270261,
+    "entries": [
+      "3D/3dmodel.model",
+      "[Content_Types].xml",
+      "_rels/.rels"
+    ],
+    "gcode_bytes": 0,
+    "has_embedded_gcode": false,
+    "model": {
+      "bounds": {
+        "max_mm": [
+          41.1,
+          41.1,
+          16.601
+        ],
+        "min_mm": [
+          -41.1,
+          -41.1,
+          0.0
+        ],
+        "size_mm": [
+          82.2,
+          82.2,
+          16.601
+        ]
+      },
+      "build_items": 1,
+      "mesh_parts": 1,
+      "objects": 1,
+      "parts": 1,
+      "triangles": 191714,
+      "vertices": 95859
+    },
+    "path": "<external>/helios-44-2-rehouse-77mm-native.3mf",
+    "sha256": "089085c4a0828eddaacd6301f0e70c6809a29342cda6ba2a35d154f8611d0ff0"
+  }
+}

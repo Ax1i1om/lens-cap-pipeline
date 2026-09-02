@@ -9,9 +9,12 @@ masks/SVGs, followed by an explicit modelling and printer handoff.
 > checks do not prove physical fit or a Bambu 3MF slice.
 
 The central rule is **approved artwork is read-only; modelling never redraws
-it**. The stable core emits a same-canvas process master, one mask and SVG per
-material, role masks, and JSON safety reports. OpenSCAD/3MF are explicit
-downstream adapters rather than hidden image-processing steps.
+it**. “High quality” at the image stage means equivalence of the declared lens
+specification, text hierarchy, and visual style—not pixel-identical generation;
+the approved raster and its hash are the exact deterministic boundary. The
+stable core emits a same-canvas process master, one mask and SVG per material,
+role masks, and JSON safety reports. OpenSCAD/3MF are explicit downstream
+adapters rather than hidden image-processing steps.
 
 ## Quick start
 
@@ -47,6 +50,21 @@ installing [uv](https://docs.astral.sh/uv/)):
 Without `--locked`, the helper is a compatibility-first convenience and uses
 the supported dependency ranges from `pyproject.toml`; pin the lockfile when
 comparing artifacts across machines and retain the recorded tool versions.
+
+The companion Skills are source-controlled separately from the installed
+wheel. Check their manifest and hashes with
+`./scripts/install_skills.py check --json`. `sync` is a dry-run by default;
+pass an explicit `--dest` and then `--apply` to install into a project or
+container. The command records a `.lens-cap-skills.json` receipt with the
+project version, manifest hash, and per-file SHA-256 values, so repeated runs
+are idempotent and version/content drift is visible. User edits are protected
+unless `--force` is supplied; `--force --prune` is additionally required to
+remove stale files. Use `--environment codex|claude` for host defaults, with
+`--allow-global` required before writing an inferred global directory.
+`bin/lens-cap-skills` is a repository-local alias.
+
+On Windows, use `py -3 scripts/install_skills.py ...` or the companion
+`bin/lens-cap-skills.cmd` launcher.
 
 ```sh
 lens-cap init jobs/my-lens/job.toml \
@@ -114,6 +132,69 @@ relief-only process can stop after `process` with `face_diameter_mm` alone.
 `lens-cap doctor --json` reports optional-tool availability without creating
 job artifacts. `validate` is a full artifact audit and therefore requires a
 successful process run; it is not a config-only lint command.
+
+When the requested deliverable is an actual 3MF, use the repository's
+one-command bridge instead of stopping at the SCAD/handoff stage. It reruns the
+public build path, audits the same-canvas relief, exports an integrated native
+3MF, and verifies the package with the dependency-free adapter. OpenSCAD is the
+only external requirement for the native one-piece output:
+
+```sh
+./bin/lens-cap-3mf jobs/my-lens/job.toml --force --json
+# Optional printer-project output (requires local Bambu profiles):
+./bin/lens-cap-3mf jobs/my-lens/job.toml --force --bambu slice \
+  --machine-profile /path/to/machine.json \
+  --process-profile /path/to/process.json \
+  --filament-profile /path/to/filament.json --json
+```
+
+On Windows, use `py -3 scripts/build_3mf.py jobs/my-lens/job.toml --force --json`
+or `bin/lens-cap-3mf.cmd`; the remaining options are identical.
+
+Without OpenSCAD, the bridge returns `unverifiable` and exits non-zero; it
+never presents a SCAD or handoff JSON as a 3MF. If an external CAD tool has
+already produced an assembly STL, the standard-library route remains available:
+`python3 tools/3mf_adapter/three_mf_adapter.py standard INPUT.stl OUTPUT.3mf`.
+
+The bridge gives `--openscad` / `--bambu-path` precedence. If omitted, it
+reads `openscad_executable` / `bambu_executable` from the job's `[print]`
+table (path-like values are resolved beside `job.toml`; bare command names use
+the host PATH), then checks the default PATH and macOS app bundles. Tool
+placement can therefore vary between Codex hosts without changing artwork or
+model semantics.
+
+To rehearse the complete route as a new user with no conversation context, run
+the clean-room fixture runner. By default it copies only the approved
+Helios-44-2 REHOUSE artwork, brief, prompt, and the 95/82/77 mm jobs into a
+temporary checkout. Pass `--fixture` to run the independent Mamiya-Sekor C
+80mm F1.9 REHOUSE sample as a cross-brand leakage test. The runner invokes the
+public CLI, audits same-canvas relief projections, and emits native OpenSCAD
+3MF packages when OpenSCAD is installed. With a compatible Bambu Studio
+installation it also slices one package:
+
+```sh
+python3 scripts/smoke_rehouse.py --bambu never --json
+python3 scripts/smoke_rehouse.py \
+  --fixture examples/fixtures/mamiya-sekor-c-80-f1-9-rehouse \
+  --bambu never --json
+# host-level verification (requires OpenSCAD; Bambu profiles are optional)
+python3 scripts/smoke_rehouse.py --bambu auto --require-external --keep-workdir --json
+```
+
+Use `--artifact-dir PATH` to explicitly copy generated 3MF files and sidecars,
+or `--keep-workdir` to inspect the isolated run. The runner never reuses old
+`out/`/3MF files or writes back into the approved fixture. Its `fit_status`
+remains `UNVERIFIABLE` until a same-material coupon is printed and measured.
+
+The dependency-free adapter can verify a Core package or require embedded
+slicer G-code:
+
+```sh
+python3 tools/3mf_adapter/three_mf_adapter.py verify path/to/model.3mf
+python3 tools/3mf_adapter/three_mf_adapter.py verify path/to/sliced.3mf --require-slice
+```
+This validates package/XML/mesh structure and G-code presence; it is not a
+substitute for a slicer preview or a physical fit coupon.
 
 After exporting meshes, use the public projection audit to compare each relief
 STL with its same-canvas mask and catch translation, mirroring, white borders,
@@ -216,10 +297,12 @@ job only after a provenance/licence review, using `git add -f` deliberately.
 See [`CONTRIBUTING.md`](CONTRIBUTING.md), [`SECURITY.md`](SECURITY.md), and
 [`THIRD_PARTY.md`](THIRD_PARTY.md) for contribution and release boundaries.
 
-This repository does not log into MakerWorld, call ChromaCanvas, upload a cloud
-project, or claim to generate or slice a 3MF. The stable public boundary is
-audited SVG, SCAD, STL, and a version-neutral handoff; platform-specific 3MF
-and slicer steps remain user-run and must record their version and preview.
+This repository does not log into MakerWorld, call ChromaCanvas, or upload a
+cloud project. When the user explicitly installs OpenSCAD (and optionally
+provides Bambu profiles), `scripts/build_3mf.py` / `bin/lens-cap-3mf` generates
+and verifies the corresponding 3MF locally. Missing desktop tools are reported
+honestly rather than guessed; slicer preview and physical fit still require
+the user's review and records.
 
 ## Skill integration
 

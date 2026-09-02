@@ -100,13 +100,31 @@ def _tool(
     base_dir: Path | None = None,
 ) -> str | None:
     if configured:
-        candidate = Path(configured).expanduser()
-        if not candidate.is_absolute() and base_dir is not None:
-            # Match config/source path semantics used by the export adapter:
-            # a relative executable is relative to the job file, not cwd.
-            candidate = (base_dir / candidate).resolve()
-        if candidate.is_file():
-            return str(candidate.resolve())
+        raw = str(configured).strip()
+        if raw:
+            candidate = Path(raw).expanduser()
+            path_like = (
+                candidate.is_absolute()
+                or raw.startswith((".", "~"))
+                or "/" in raw
+                or "\\" in raw
+                or bool(candidate.suffix)
+            )
+            if path_like:
+                if not candidate.is_absolute() and base_dir is not None:
+                    # Match config/source path semantics used by the export
+                    # adapter: a relative executable is relative to the job
+                    # file, not cwd.
+                    candidate = (base_dir / candidate).resolve()
+                if candidate.is_file():
+                    return str(candidate.resolve())
+                # Explicit path-like values are authoritative; do not hide a
+                # typo by selecting another executable from ``names``.
+                return None
+            # Bare names (``openscad``/``BambuStudio``) are PATH commands, not
+            # files beside the job.  Keep an explicit missing name fail-closed.
+            found = shutil.which(raw)
+            return found if found else None
     for name in names:
         found = shutil.which(name)
         if found:

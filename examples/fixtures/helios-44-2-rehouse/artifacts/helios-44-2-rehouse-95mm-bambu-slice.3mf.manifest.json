@@ -1,0 +1,156 @@
+{
+  "adapter": "bambu-studio-3mf",
+  "adapter_version": 1,
+  "bambu": "<BambuStudio.app>/Contents/MacOS/BambuStudio",
+  "bambu_result": {
+    "error_string": "Success.",
+    "export_time": 1214,
+    "layer_height": 0.20000000298023224,
+    "plate_index": 0,
+    "prepare_time": 194,
+    "return_code": 0,
+    "sliced_plates": [
+      {
+        "feature_type_times": {
+          "Bottom surface": 54.667415618896484,
+          "Bridge": 2199.37451171875,
+          "Custom": 3.308375835418701,
+          "Inner wall": 1816.4617919921875,
+          "Internal solid infill": 3111.004150390625,
+          "Outer wall": 2343.9970703125,
+          "Skirt": 20.567161560058594,
+          "Sparse infill": 1524.4920654296875,
+          "Top surface": 864.2078247070312,
+          "Travel": 518.5084838867188,
+          "Undefined": 516.5971069335938
+        },
+        "filament_change_times": 0,
+        "filaments": [
+          {
+            "filament_id": "",
+            "id": 1,
+            "main_used_g": 0.0,
+            "total_used_g": 0.0
+          }
+        ],
+        "generate_support_material_time": 393,
+        "id": 1,
+        "infill_time": 4883,
+        "layer_filament_change": 0,
+        "main_predication": 12453.79296875,
+        "make_perimeters_time": 2588,
+        "obj_cached_cnt": 0,
+        "objects": [
+          {
+            "bbox": {
+              "depth": 140.14772033691406,
+              "height": 16.60099983215332,
+              "width": 140.14772033691406,
+              "x": 29.92612648010254,
+              "y": 29.926136016845703,
+              "z": 0.0
+            },
+            "id": 5,
+            "name": "helios-44-2-rehouse-95mm-assembly.stl",
+            "triangle_count": 191712
+          }
+        ],
+        "sliced_time": 8984,
+        "sliced_time_with_cache": 1036,
+        "total_predication": 12455.1904296875,
+        "triangle_count": 191712,
+        "warning_message": ""
+      }
+    ],
+    "sparse_infill_density": 20.0,
+    "wall_loops": 2
+  },
+  "bambu_version": "BambuStudio-02.08.02.60:",
+  "command": [
+    "<BambuStudio.app>/Contents/MacOS/BambuStudio",
+    "--datadir",
+    "<temporary-datadir>",
+    "--outputdir",
+    "<temporary-outputdir>",
+    "--load-settings",
+    "<BambuStudio.app>/Contents/Resources/profiles/BBL/machine/Bambu Lab A1 mini 0.2 nozzle.json;<BambuStudio.app>/Contents/Resources/profiles/BBL/process/0.10mm Standard @BBL A1M 0.2 nozzle.json",
+    "--load-filaments",
+    "<BambuStudio.app>/Contents/Resources/profiles/BBL/filament/Bambu PLA Basic @BBL A1M 0.2 nozzle.json",
+    "--orient",
+    "0",
+    "--arrange",
+    "1",
+    "--slice",
+    "0",
+    "--export-3mf",
+    "helios-44-2-rehouse-95mm-bambu-slice.3mf",
+    "<external>/helios-44-2-rehouse-95mm-assembly.stl"
+  ],
+  "command_exit_code": 0,
+  "determinism": "input/command reproducible; Bambu UUIDs, PNGs, timestamps, and G-code metadata may vary by release/run",
+  "generated_at_utc": "2026-09-02T19:57:07.669855+00:00",
+  "input": "<external>/helios-44-2-rehouse-95mm-assembly.stl",
+  "input_sha256": "df9bb82fa5424c84623c0aa31f28102a0e8b9fe303fb207770b5779866819f4e",
+  "mode": "slice",
+  "output": "<external>/helios-44-2-rehouse-95mm-bambu-slice.3mf",
+  "preparation": {
+    "input_kind": "stl"
+  },
+  "profiles_are_external": true,
+  "python": "3.11.15",
+  "stderr_tail": "",
+  "stdout_tail": "[2026-09-03 03:56:56.253883] [0x0000000204b87100] [trace]   Initializing StaticPrintConfigs\n[2026-09-03 03:56:57.265932] [0x00000001716cb000] [error]   Reversing even wall line causes it to be printed CCW instead of CW!\n[2026-09-03 03:56:57.670503] [0x0000000171ee3000] [error]   Reversing even wall line causes it to be printed CCW instead of CW!\n",
+  "verification": {
+    "bytes": 4148580,
+    "entries": [
+      "3D/3dmodel.model",
+      "3D/Objects/object_1.model",
+      "3D/_rels/3dmodel.model.rels",
+      "Metadata/_rels/model_settings.config.rels",
+      "Metadata/cut_information.xml",
+      "Metadata/filament_sequence.json",
+      "Metadata/model_settings.config",
+      "Metadata/pick_1.png",
+      "Metadata/plate_1.gcode",
+      "Metadata/plate_1.gcode.md5",
+      "Metadata/plate_1.json",
+      "Metadata/plate_1.png",
+      "Metadata/plate_1_small.png",
+      "Metadata/plate_no_light_1.png",
+      "Metadata/project_settings.config",
+      "Metadata/slice_info.config",
+      "Metadata/top_1.png",
+      "[Content_Types].xml",
+      "_rels/.rels"
+    ],
+    "gcode_bytes": 6600596,
+    "has_embedded_gcode": true,
+    "model": {
+      "bounds": {
+        "max_mm": [
+          50.0999985,
+          50.0999985,
+          8.30049992
+        ],
+        "min_mm": [
+          -50.0999985,
+          -50.0999985,
+          -8.30049992
+        ],
+        "size_mm": [
+          100.199997,
+          100.199997,
+          16.60099984
+        ]
+      },
+      "build_items": 1,
+      "mesh_parts": 1,
+      "objects": 2,
+      "parts": 2,
+      "triangles": 191712,
+      "vertices": 95540
+    },
+    "path": "<external>/helios-44-2-rehouse-95mm-bambu-slice.3mf",
+    "sha256": "ac5f7f3b67eed9e0c5ce29b27218b18b5a9ecc68adf06c13a29bb75a341404f5"
+  }
+}

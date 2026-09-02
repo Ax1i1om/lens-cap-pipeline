@@ -1,0 +1,72 @@
+schema_version = 1
+job_slug = "mamiya-sekor-c-80-f1-9-rehouse-95mm"
+source_art = "../../art/master.png"
+output_dir = "out"
+grid_size = 1000
+measured_diameter_mm = 95.0
+nozzle_mm = 0.2
+safe_border_mm = 0.25
+assembly_mode = "auto"
+
+[metadata]
+lens_identity = "Mamiya-Sekor C 80mm F1.9 M645, rehoused cinema test"
+display_text = ["80", "F1.9", "MAMIYA-SEKOR C", "645", "REHOUSED MEDIUM FORMAT"]
+design_brief = "../../design-brief.json"
+art_master_approval = "Agent-reviewed smoke-test master"
+measurement_source = "synthetic fixture: nominal 95 mm rehoused PL front; 67 mm filter size is not the gripping diameter"
+adapter_nominal_ring_mm = 95.0
+adapter_radial_wall_mm = 0.0
+nominal_filter_size_mm = 67.0
+
+[fit]
+foam_liner_status = "foam"
+liner_thickness_mm = 1.5
+compression_fraction = 0.20
+compression_is_assumption = true
+wall_thickness_mm = 2.4
+bottom_thickness_mm = 2.0
+side_height_mm = 14.0
+bare_clearance_mm = 0.40
+friction_ribs_enabled = true
+friction_ribs_explicit = false
+friction_rib_profile = "light_tapered"
+retention_strategy = "continuous_foam"
+
+[circle]
+center_px = [626.0, 625.0]
+radius_px = 610.0
+allow_outside = false
+
+[prefilter]
+name = "none"
+size = 3
+radius = 0.0
+
+[cleanup]
+enabled = true
+max_area_px = 8
+max_dimension_px = 3
+ring_px = 2
+dominance = 0.6
+apply_to = ["relief"]
+
+[palette.black]
+index = 0
+rgb = [18, 18, 18]
+role = "base"
+height_mm = 0.0
+required = true
+
+[palette.gray]
+index = 1
+rgb = [112, 112, 112]
+role = "relief"
+height_mm = 0.4
+required = true
+
+[palette.ivory]
+index = 2
+rgb = [240, 230, 215]
+role = "relief"
+height_mm = 0.6
+required = true

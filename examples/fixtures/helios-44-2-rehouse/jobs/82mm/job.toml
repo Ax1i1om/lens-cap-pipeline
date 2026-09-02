@@ -1,0 +1,70 @@
+schema_version = 1
+job_slug = "helios-44-2-rehouse-82mm"
+source_art = "../../art/master.png"
+output_dir = "out"
+grid_size = 1000
+measured_diameter_mm = 82.0
+nozzle_mm = 0.2
+safe_border_mm = 0.25
+assembly_mode = "auto"
+
+[metadata]
+lens_identity = "Helios-44-2 58mm F2, rehoused/step-up adapter test"
+display_text = ["58", "F2", "HELIOS 44-2", "REHOUSED CINEMA", "M42"]
+design_brief = "../../design-brief.json"
+art_master_approval = "agent-reviewed smoke-test master"
+measurement_source = "synthetic fixture: 77 mm nominal ring plus 2.5 mm radial adapter wall"
+adapter_nominal_ring_mm = 77.0
+adapter_radial_wall_mm = 2.5
+foam_liner_status = "none"
+
+[fit]
+foam_liner_status = "none"
+compression_fraction = 0.0
+compression_is_assumption = false
+wall_thickness_mm = 2.4
+bottom_thickness_mm = 2.0
+side_height_mm = 14.0
+bare_clearance_mm = 0.40
+friction_ribs_enabled = true
+friction_ribs_explicit = false
+friction_rib_profile = "light_tapered"
+retention_strategy = "bare_wall_plus_neutral_ribs"
+
+[circle]
+center_px = [626.5, 626.5]
+radius_px = 626.5
+allow_outside = false
+
+[prefilter]
+name = "none"
+size = 3
+radius = 0.0
+
+[cleanup]
+enabled = true
+max_area_px = 8
+max_dimension_px = 3
+ring_px = 2
+dominance = 0.6
+apply_to = ["relief"]
+
+[palette.black]
+index = 0
+rgb = [17, 18, 17]
+role = "base"
+height_mm = 0.0
+required = true
+[palette.gray]
+index = 1
+rgb = [116, 116, 113]
+role = "relief"
+height_mm = 0.4
+required = true
+
+[palette.ivory]
+index = 2
+rgb = [242, 231, 211]
+role = "relief"
+height_mm = 0.6
+required = true

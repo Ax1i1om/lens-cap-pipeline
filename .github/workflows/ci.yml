@@ -26,10 +26,19 @@ jobs:
         run: python -m compileall -q lens_cap_pipeline
       - name: Check local bootstrap entry point
         run: python scripts/bootstrap.py --help
+      - name: Check companion Skill manifest
+        run: python scripts/install_skills.py check --json
       - name: Run tests
         run: python -m pytest
       - name: Run portable smoke test
         run: python scripts/smoke.py
+      - name: Run clean-room rehousing smoke test
+        run: python scripts/smoke_rehouse.py --bambu never --json
+      - name: Verify bundled 3MF Core fixtures
+        run: |
+          python tools/3mf_adapter/three_mf_adapter.py verify tools/3mf_adapter/fixtures/fixture-cube-standard.3mf
+          python tools/3mf_adapter/three_mf_adapter.py verify tools/3mf_adapter/fixtures/fixture-cube-openscad.3mf
+          python tools/3mf_adapter/three_mf_adapter.py verify tools/3mf_adapter/fixtures/fixture-cube-bambu-sliced.3mf --require-slice
 
   static:
     runs-on: ubuntu-latest
@@ -41,4 +50,4 @@ jobs:
       - name: Install development tools
         run: python -m pip install -e '.[dev]'
       - name: Ruff check
-        run: ruff check lens_cap_pipeline tests scripts
+        run: ruff check lens_cap_pipeline tests scripts tools/3mf_adapter

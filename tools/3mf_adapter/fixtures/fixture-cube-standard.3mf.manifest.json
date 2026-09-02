@@ -1,0 +1,59 @@
+{
+  "adapter": "standard-core-3mf",
+  "adapter_version": 1,
+  "determinism": "byte-stable for identical input/title under the same Python/zlib implementation",
+  "input": "tools/3mf_adapter/fixtures/fixture-cube.stl",
+  "input_sha256": "7d4a199ea1280f376efdad750a4f74a074cbc4e98cf2f4d4117f1852905f91a1",
+  "mesh": {
+    "boundary_edges": 0,
+    "bounds": {
+      "max_mm": [
+        20.0,
+        20.0,
+        20.0
+      ],
+      "min_mm": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "size_mm": [
+        20.0,
+        20.0,
+        20.0
+      ]
+    },
+    "bytes": 1417,
+    "closed": true,
+    "closure_required": true,
+    "dropped_degenerate": 0,
+    "nonmanifold_edges": 0,
+    "sha256": "6a4d3e8d4bc81f054ca3da01b23feb919fab59ddf90b4d45977230302e24ee83",
+    "triangles": 12,
+    "unique_edges": 18,
+    "vertices": 8
+  },
+  "output": "tools/3mf_adapter/fixtures/fixture-cube-standard.3mf",
+  "python": "3.14.4",
+  "verification": {
+    "bytes": 1417,
+    "entries": [
+      "3D/3dmodel.model",
+      "3D/_rels/3dmodel.model.rels",
+      "[Content_Types].xml",
+      "_rels/.rels"
+    ],
+    "gcode_bytes": 0,
+    "has_embedded_gcode": false,
+    "model": {
+      "build_items": 1,
+      "mesh_parts": 1,
+      "objects": 1,
+      "parts": 1,
+      "triangles": 12,
+      "vertices": 8
+    },
+    "path": "tools/3mf_adapter/fixtures/fixture-cube-standard.3mf",
+    "sha256": "6a4d3e8d4bc81f054ca3da01b23feb919fab59ddf90b4d45977230302e24ee83"
+  }
+}

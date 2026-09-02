@@ -1,0 +1,139 @@
+{
+  "adapter": "bambu-studio-3mf",
+  "adapter_version": 1,
+  "bambu": "<BambuStudio.app>/Contents/MacOS/BambuStudio",
+  "bambu_result": {
+    "error_string": "Success.",
+    "export_time": 290,
+    "layer_height": 0.20000000298023224,
+    "plate_index": 0,
+    "prepare_time": 3,
+    "return_code": 0,
+    "sliced_plates": [
+      {
+        "feature_type_times": {
+          "Bottom surface": 38.06917953491211,
+          "Bridge": 56.676116943359375,
+          "Custom": 4.527979373931885,
+          "Inner wall": 273.26995849609375,
+          "Internal solid infill": 145.63816833496094,
+          "Outer wall": 294.94171142578125,
+          "Skirt": 5.887577056884766,
+          "Sparse infill": 726.541748046875,
+          "Top surface": 39.79173278808594,
+          "Travel": 92.23444366455078,
+          "Undefined": 89.19634246826172
+        },
+        "filament_change_times": 0,
+        "filaments": [
+          {
+            "filament_id": "",
+            "id": 1,
+            "main_used_g": 0.0,
+            "total_used_g": 0.0
+          }
+        ],
+        "generate_support_material_time": 2,
+        "id": 1,
+        "infill_time": 3,
+        "layer_filament_change": 0,
+        "main_predication": 1673.0416259765625,
+        "make_perimeters_time": 6,
+        "obj_cached_cnt": 0,
+        "objects": [
+          {
+            "bbox": {
+              "depth": 20.000001907348633,
+              "height": 20.0,
+              "width": 20.0,
+              "x": 90.0,
+              "y": 90.00000762939453,
+              "z": 0.0
+            },
+            "id": 5,
+            "name": "fixture-cube.stl",
+            "triangle_count": 12
+          }
+        ],
+        "sliced_time": 72,
+        "sliced_time_with_cache": 37,
+        "total_predication": 1674.531494140625,
+        "triangle_count": 12,
+        "warning_message": ""
+      }
+    ],
+    "sparse_infill_density": 20.0,
+    "wall_loops": 2
+  },
+  "bambu_version": "BambuStudio-02.08.02.60:",
+  "command": [
+    "<BambuStudio.app>/Contents/MacOS/BambuStudio",
+    "--datadir",
+    "<temporary-datadir>",
+    "--outputdir",
+    "<temporary-outputdir>",
+    "--load-settings",
+    "<BambuStudio.app>/Contents/Resources/profiles/BBL/machine/Bambu Lab A1 mini 0.2 nozzle.json;<BambuStudio.app>/Contents/Resources/profiles/BBL/process/0.10mm Standard @BBL A1M 0.2 nozzle.json",
+    "--load-filaments",
+    "<BambuStudio.app>/Contents/Resources/profiles/BBL/filament/Bambu PLA Basic @BBL A1M 0.2 nozzle.json",
+    "--orient",
+    "0",
+    "--arrange",
+    "1",
+    "--slice",
+    "0",
+    "--export-3mf",
+    "fixture-cube-bambu-sliced.3mf",
+    "tools/3mf_adapter/fixtures/fixture-cube.stl"
+  ],
+  "command_exit_code": 0,
+  "determinism": "input/command reproducible; Bambu UUIDs, PNGs, timestamps, and G-code metadata may vary by release/run",
+  "generated_at_utc": "2026-09-02T19:03:23.970127+00:00",
+  "input": "tools/3mf_adapter/fixtures/fixture-cube.stl",
+  "input_sha256": "7d4a199ea1280f376efdad750a4f74a074cbc4e98cf2f4d4117f1852905f91a1",
+  "mode": "slice",
+  "output": "tools/3mf_adapter/fixtures/fixture-cube-bambu-sliced.3mf",
+  "preparation": {
+    "input_kind": "stl"
+  },
+  "profiles_are_external": true,
+  "python": "3.14.4",
+  "stderr_tail": "",
+  "stdout_tail": "[2026-09-03 03:03:23.545896] [0x0000000204b87100] [trace]   Initializing StaticPrintConfigs\n",
+  "verification": {
+    "bytes": 55277,
+    "entries": [
+      "3D/3dmodel.model",
+      "3D/Objects/object_1.model",
+      "3D/_rels/3dmodel.model.rels",
+      "Metadata/_rels/model_settings.config.rels",
+      "Metadata/cut_information.xml",
+      "Metadata/filament_sequence.json",
+      "Metadata/model_settings.config",
+      "Metadata/pick_1.png",
+      "Metadata/plate_1.gcode",
+      "Metadata/plate_1.gcode.md5",
+      "Metadata/plate_1.json",
+      "Metadata/plate_1.png",
+      "Metadata/plate_1_small.png",
+      "Metadata/plate_no_light_1.png",
+      "Metadata/project_settings.config",
+      "Metadata/slice_info.config",
+      "Metadata/top_1.png",
+      "[Content_Types].xml",
+      "_rels/.rels"
+    ],
+    "gcode_bytes": 203057,
+    "has_embedded_gcode": true,
+    "model": {
+      "build_items": 1,
+      "mesh_parts": 1,
+      "objects": 2,
+      "parts": 2,
+      "triangles": 12,
+      "vertices": 8
+    },
+    "path": "tools/3mf_adapter/fixtures/fixture-cube-bambu-sliced.3mf",
+    "sha256": "f9a454350b737df95b86cb806e036a0a24749cacfd163a611190ba82f2838e4e"
+  }
+}

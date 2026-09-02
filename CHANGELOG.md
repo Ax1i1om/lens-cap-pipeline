@@ -31,6 +31,22 @@ film references, and generated artwork require separate provenance and rights.
 
 ## Unreleased
 
+* Adds `scripts/build_3mf.py` and `bin/lens-cap-3mf`, the canonical one-command
+  endpoint from a job file to a verified integrated native 3MF, with an
+  explicit optional Bambu slice path and machine-readable release report.
+  Missing desktop tools remain `UNVERIFIABLE` instead of being mistaken for a
+  completed 3MF.
+* Adds clean-room REHOUSE smoke fixtures for Helios-44-2 and Mamiya-Sekor C
+  80mm F1.9 across multiple adapter envelopes, with retained native/sliced
+  3MF snapshots and portable sidecars.
+* Adds a read-only-by-default, idempotent companion-Skill synchronizer with
+  manifest/version/file-hash drift reports for project, Codex, and Claude
+  destinations. Explicit `--apply`/`--force` gates writes and preserves local
+  edits.
+* Fixes `init` so a missing relative starter artwork path remains relative to
+  the task config directory instead of leaking the caller's working directory;
+  adds cross-context routing/intake regression checks.
+
 * Added generic, manifest-recorded inner-wall friction wedges to fitted caps.
   They are enabled by default; the `light_tapered` compatibility profile uses a
   conservative 0.10 mm radial intrusion,

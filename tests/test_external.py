@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import importlib
 import json
 from pathlib import Path
 
@@ -11,6 +12,8 @@ from lens_cap_pipeline.config import load_config
 from lens_cap_pipeline.external import write_bambu_handoff
 from lens_cap_pipeline.model import generate_model
 from lens_cap_pipeline.process import process
+
+validate_module = importlib.import_module("lens_cap_pipeline.validate")
 
 
 def _fitted_job(tmp_path: Path) -> Path:
@@ -23,6 +26,40 @@ def _fitted_job(tmp_path: Path) -> Path:
     text += '\n[fit]\nfoam_liner_status = "foam"\nliner_thickness_mm = 1.5\n'
     path.write_text(text, encoding="utf-8")
     return path
+
+
+def test_external_resolver_keeps_bare_command_on_path_and_path_typo_is_fail_closed(
+    tmp_path: Path, monkeypatch
+) -> None:
+    calls: list[str] = []
+
+    def fake_which(value: str) -> str | None:
+        calls.append(value)
+        return "/host/bin/openscad" if value == "openscad" else None
+
+    monkeypatch.setattr(external_module.shutil, "which", fake_which)
+    assert external_module._resolve_tool("openscad", ("fallback",), base_dir=tmp_path) == "/host/bin/openscad"
+    assert calls == ["openscad"]
+
+    calls.clear()
+    assert external_module._resolve_tool("tools/missing-openscad", ("fallback",), base_dir=tmp_path) is None
+    # A bad explicit path must not fall through to the fallback names.
+    assert calls == []
+
+
+def test_validation_tool_resolver_uses_path_for_bare_name(tmp_path: Path, monkeypatch) -> None:
+    calls: list[str] = []
+
+    def fake_which(value: str) -> str | None:
+        calls.append(value)
+        return "/host/bin/openscad" if value == "openscad" else None
+
+    monkeypatch.setattr(validate_module.shutil, "which", fake_which)
+    assert validate_module._tool("openscad", ("fallback",), base_dir=tmp_path) == "/host/bin/openscad"
+    assert calls == ["openscad"]
+    calls.clear()
+    assert validate_module._tool("tools/missing-openscad", ("fallback",), base_dir=tmp_path) is None
+    assert calls == []
 
 
 def test_bambu_handoff_filters_stale_meshes_and_exposes_exclusive_sets(tmp_path: Path) -> None:

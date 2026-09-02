@@ -5,7 +5,7 @@
 > **ALPHA · v0.1.0-alpha.2**：这是首个公开预览版的路由修订版。配置 schema、模型适配器和
 > CLI 仍可能发生不兼容变化；文件检查不等于实体卡合或 Bambu 3MF 切片验证。
 
-本项目的核心原则是：**批准的图稿只读，模型化不重新绘图**。当前稳定核心负责在同一坐标画布上按声明的 palette 生成索引处理稿、材料遮罩和 SVG，并输出可复核 JSON 报告；OpenSCAD／3MF 是显式的后续适配层，不会隐藏在图像处理里。
+本项目的核心原则是：**批准的图稿只读，模型化不重新绘图**。图像阶段的“高质量”验收是镜头规格、文字层级和视觉风格等价，而不是要求生成像素一致；用户批准的栅格及其哈希才是后续确定性生产的精确边界。当前稳定核心负责在同一坐标画布上按声明的 palette 生成索引处理稿、材料遮罩和 SVG，并输出可复核 JSON 报告；OpenSCAD／3MF 是显式的后续适配层，不会隐藏在图像处理里。
 
 ## 快速开始
 
@@ -40,6 +40,30 @@ Python 脚本即可。
 不带 `--locked` 的脚本是兼容性优先的便捷安装，会使用 `pyproject.toml` 的
 受支持版本范围；跨机器比较发布物时请固定锁文件，并保留报告中的版本信息。
 
+仓库内的 companion Skill 以 `skills/manifest.json` 为唯一来源。可先做只读的
+版本／哈希检查：
+
+```sh
+./scripts/install_skills.py check --json
+```
+
+同步默认只是预览；指定目标并明确 `--apply` 后才会写入：
+
+```sh
+./scripts/install_skills.py sync --dest .agents/skills
+./scripts/install_skills.py sync --dest .agents/skills --apply
+```
+
+Windows 可将同一命令写成 `py -3 scripts/install_skills.py ...`，或使用
+`bin/lens-cap-skills.cmd`。
+
+目标目录会保存 `.lens-cap-skills.json` 回执（项目版本、manifest 哈希和逐文件
+SHA-256），重复执行不改动未变化文件。检测到用户改动时不会静默覆盖，需明确传入
+`--force`；删除源中已不存在的文件还需 `--force --prune`。也可用
+`--environment codex|claude` 选择宿主默认目录；写入推断出的全局目录必须再传
+`--allow-global`，否则只检查／预览。`bin/lens-cap-skills` 和
+`scripts/sync_skills.py` 是同一入口的便携别名。
+
 创建一个新任务（`init` 的第一个参数是配置文件，而不是目录）：
 
 ```sh
@@ -58,9 +82,66 @@ lens-cap build jobs/my-lens/job.toml --force
 lens-cap doctor --json
 ```
 
+如果目标是直接得到可交给切片器的 3MF，不要停在 `build` 的 handoff：使用仓库
+提供的一键桥接器。它会重新调用公开 CLI、检查同画布浮雕、导出一体原生 3MF，
+并用无第三方依赖的校验器读取包；`OpenSCAD` 是生成一体 3MF 的唯一外部依赖。
+
+```sh
+./bin/lens-cap-3mf jobs/my-lens/job.toml --force --json
+# 可选：在明确提供本机 Bambu 配置后同时生成含 G-code 的切片 3MF
+./bin/lens-cap-3mf jobs/my-lens/job.toml --force --bambu slice \
+  --machine-profile /path/to/machine.json \
+  --process-profile /path/to/process.json \
+  --filament-profile /path/to/filament.json --json
+```
+
+Windows 使用 `py -3 scripts/build_3mf.py jobs/my-lens/job.toml --force --json`
+或 `bin/lens-cap-3mf.cmd`；其余参数相同。
+
+缺少 OpenSCAD 时该命令会明确返回 `UNVERIFIABLE` 并以非零状态退出，不会把
+SCAD 或 handoff JSON 冒充成 3MF；已有外部 STL 仍可用
+`tools/3mf_adapter/three_mf_adapter.py standard` 生成 Core 3MF。
+
+桥接器会优先使用命令行的 `--openscad`／`--bambu-path`；省略时读取任务
+`[print]` 中的 `openscad_executable`／`bambu_executable`（含路径的值按
+`job.toml` 所在目录解析，裸命令名按宿主机 PATH 查找），最后才查找默认
+PATH 和 macOS 应用包。这样
+不同 CODEX 主机可以把工具位置写进任务而不改图稿或模型语义。
+
 `validate` 是对已经生成的 process/model 派生物的完整审计，不是仅配置
 lint；它需要先有一次成功的 `process`（`build` 会自动完成）。配置解析错误
 会由所有阶段命令直接报告。
+
+要在没有当前对话历史的情况下复演“新用户”链路，可运行仓库自带的
+干净环境测试。默认它会复制 Helios-44-2 REHOUSE 测试图稿和 95／82／77 mm
+三份示例配置到临时目录；用 `--fixture` 也可切换到独立的 Mamiya-Sekor C
+80mm F1.9 REHOUSE 样本。脚本重新调用公开 CLI，检查焦段／光圈语义、遮罩投影，
+并在本机有 OpenSCAD 时输出原生 3MF；检测到兼容的 Bambu Studio 配置时还会
+对 95 mm 版本做一次切片。默认不要求桌面程序：
+
+```sh
+python3 scripts/smoke_rehouse.py --bambu never --json
+# 换一个品牌/重制样本，验证没有跨任务文字泄漏：
+python3 scripts/smoke_rehouse.py \
+  --fixture examples/fixtures/mamiya-sekor-c-80-f1-9-rehouse \
+  --bambu never --json
+# 完整主机验证（需要 OpenSCAD；若有 A1 mini 配置也会切片）
+python3 scripts/smoke_rehouse.py --bambu auto --require-external --keep-workdir --json
+```
+
+`--keep-workdir` 会保留隔离输出，`--artifact-dir PATH` 可在明确指定时复制
+生成的 3MF 及 sidecar；脚本不会带入示例目录旧的 `out/`、3MF 或对批准图稿
+做写回。输出中的 `fit_status` 仍是 `UNVERIFIABLE`，直到同材料试配环被实际
+打印并测量。
+
+需要直接检查 3MF Core 包时，可使用仓库内不依赖第三方库的适配器：
+
+```sh
+python3 tools/3mf_adapter/three_mf_adapter.py verify path/to/model.3mf
+python3 tools/3mf_adapter/three_mf_adapter.py verify path/to/sliced.3mf --require-slice
+```
+它检查 ZIP CRC、Core XML 关系、所有模型部件的网格索引／边界和可选的非空 G-code；
+它不能替代 Bambu 预览或实体卡合试配。
 
 输出目录包含：
 
@@ -201,7 +282,10 @@ Skill、docs 和示例是仓库／source distribution 的 companion 文档，不
 
 本地 `jobs/` 工作区也默认被忽略，因为其中通常包含尚未获准再分发的图稿和模型；只有完成 provenance／许可证审查后，才应使用 `git add -f` 发布特定任务。
 
-本仓库不会自动登录 MakerWorld、调用 ChromaCanvas、上传云端项目或声称已经生成／切片 3MF；稳定核心公开到 SVG、SCAD、STL 和可审计 handoff，平台专用的 3MF／切片步骤必须由用户在相应软件中完成并记录版本与预览。
+本仓库不会自动登录 MakerWorld、调用 ChromaCanvas 或上传云端项目。仓库内的
+`scripts/build_3mf.py`／`bin/lens-cap-3mf` 会在用户明确安装并指定 OpenSCAD（以及可选
+Bambu 配置）时生成并校验 3MF；不会假装拥有缺失的桌面程序，也不会把平台登录或
+云端切片当成核心功能。切片后的预览和实体卡合仍必须由用户检查并记录。
 
 ## 开发与测试
 

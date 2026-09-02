@@ -23,3 +23,18 @@ art/master.jpg
 # Per-lens working jobs may contain private or provider-restricted artwork.
 # Publish a job only with an explicit provenance/licence review (`git add -f`).
 jobs/
+
+# The checked-in named-lens fixtures are deliberately public, reproducible
+# inputs/artifacts rather than a user's private working jobs.  Keep the broad
+# rules above for every other path, but make these fixture files discoverable
+# in a fresh Git clone without requiring `git add -f`.
+!examples/fixtures/*/jobs/
+!examples/fixtures/*/jobs/**/*.toml
+# Keep generated rehearsal trees private/ephemeral even though the source
+# ``job.toml`` files above are intentionally trackable.
+examples/fixtures/*/jobs/*/out/
+!examples/fixtures/*/art/
+!examples/fixtures/*/art/master.png
+!examples/fixtures/*/artifacts/
+!examples/fixtures/*/artifacts/*.3mf
+!examples/fixtures/*/artifacts/*.manifest.json

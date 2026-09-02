@@ -28,6 +28,58 @@ with `uv` installed; this uses the committed `uv.lock`. The unlocked helper
 uses the compatible version ranges and is convenient for ordinary development,
 but it is not a byte-level environment pin.
 
+When the deliverable is an actual 3MF, the public one-command bridge is:
+
+```sh
+./bin/lens-cap-3mf jobs/name/job.toml --force --json
+```
+
+It requires a local OpenSCAD with the Manifold backend for the integrated
+one-piece package. Add `--bambu slice` and explicit machine/process/filament
+profiles only when a printer-specific 3MF with embedded G-code is wanted.
+The bridge prefers explicit --openscad / --bambu-path, then the job's
+[print] executable fields (path-like relative values are relative to the job
+file; bare command names use PATH), then host discovery. Explicit values are
+authoritative: a missing configured path does not silently select another app.
+It runs the same-canvas relief projection audit before writing the native 3MF.
+
+### Keep companion Skills in sync
+
+The checked-in `skills/manifest.json` is the source of truth for the two
+first-party routing Skills. Check the source tree from any host without
+writing a global directory:
+
+```sh
+./scripts/install_skills.py check --json
+```
+
+To inspect a Codex/Claude-compatible destination, pass it explicitly. A
+`sync` without `--apply` is also a read-only plan:
+
+```sh
+./scripts/install_skills.py check --dest .agents/skills --json
+./scripts/install_skills.py sync --dest .agents/skills
+```
+
+Apply only after reviewing the plan. The synchronizer writes a
+`.lens-cap-skills.json` receipt containing the project version, manifest hash,
+and per-file SHA-256 values; rerunning an unchanged sync is a no-op. It never
+overwrites a locally edited Skill unless `--force` is explicit. Removing
+source files additionally requires `--force --prune`:
+
+```sh
+./scripts/install_skills.py sync --dest .agents/skills --apply
+./scripts/install_skills.py sync --environment codex --apply --allow-global
+```
+
+Use `--environment claude` for `~/.claude/skills`, or `--dest` for a
+project/container-specific path. Inferred global destinations are always
+dry-run unless `--allow-global` is supplied. For `check`, exit status `1`
+means a destination is missing or drifted; status `2` means the manifest or
+requested target is invalid. A `sync` plan exits successfully while showing
+the pending actions. `bin/lens-cap-skills` and `scripts/sync_skills.py` are
+portable aliases for the same entry point.
+
 ## 1. Declare one job
 
 Run `lens-cap init jobs/name/job.toml --source ...` and edit the generated
@@ -39,6 +91,13 @@ plastic, declare `foam_liner_status = "none"` (and the bare clearance) in the
 chosen; otherwise ribs remain enabled by the documented default (use
 `--friction-ribs` to record an explicit enabled choice). The measured
 mating diameter automatically becomes the face diameter.
+
+When the starter artwork does not exist yet, a relative `--source` is kept
+relative to the new job directory and its source-parent placeholder (normally
+`art/`) is created there.
+This makes `init` safe from an empty checkout: it does not serialize a path
+that accidentally points at the caller's current directory. Restore or copy
+the approved artwork before running `process`.
 Record the current lens identity and artwork
 provenance in the accompanying manifest. For a fitted cap, the face diameter
 must come from the actual gripping outside diameter; do not copy a nominal
@@ -58,6 +117,22 @@ the current measurements rather than copying its mesh.
 An opaque square source needs an explicit `[circle]` center/radius. A
 transparent source may use alpha as its exclusion mask only when that alpha is
 approved and documented.
+
+### Clean-room rehearsal
+
+The repository includes a deterministic-input integration rehearsal that does
+not depend on the current conversation or any old generated directory:
+
+```sh
+python3 scripts/smoke_rehouse.py --bambu never --json
+```
+
+It copies the Helios-44-2 REHOUSE fixture into a temporary checkout and runs
+the public CLI for measured 95, 82, and 77 mm mating envelopes. On a host with
+OpenSCAD, add `--bambu auto --require-external --keep-workdir` to exercise native
+3MF export and one Bambu slice. `--artifact-dir` is an explicit opt-in for
+copying those 3MFs out of the temporary run. Missing desktop tools remain
+`UNVERIFIABLE`; physical fit remains pending until a coupon is measured.
 
 ## 2. Process the artwork
 
@@ -97,12 +172,14 @@ with `lens-cap model`; it imports every mask on the same canvas and writes a
 parameterized SCAD plus `geometry-report.json`. `lens-cap export-openscad` asks
 the explicitly installed OpenSCAD executable to export selectors, while
 `lens-cap bambu-handoff` writes a version-neutral Bambu manifest. (`mesh` and
-`handoff` are compatibility aliases.) Never redraw or
-retype artwork in a CAD script. Keep the mechanical body parameterized by the
-current measured diameter and liner plan. Generate and measure a short fit
-ring before a full multicolour print. The bundled `wide_tapered` profile is
-mechanical geometry only and must not alter the approved focal-length/aperture
-artwork or introduce brand marks.
+`handoff` are compatibility aliases.) The `bin/lens-cap-3mf` bridge chains
+these gates, exports the integrated native 3MF, and verifies its Core package;
+it returns `UNVERIFIABLE` rather than pretending a missing desktop tool is a
+complete file. Never redraw or retype artwork in a CAD script. Keep the
+mechanical body parameterized by the current measured diameter and liner plan.
+Generate and measure a short fit ring before a full multicolour print. The
+bundled `wide_tapered` profile is mechanical geometry only and must not alter
+the approved focal-length/aperture artwork or introduce brand marks.
 
 The OpenSCAD adapter uses the `Manifold` backend for exports so an integrated
 assembly retains the imported relief solids as well as the cap body. A machine

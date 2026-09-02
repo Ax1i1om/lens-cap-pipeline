@@ -1,0 +1,156 @@
+{
+  "adapter": "bambu-studio-3mf",
+  "adapter_version": 1,
+  "bambu": "<BambuStudio.app>/Contents/MacOS/BambuStudio",
+  "bambu_result": {
+    "error_string": "Success.",
+    "export_time": 680,
+    "layer_height": 0.20000000298023224,
+    "plate_index": 0,
+    "prepare_time": 86,
+    "return_code": 0,
+    "sliced_plates": [
+      {
+        "feature_type_times": {
+          "Bottom surface": 55.812644958496094,
+          "Bridge": 2339.942626953125,
+          "Custom": 3.5919570922851562,
+          "Inner wall": 1861.3743896484375,
+          "Internal solid infill": 3239.671630859375,
+          "Outer wall": 2150.286376953125,
+          "Skirt": 20.959768295288086,
+          "Sparse infill": 1579.2130126953125,
+          "Top surface": 904.8273315429688,
+          "Travel": 514.8714599609375,
+          "Undefined": 512.6737670898438
+        },
+        "filament_change_times": 0,
+        "filaments": [
+          {
+            "filament_id": "",
+            "id": 1,
+            "main_used_g": 0.0,
+            "total_used_g": 0.0
+          }
+        ],
+        "generate_support_material_time": 176,
+        "id": 1,
+        "infill_time": 2286,
+        "layer_filament_change": 0,
+        "main_predication": 12666.8935546875,
+        "make_perimeters_time": 1298,
+        "obj_cached_cnt": 0,
+        "objects": [
+          {
+            "bbox": {
+              "depth": 142.55039978027344,
+              "height": 16.60099983215332,
+              "width": 142.55039978027344,
+              "x": 28.72479248046875,
+              "y": 28.724802017211914,
+              "z": 0.0
+            },
+            "id": 5,
+            "name": "mamiya-sekor-c-80-f1-9-rehouse-95mm-assembly.stl",
+            "triangle_count": 85954
+          }
+        ],
+        "sliced_time": 4740,
+        "sliced_time_with_cache": 948,
+        "total_predication": 12668.2880859375,
+        "triangle_count": 85954,
+        "warning_message": ""
+      }
+    ],
+    "sparse_infill_density": 20.0,
+    "wall_loops": 2
+  },
+  "bambu_version": "BambuStudio-02.08.02.60:",
+  "command": [
+    "<BambuStudio.app>/Contents/MacOS/BambuStudio",
+    "--datadir",
+    "<temporary-datadir>",
+    "--outputdir",
+    "<temporary-outputdir>",
+    "--load-settings",
+    "<BambuStudio.app>/Contents/Resources/profiles/BBL/machine/Bambu Lab A1 mini 0.2 nozzle.json;<BambuStudio.app>/Contents/Resources/profiles/BBL/process/0.10mm Standard @BBL A1M 0.2 nozzle.json",
+    "--load-filaments",
+    "<BambuStudio.app>/Contents/Resources/profiles/BBL/filament/Bambu PLA Basic @BBL A1M 0.2 nozzle.json",
+    "--orient",
+    "0",
+    "--arrange",
+    "1",
+    "--slice",
+    "0",
+    "--export-3mf",
+    "mamiya-sekor-c-80-f1-9-rehouse-95mm-bambu-slice.3mf",
+    "<external>/mamiya-sekor-c-80-f1-9-rehouse-95mm-assembly.stl"
+  ],
+  "command_exit_code": 0,
+  "determinism": "input/command reproducible; Bambu UUIDs, PNGs, timestamps, and G-code metadata may vary by release/run",
+  "generated_at_utc": "2026-09-02T19:57:24.159213+00:00",
+  "input": "<external>/mamiya-sekor-c-80-f1-9-rehouse-95mm-assembly.stl",
+  "input_sha256": "910ec6682a6760e2f00640f011e6a3ab6668984a3544029aeea36375097af51c",
+  "mode": "slice",
+  "output": "<external>/mamiya-sekor-c-80-f1-9-rehouse-95mm-bambu-slice.3mf",
+  "preparation": {
+    "input_kind": "stl"
+  },
+  "profiles_are_external": true,
+  "python": "3.11.15",
+  "stderr_tail": "",
+  "stdout_tail": "[2026-09-03 03:57:18.282444] [0x0000000204b87100] [trace]   Initializing StaticPrintConfigs\n",
+  "verification": {
+    "bytes": 2552995,
+    "entries": [
+      "3D/3dmodel.model",
+      "3D/Objects/object_1.model",
+      "3D/_rels/3dmodel.model.rels",
+      "Metadata/_rels/model_settings.config.rels",
+      "Metadata/cut_information.xml",
+      "Metadata/filament_sequence.json",
+      "Metadata/model_settings.config",
+      "Metadata/pick_1.png",
+      "Metadata/plate_1.gcode",
+      "Metadata/plate_1.gcode.md5",
+      "Metadata/plate_1.json",
+      "Metadata/plate_1.png",
+      "Metadata/plate_1_small.png",
+      "Metadata/plate_no_light_1.png",
+      "Metadata/project_settings.config",
+      "Metadata/slice_info.config",
+      "Metadata/top_1.png",
+      "[Content_Types].xml",
+      "_rels/.rels"
+    ],
+    "gcode_bytes": 5058745,
+    "has_embedded_gcode": true,
+    "model": {
+      "bounds": {
+        "max_mm": [
+          51.0999985,
+          51.0999985,
+          8.30049992
+        ],
+        "min_mm": [
+          -51.0999985,
+          -51.0999985,
+          -8.30049992
+        ],
+        "size_mm": [
+          102.199997,
+          102.199997,
+          16.60099984
+        ]
+      },
+      "build_items": 1,
+      "mesh_parts": 1,
+      "objects": 2,
+      "parts": 2,
+      "triangles": 85954,
+      "vertices": 42812
+    },
+    "path": "<external>/mamiya-sekor-c-80-f1-9-rehouse-95mm-bambu-slice.3mf",
+    "sha256": "1cb2e44ed96a5147970bd4a6898c562097ea624b34ede014c0aa93ecdf2ddeae"
+  }
+}

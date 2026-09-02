@@ -1,0 +1,61 @@
+{
+  "adapter": "openscad-native-3mf",
+  "adapter_version": 1,
+  "command": [
+    "<OpenSCAD.app>/Contents/MacOS/OpenSCAD",
+    "--backend",
+    "Manifold",
+    "-o",
+    "<temporary-workdir>/mamiya-sekor-c-80-f1-9-rehouse-85mm-native.3mf",
+    "<external>/mamiya-sekor-c-80-f1-9-rehouse-85mm.scad"
+  ],
+  "command_exit_code": 0,
+  "determinism": "geometry/command reproducible; OpenSCAD may vary UUIDs, XML metadata, and exporter details by release",
+  "generated_at_utc": "2026-09-02T19:57:14.721913+00:00",
+  "input": "<external>/mamiya-sekor-c-80-f1-9-rehouse-85mm.scad",
+  "input_sha256": "c9960223816493521312b680110e68caa672e2264bf63a9aa10477fb47b882a9",
+  "openscad": "<OpenSCAD.app>/Contents/MacOS/OpenSCAD",
+  "openscad_version": "OpenSCAD version 2026.06.12",
+  "output": "<external>/mamiya-sekor-c-80-f1-9-rehouse-85mm-native.3mf",
+  "python": "3.11.15",
+  "render_part": "assembly (SCAD default)",
+  "stderr_tail": "Geometries in cache: 27\nGeometry cache size in bytes: 15359264\nCGAL Polyhedrons in cache: 6\nCGAL cache size in bytes: 12500250\nTotal rendering time: 0:00:00.275\n   Top level object is a 3D object (manifold):\n   Status:     NoError\n   Genus:      0\n   Vertices:    42345\n   Facets:      84686\n",
+  "stdout_tail": "",
+  "verification": {
+    "bytes": 1012462,
+    "entries": [
+      "3D/3dmodel.model",
+      "[Content_Types].xml",
+      "_rels/.rels"
+    ],
+    "gcode_bytes": 0,
+    "has_embedded_gcode": false,
+    "model": {
+      "bounds": {
+        "max_mm": [
+          46.1,
+          46.1,
+          16.601
+        ],
+        "min_mm": [
+          -46.1,
+          -46.1,
+          0.0
+        ],
+        "size_mm": [
+          92.2,
+          92.2,
+          16.601
+        ]
+      },
+      "build_items": 1,
+      "mesh_parts": 1,
+      "objects": 1,
+      "parts": 1,
+      "triangles": 84686,
+      "vertices": 42345
+    },
+    "path": "<external>/mamiya-sekor-c-80-f1-9-rehouse-85mm-native.3mf",
+    "sha256": "97932b4c750763a8f1b2ccf0d17bcfa529fed58c8b379c5a15f2179b7828b025"
+  }
+}

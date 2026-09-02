@@ -1,0 +1,24 @@
+Create a high-quality square source artwork for a circular camera lens-cap
+medallion inspired by the Soviet Helios-44-2 and its later cinema rehousing
+culture. This is a flat graphic specification, not a product photograph.
+
+Exact rendered text, and no other text: 58, F2, HELIOS 44-2, REHOUSED CINEMA,
+M42. Make “58” the largest and first visual read; make “F2” the second largest
+and second visual read. Keep HELIOS 44-2, REHOUSED CINEMA, and M42 secondary and
+restrained. Use a complete circular composition on a square canvas with broad
+connected black, charcoal, medium-gray, and warm-ivory fields; bold contours;
+continuous engraved/linocut or screen-print lines; and strong modular
+registration geometry. Translate the qualified cinema-rehousing association
+into abstract concentric optical swirls, a narrow radial searchlight wedge,
+desert-like contour arcs, and a clean mechanical registration grid. The
+association is a visual metaphor for the rehoused Helios-44-2 family and is
+not an official film logo or still.
+
+Do not draw a lens barrel, glass, iris/aperture blades, camera, film strip,
+actor, spacecraft, film logo, Batman logo, Dune logo, brand logo, realistic
+reflection, glossy 3D object, photographic clutter, pointillism, dense
+halftone, gradient, random numerals, pseudo-text, or rectangular crop. Keep
+large fills flat and printable; allow antialiasing only at shape boundaries.
+The circle must be centered, fully visible, and suitable for deterministic
+same-canvas mask tracing. Typography and hierarchy are more important than
+micro-detail.

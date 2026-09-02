@@ -1,20 +1,42 @@
 include AGENTS.md LICENSE NOTICE README.md README.en.md CHANGELOG.md CONTRIBUTING.md SECURITY.md THIRD_PARTY.md CODE_OF_CONDUCT.md
 include uv.lock
 include bin/lens-cap
+include bin/lens-cap-skills
+include bin/lens-cap-3mf
+include bin/lens-cap-skills.cmd
+include bin/lens-cap-3mf.cmd
 include bin/audit-stl-projection
 recursive-include .github *.md *.yml
 recursive-include docs *.md
 recursive-include skills *.md
 recursive-include skills *.yaml
 include skills/manifest.json
-recursive-include examples *.toml *.json
+include examples/*.toml
+include examples/design-brief.template.json
+include examples/job-manifest.template.json
 recursive-include examples/art *.ppm
 recursive-include scripts *.py
 recursive-include tests *.py
+recursive-include tools/3mf_adapter *.py *.md *.scad *.stl *.3mf *.json
+recursive-include .agents *.md *.yaml *.json
+include examples/fixtures/helios-44-2-rehouse/README.md
+include examples/fixtures/helios-44-2-rehouse/prompt.txt
+include examples/fixtures/helios-44-2-rehouse/design-brief.json
+include examples/fixtures/helios-44-2-rehouse/art/master.png
+recursive-include examples/fixtures/helios-44-2-rehouse/jobs *.toml
+recursive-include examples/fixtures/helios-44-2-rehouse/artifacts *.3mf *.manifest.json
+include examples/fixtures/mamiya-sekor-c-80-f1-9-rehouse/README.md
+include examples/fixtures/mamiya-sekor-c-80-f1-9-rehouse/prompt.txt
+include examples/fixtures/mamiya-sekor-c-80-f1-9-rehouse/design-brief.json
+include examples/fixtures/mamiya-sekor-c-80-f1-9-rehouse/art/master.png
+recursive-include examples/fixtures/mamiya-sekor-c-80-f1-9-rehouse/jobs *.toml
+recursive-include examples/fixtures/mamiya-sekor-c-80-f1-9-rehouse/artifacts *.3mf *.manifest.json
 
 # Never ship local/generated artifacts even when a developer built an example
 # before creating the source archive.
 prune examples/build
+prune examples/fixtures/helios-44-2-rehouse/jobs/*/out
+prune examples/fixtures/mamiya-sekor-c-80-f1-9-rehouse/jobs/*/out
 prune build
 prune dist
 prune .venv

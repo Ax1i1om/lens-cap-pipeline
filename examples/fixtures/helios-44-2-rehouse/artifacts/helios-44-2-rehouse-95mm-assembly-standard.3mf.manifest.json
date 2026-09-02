@@ -1,0 +1,76 @@
+{
+  "adapter": "standard-core-3mf",
+  "adapter_version": 1,
+  "determinism": "byte-stable for identical input/title under the same Python/zlib implementation",
+  "input": "examples/fixtures/helios-44-2-rehouse/jobs/95mm/out/model/mesh/helios-44-2-rehouse-95mm-assembly.stl",
+  "input_sha256": "df9bb82fa5424c84623c0aa31f28102a0e8b9fe303fb207770b5779866819f4e",
+  "mesh": {
+    "boundary_edges": 4,
+    "bounds": {
+      "max_mm": [
+        50.099998474121094,
+        50.099998474121094,
+        16.60099983215332
+      ],
+      "min_mm": [
+        -50.099998474121094,
+        -50.099998474121094,
+        0.0
+      ],
+      "size_mm": [
+        100.19999694824219,
+        100.19999694824219,
+        16.60099983215332
+      ]
+    },
+    "bytes": 2309671,
+    "closed": false,
+    "closure_required": false,
+    "dropped_degenerate": 2,
+    "nonmanifold_edges": 318,
+    "sha256": "1abbcf85852fc8eda281806187d6a07b45a9f25cac977304b69e298e1756c713",
+    "triangles": 191710,
+    "unique_edges": 287249,
+    "vertices": 95540
+  },
+  "output": "examples/fixtures/helios-44-2-rehouse/artifacts/helios-44-2-rehouse-95mm-assembly-standard.3mf",
+  "python": "3.14.4",
+  "verification": {
+    "bytes": 2309671,
+    "entries": [
+      "3D/3dmodel.model",
+      "3D/_rels/3dmodel.model.rels",
+      "[Content_Types].xml",
+      "_rels/.rels"
+    ],
+    "gcode_bytes": 0,
+    "has_embedded_gcode": false,
+    "model": {
+      "bounds": {
+        "max_mm": [
+          50.099998474,
+          50.099998474,
+          16.600999832
+        ],
+        "min_mm": [
+          -50.099998474,
+          -50.099998474,
+          0.0
+        ],
+        "size_mm": [
+          100.199996948,
+          100.199996948,
+          16.600999832
+        ]
+      },
+      "build_items": 1,
+      "mesh_parts": 1,
+      "objects": 1,
+      "parts": 1,
+      "triangles": 191710,
+      "vertices": 95540
+    },
+    "path": "examples/fixtures/helios-44-2-rehouse/artifacts/helios-44-2-rehouse-95mm-assembly-standard.3mf",
+    "sha256": "1abbcf85852fc8eda281806187d6a07b45a9f25cac977304b69e298e1756c713"
+  }
+}

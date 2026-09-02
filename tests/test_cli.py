@@ -86,6 +86,10 @@ def test_init_defaults_to_inner_friction_ribs_and_records_default(tmp_path: Path
     assert config.fit.friction_ribs_explicit is False
     assert config.fit.friction_rib_count == 12
     assert config.fit.friction_rib_protrusion_mm == 0.10
+    assert config.fit.foam_liner_status == "none"
+    assert config.fit.compression_fraction == 0.0
+    assert config.fit.compression_is_assumption is False
+    assert config.fit.retention_strategy == "bare_wall_plus_neutral_ribs"
 
 
 def test_init_can_select_wide_tapered_profile(tmp_path: Path) -> None:
@@ -187,6 +191,61 @@ def test_init_creates_the_declared_output_directory(tmp_path: Path) -> None:
     ) == 0
     assert (config_path.parent / "artifacts").is_dir()
     assert not (config_path.parent / "build").exists()
+
+
+def test_init_keeps_missing_relative_source_relative_to_task_directory(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """An empty cwd must not leak into a nested task's starter config.
+
+    ``init`` intentionally permits a starter artwork path that will be filled
+    in after the command.  When that path is absent in both the cwd and task
+    directory, its serialized spelling must still be resolved from the task
+    config directory rather than from the caller's cwd.
+    """
+
+    monkeypatch.chdir(tmp_path)
+    config_path = tmp_path / "jobs" / "empty" / "job.toml"
+    assert main(
+        [
+            "init",
+            str(config_path),
+            "--source",
+            "art/master.png",
+            "--face-diameter",
+            "52",
+        ]
+    ) == 0
+    generated = config_path.read_text(encoding="utf-8")
+    assert 'source_art = "art/master.png"' in generated
+    assert (config_path.parent / "art").is_dir()
+    assert not (tmp_path / "art").exists()
+
+
+def test_init_creates_placeholder_for_a_custom_relative_source_directory(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    config_path = tmp_path / "jobs" / "custom" / "job.toml"
+    assert main(
+        [
+            "init",
+            str(config_path),
+            "--source",
+            "reference/master.png",
+            "--face-diameter",
+            "52",
+        ]
+    ) == 0
+    assert 'source_art = "reference/master.png"' in config_path.read_text(encoding="utf-8")
+    assert (config_path.parent / "reference").is_dir()
+    assert not (config_path.parent / "art").exists()
+
+
+def test_init_rejects_an_empty_source_argument(tmp_path: Path) -> None:
+    config_path = tmp_path / "job.toml"
+    assert main(["init", str(config_path), "--source", "", "--face-diameter", "52"]) == 2
+    assert not config_path.exists()
 
 
 def test_init_rejects_foam_without_a_mating_measurement(tmp_path: Path) -> None:

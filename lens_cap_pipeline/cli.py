@@ -6,6 +6,7 @@ import argparse
 import json
 import os
 import sys
+from dataclasses import replace
 from pathlib import Path
 
 from .config import (
@@ -145,6 +146,7 @@ def _parser() -> argparse.ArgumentParser:
     run_parser.add_argument("--bambu-handoff", action="store_true", help="write the version-neutral Bambu handoff manifest")
     run_parser.add_argument("--external", action="store_true", help="compile/check with installed OpenSCAD")
     run_parser.add_argument("--strict-external", action="store_true", help="fail when an external check is unavailable")
+    run_parser.add_argument("--openscad", help="explicit OpenSCAD executable for external checks/exports")
     run_parser.add_argument("--json", action="store_true")
 
     export_parser = sub.add_parser("export-openscad", aliases=["mesh"], help="export selected model parts to STL")
@@ -152,6 +154,7 @@ def _parser() -> argparse.ArgumentParser:
     export_parser.add_argument("--part", action="append", dest="parts", help="selector (repeatable)")
     export_parser.add_argument("--force", action="store_true")
     export_parser.add_argument("--strict-external", action="store_true", help="treat a missing renderer as a failure")
+    export_parser.add_argument("--openscad", help="explicit OpenSCAD executable")
     export_parser.add_argument("--json", action="store_true")
 
     handoff_parser = sub.add_parser("bambu-handoff", aliases=["handoff"], help="write an explicit Bambu Studio handoff manifest")
@@ -163,6 +166,7 @@ def _parser() -> argparse.ArgumentParser:
     validate_parser.add_argument("config", type=Path)
     validate_parser.add_argument("--external", action="store_true")
     validate_parser.add_argument("--strict-external", action="store_true")
+    validate_parser.add_argument("--openscad", help="explicit OpenSCAD executable for the compile probe")
     validate_parser.add_argument("--json", action="store_true")
 
     doctor_parser = sub.add_parser("doctor", help="show optional external-tool availability")
@@ -216,6 +220,8 @@ def _init_target(path: Path) -> Path:
 
 def _init_source_for_config(value: str, target: Path) -> str:
     """Resolve a CLI source argument and serialize it clone-relatively."""
+    if not isinstance(value, str) or not value.strip():
+        raise ConfigError("--source must be a non-empty path")
     raw = Path(value).expanduser()
     if raw.is_absolute():
         resolved = raw.resolve()
@@ -226,7 +232,13 @@ def _init_source_for_config(value: str, target: Path) -> str:
         # useful config-relative default such as ``art/master.png``.
         cwd_candidate = (Path.cwd() / raw).resolve()
         config_candidate = (target.parent.resolve() / raw).resolve()
-        resolved = cwd_candidate if cwd_candidate.is_file() or not config_candidate.exists() else config_candidate
+        # A relative argument is first interpreted from the caller's cwd when
+        # that file already exists.  If it does not, retain the task-local
+        # spelling instead of serializing a path relative to an unrelated cwd.
+        # This matters for ``init jobs/name/job.toml`` from an empty checkout:
+        # the starter ``art/master.png`` should remain beside that job, not
+        # unexpectedly point at ``../art/master.png`` under the caller.
+        resolved = cwd_candidate if cwd_candidate.is_file() else config_candidate
     try:
         return Path(os.path.relpath(resolved, target.parent.resolve())).as_posix()
     except (ValueError, OSError):
@@ -333,6 +345,19 @@ def main(argv: list[str] | None = None) -> int:
                 data["measured_diameter_mm"] = args.measured_diameter
                 if args.face_diameter is None:
                     data.pop("face_diameter_mm", None)
+                # A bare fitted cap has no compressible liner.  Do not leave
+                # the template's foam-only 20% assumption in a no-foam job:
+                # it is ignored by the cavity calculation, but it is easy for
+                # a new user (or a downstream adapter) to mistake it for a
+                # physical claim.  Foam jobs overwrite these fields below.
+                fit_data.update(
+                    {
+                        "foam_liner_status": "none",
+                        "compression_fraction": 0.0,
+                        "compression_is_assumption": False,
+                        "retention_strategy": "bare_wall_plus_neutral_ribs",
+                    }
+                )
             if args.foam_thickness is not None:
                 # Update the template's fit table instead of replacing it.
                 # Keeping wall, rib, and printability defaults in the emitted
@@ -382,7 +407,22 @@ def main(argv: list[str] | None = None) -> int:
                 fit_data.setdefault("friction_ribs_enabled", True)
                 fit_data.setdefault("friction_ribs_explicit", False)
             _write_config(target, data)
-            target.parent.joinpath("art").mkdir(parents=True, exist_ok=True)
+            # Keep a placeholder beside the task for a not-yet-supplied
+            # relative source.  Derive the directory from the serialized
+            # source instead of always creating ``art/``: custom paths such
+            # as ``reference/master.png`` should get the matching placeholder,
+            # while an explicit path outside the task must never cause mkdir
+            # to touch an unrelated directory.
+            source_value = Path(str(data.get("source_art", ""))).expanduser()
+            if not source_value.is_absolute():
+                source_parent = (target.parent / source_value.parent).resolve()
+                task_parent = target.parent.resolve()
+                try:
+                    source_parent.relative_to(task_parent)
+                except ValueError:
+                    pass
+                else:
+                    source_parent.mkdir(parents=True, exist_ok=True)
             output_path = Path(str(data.get("output_dir", "build"))).expanduser()
             if not output_path.is_absolute():
                 output_path = target.parent / output_path
@@ -395,6 +435,17 @@ def main(argv: list[str] | None = None) -> int:
             return 0
 
         config = load_config(args.config)
+        # External tool paths are runtime overrides, not artwork semantics.
+        # Keep them on the immutable normalized config so every downstream
+        # stage (export, validate, and handoff provenance) observes the same
+        # executable.  The bridge passes an absolute path; direct CLI callers
+        # may also use a command name resolved through PATH.
+        openscad_override = getattr(args, "openscad", None)
+        if openscad_override:
+            config = replace(
+                config,
+                print=replace(config.print, openscad_executable=str(openscad_override)),
+            )
         if args.command == "validate":
             report = validate_job(
                 config,

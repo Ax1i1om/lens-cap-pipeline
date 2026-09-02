@@ -1,0 +1,76 @@
+{
+  "adapter": "standard-core-3mf",
+  "adapter_version": 1,
+  "determinism": "byte-stable for identical input/title under the same Python/zlib implementation",
+  "input": "examples/fixtures/helios-44-2-rehouse/jobs/77mm/out/model/mesh/helios-44-2-rehouse-77mm-assembly.stl",
+  "input_sha256": "e51485a719dedfadcf39604b8133a8d64f33df104bd77d3d1c31638c126c3f5f",
+  "mesh": {
+    "boundary_edges": 3,
+    "bounds": {
+      "max_mm": [
+        41.099998474121094,
+        41.099998474121094,
+        16.60099983215332
+      ],
+      "min_mm": [
+        -41.099998474121094,
+        -41.099998474121094,
+        0.0
+      ],
+      "size_mm": [
+        82.19999694824219,
+        82.19999694824219,
+        16.60099983215332
+      ]
+    },
+    "bytes": 2365680,
+    "closed": false,
+    "closure_required": false,
+    "dropped_degenerate": 1,
+    "nonmanifold_edges": 318,
+    "sha256": "8cb7bfe542572c45230a94bff65ca36d157ef754fa9d0589031de799bd91047e",
+    "triangles": 191713,
+    "unique_edges": 287253,
+    "vertices": 95541
+  },
+  "output": "examples/fixtures/helios-44-2-rehouse/artifacts/helios-44-2-rehouse-77mm-assembly-standard.3mf",
+  "python": "3.14.4",
+  "verification": {
+    "bytes": 2365680,
+    "entries": [
+      "3D/3dmodel.model",
+      "3D/_rels/3dmodel.model.rels",
+      "[Content_Types].xml",
+      "_rels/.rels"
+    ],
+    "gcode_bytes": 0,
+    "has_embedded_gcode": false,
+    "model": {
+      "bounds": {
+        "max_mm": [
+          41.099998474,
+          41.099998474,
+          16.600999832
+        ],
+        "min_mm": [
+          -41.099998474,
+          -41.099998474,
+          0.0
+        ],
+        "size_mm": [
+          82.199996948,
+          82.199996948,
+          16.600999832
+        ]
+      },
+      "build_items": 1,
+      "mesh_parts": 1,
+      "objects": 1,
+      "parts": 1,
+      "triangles": 191713,
+      "vertices": 95541
+    },
+    "path": "examples/fixtures/helios-44-2-rehouse/artifacts/helios-44-2-rehouse-77mm-assembly-standard.3mf",
+    "sha256": "8cb7bfe542572c45230a94bff65ca36d157ef754fa9d0589031de799bd91047e"
+  }
+}

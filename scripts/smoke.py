@@ -20,9 +20,15 @@ from lens_cap_pipeline.config import load_config  # noqa: E402
 from lens_cap_pipeline.model import generate_model  # noqa: E402
 from lens_cap_pipeline.process import process  # noqa: E402
 from lens_cap_pipeline.validate import validate_job  # noqa: E402
+from scripts.install_skills import inspect_skills  # noqa: E402
 
 
 def main() -> int:
+    # Skill files are companion assets, so smoke their source manifest before
+    # exercising the image/model pipeline.  This remains read-only and works
+    # from a fresh checkout without a host-specific Skill directory.
+    skill_report = inspect_skills(root=ROOT)
+    assert skill_report["status"] == "passed", skill_report
     with tempfile.TemporaryDirectory(prefix="lens-cap-smoke-") as raw:
         root = Path(raw)
         image = Image.new("RGB", (96, 96), (17, 18, 17))
@@ -81,7 +87,19 @@ required = true
         assert model.scad_path.is_file()
         validation = validate_job(model_config)
         assert validation["status"] == "passed", validation
-        print(json.dumps({"status": "passed", "job": config.job_slug}, ensure_ascii=False))
+        print(
+            json.dumps(
+                {
+                    "status": "passed",
+                    "job": config.job_slug,
+                    "skills": {
+                        "project_version": skill_report["project_version"],
+                        "manifest_sha256": skill_report["manifest_sha256"],
+                    },
+                },
+                ensure_ascii=False,
+            )
+        )
     return 0
 
 

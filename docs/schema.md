@@ -32,6 +32,12 @@ report records its basename, version and output hashes. Other provenance
 metadata should avoid machine-specific absolute paths when a cross-machine
 digest is required.
 
+In `[print]`, a path-like executable value (one containing a separator, an
+explicit relative marker, or a filename extension) is resolved relative to the
+job file. A bare command name such as `openscad` or `BambuStudio` is looked up
+on `PATH`; any explicitly configured value is authoritative and a missing one
+is reported as `UNVERIFIABLE` rather than replaced by another installation.
+
 For a fitted cap, set `measured_diameter_mm` and omit
 `face_diameter_mm` unless an explicit face-size override is intended. The core
 does not infer either value from a nominal filter thread.

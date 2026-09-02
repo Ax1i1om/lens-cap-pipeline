@@ -1,5 +1,21 @@
 {
   "schema_version": 1,
+  "project_version": "0.1.0a2",
+  "distribution": {
+    "entrypoint": "scripts/install_skills.py",
+    "aliases": ["bin/lens-cap-skills", "scripts/sync_skills.py"],
+    "production_entrypoint": "scripts/build_3mf.py",
+    "production_alias": "bin/lens-cap-3mf",
+    "receipt": ".lens-cap-skills.json",
+    "default_mode": "dry-run",
+    "apply_flag": "--apply",
+    "drift_exit_code": 1,
+    "environments": {
+      "project": ".agents/skills",
+      "codex": "$CODEX_HOME/skills",
+      "claude": "$CLAUDE_HOME/skills"
+    }
+  },
   "routing_policy": {
     "lens_cap_intent": {
       "priority": "exclusive_primary_design_route",
@@ -23,6 +39,21 @@
         "generic CAD",
         "generic 3D modelling"
       ],
+      "artwork_hierarchy": {
+        "first_read": "focal_length",
+        "second_read": "maximum_aperture",
+        "second_read_aliases": ["f_stop", "f_number", "f_value"],
+        "preserve_after_approval": true
+      },
+      "production_intake": {
+        "grouped_questions": [
+          "mating_outside_diameter_mm",
+          "foam_liner_plan_and_uncompressed_thickness_mm",
+          "friction_rib_preference"
+        ],
+        "friction_ribs_default_enabled": true,
+        "smooth_wall_requires_explicit_opt_out": true
+      },
       "sequence": {
         "concept_art": ["lens-cap-imagegen"],
         "printable_from_approved_art": ["lens-cap-production"],
@@ -33,6 +64,7 @@
   "skills": [
     {
       "name": "lens-cap-imagegen",
+      "version": "0.1.0a2",
       "path": "skills/lens-cap-imagegen/SKILL.md",
       "localized_paths": ["skills/lens-cap-imagegen/SKILL.zh-CN.md"],
       "phase": "concept_art",
@@ -40,6 +72,7 @@
     },
     {
       "name": "lens-cap-production",
+      "version": "0.1.0a2",
       "path": "skills/lens-cap-production/SKILL.md",
       "localized_paths": ["skills/lens-cap-production/SKILL.zh-CN.md"],
       "phase": "printable_production",

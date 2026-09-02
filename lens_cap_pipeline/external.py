@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import shutil
 import struct
 import subprocess
@@ -116,18 +117,47 @@ def _resolve_tool(
     base_dir: Path | None = None,
 ) -> str | None:
     if configured:
-        candidate = Path(configured).expanduser()
-        if not candidate.is_absolute() and base_dir is not None:
-            # Tool paths in a portable job file are interpreted relative to
-            # that file, just like source_art/output_dir.  This keeps a CLI
-            # invocation independent of the caller's current directory.
-            candidate = (base_dir / candidate).resolve()
-        if candidate.is_file() and candidate.stat().st_mode & 0o111:
-            return str(candidate.resolve())
-        # On Windows an executable may not expose the POSIX execute bit.
-        if candidate.is_file():
-            return str(candidate.resolve())
-    for name in names:
+        raw = str(configured).strip()
+        if raw:
+            candidate = Path(raw).expanduser()
+            path_like = (
+                candidate.is_absolute()
+                or raw.startswith((".", "~"))
+                or "/" in raw
+                or "\\" in raw
+                or bool(candidate.suffix)
+            )
+            if path_like:
+                if not candidate.is_absolute() and base_dir is not None:
+                    # Tool paths in a portable job file are interpreted
+                    # relative to that file, just like source_art/output_dir.
+                    # This keeps a CLI invocation independent of cwd.
+                    candidate = (base_dir / candidate).resolve()
+                if candidate.is_file() and candidate.stat().st_mode & 0o111:
+                    return str(candidate.resolve())
+                # On Windows an executable may not expose the POSIX execute
+                # bit.  A path-like value is still authoritative when it is a
+                # regular file.
+                if candidate.is_file():
+                    return str(candidate.resolve())
+                # An explicit path typo must not silently select another
+                # desktop installation.
+                return None
+            # A bare command name is intentionally resolved through PATH.  It
+            # remains authoritative too: if it is absent, do not fall back to
+            # a different candidate or app bundle.
+            found = shutil.which(raw)
+            return found if found else None
+    # Desktop bundles are not normally on PATH on macOS.  Keep these as
+    # explicit fallback candidates so a clean clone can discover the same
+    # optional tools that the standalone 3MF adapter supports, while still
+    # allowing a job's configured executable to take precedence.
+    fallback_names = list(names)
+    if any("bambu" in str(name).lower() for name in names):
+        fallback_names.append("/Applications/BambuStudio.app/Contents/MacOS/BambuStudio")
+    if any("openscad" in str(name).lower() for name in names):
+        fallback_names.append("/Applications/OpenSCAD.app/Contents/MacOS/OpenSCAD")
+    for name in fallback_names:
         found = shutil.which(name)
         if found:
             return found
@@ -156,13 +186,28 @@ def _version(
             "executable": Path(executable).name,
             "error": f"{Path(executable).name}: {type(exc).__name__}",
         }
-    stdout = result.stdout[-1000:]
-    stderr = result.stderr[-1000:]
+    raw_stdout = result.stdout or ""
+    raw_stderr = result.stderr or ""
+    # Detect a vendor banner before truncating diagnostic text.  Bambu prints
+    # its banner near the beginning and can emit a long help page afterwards.
+    banner = re.search(
+        r"(?:BambuStudio|bambu-studio)[-_]?\d[\w.:-]*",
+        raw_stdout + "\n" + raw_stderr,
+        re.IGNORECASE,
+    )
+    stdout = raw_stdout[-1000:]
+    stderr = raw_stderr[-1000:]
     if root is not None and model is not None:
         stdout = _stable_tool_text(stdout, root=root, model=model)
         stderr = _stable_tool_text(stderr, root=root, model=model)
+    # Bambu Studio releases commonly reject ``--version`` with return code
+    # 254 while still printing a precise ``BambuStudio-02.xx`` banner.  A
+    # recognizable banner is sufficient tool identity; otherwise a non-zero
+    # probe remains UNVERIFIABLE.  This prevents a usable slicer from being
+    # misclassified merely because its CLI has no dedicated version flag.
+    version_ok = result.returncode == 0 or banner is not None
     return {
-        "status": "passed" if result.returncode == 0 else "unverifiable",
+        "status": "passed" if version_ok else "unverifiable",
         "returncode": result.returncode,
         "stdout": stdout,
         "stderr": stderr,

@@ -1,0 +1,7 @@
+# The repository generally ignores generated print files. These tiny, public
+# smoke fixtures (including the native OpenSCAD and Bambu outputs) are
+# intentionally retained so the adapter has auditable packages to verify and
+# open in a slicer.
+!fixtures/
+!fixtures/*.3mf
+!fixtures/*.stl
