@@ -37,6 +37,7 @@ if str(ROOT) not in sys.path:
 
 import scripts.resolve_skill_route as route_resolver  # noqa: E402
 import scripts.smoke_rehouse as smoke  # noqa: E402
+from lens_cap_pipeline.brief import BriefError, canonical_aperture_display  # noqa: E402
 
 SCHEMA_VERSION = 1
 REQUIRED_INTAKE = (
@@ -307,17 +308,31 @@ def _contains_focal_display(text: str, display: str) -> bool:
 
 
 def _contains_aperture(text: str, aperture: str) -> bool:
-    """Match F-number spellings while rejecting a larger adjacent F-number."""
+    """Match a complete prime or variable F-number display token."""
 
-    compact = "".join(aperture.casefold().split())
-    if compact.startswith("f"):
-        compact = compact[1:]
-    compact = compact.lstrip("/")
-    if not compact:
-        return False
-    source = text.casefold().replace(" ", "")
-    number = re.escape(compact)
-    return re.search(rf"(?<![a-z\d.])f/?{number}(?![a-z\d.])", source) is not None
+    try:
+        canonical = canonical_aperture_display(aperture)
+    except BriefError as exc:
+        raise RehearsalError(str(exc)) from exc
+    source = unicodedata.normalize("NFKC", text).casefold()
+    source = (
+        source.replace("−", "-")
+        .replace("–", "-")
+        .replace("—", "-")
+        .replace("‑", "-")
+        .replace("‒", "-")
+        .replace("－", "-")
+        .replace("~", "-")
+    )
+    source = re.sub(r"\bto\b|至", "-", source)
+    source = re.sub(r"\s+", "", source)
+    number = canonical[1:]
+    if "-" in number:
+        start, end = number.split("-", 1)
+        body = rf"{re.escape(start)}-(?:f/?)?{re.escape(end)}"
+    else:
+        body = re.escape(number)
+    return re.search(rf"(?<![a-z\d.])f/?{body}(?![a-z\d.])", source) is not None
 
 
 def _contains_measurement(text: str, value: float) -> bool:
@@ -407,8 +422,14 @@ def _validate_conversation(scenario: Mapping[str, Any], brief: Mapping[str, Any]
     if not focal_present:
         raise RehearsalError("initial user request does not state the fixture focal length display")
     aperture = _nonempty_text(identity.get("maximum_aperture"), "design brief maximum_aperture")
-    if not _contains_aperture(initial, aperture):
-        raise RehearsalError("initial user request does not state the fixture maximum aperture")
+    aperture_display = identity.get("maximum_aperture_display")
+    aperture_display = aperture if aperture_display is None else _nonempty_text(
+        aperture_display, "design brief maximum_aperture_display"
+    )
+    if not _contains_aperture(initial, aperture_display):
+        raise RehearsalError(
+            "initial user request does not state the fixture complete maximum aperture display"
+        )
     if not _contains_any(
         initial,
         (
@@ -615,6 +636,7 @@ def _validate_conversation(scenario: Mapping[str, Any], brief: Mapping[str, Any]
         "route": list(EXPECTED_ROUTE),
         "route_resolution": route_resolution,
         "focal_length_display": focal_display,
+        "maximum_aperture_display": canonical_aperture_display(aperture_display),
         "intake": {
             "asked_once": True,
             "persisted_in_job_toml": True,
@@ -755,6 +777,9 @@ def run_rehearsal(
     workdir: str | Path | None = None,
     artifact_dir: str | Path | None = None,
     force_artifacts: bool = False,
+    machine_profile: str | Path | None = None,
+    process_profile: str | Path | None = None,
+    filament_profile: str | Path | None = None,
     root: str | Path = ROOT,
 ) -> dict[str, Any]:
     """Validate one transcript, then run its fixture through clean production."""
@@ -786,9 +811,18 @@ def run_rehearsal(
         "--bambu",
         bambu,
         "--json",
+        "--bridge-job",
+        primary_relative.as_posix(),
     ]
     if require_external:
         command.append("--require-external")
+    for flag, profile in (
+        ("--machine-profile", machine_profile),
+        ("--process-profile", process_profile),
+        ("--filament-profile", filament_profile),
+    ):
+        if profile is not None:
+            command.extend((flag, str(Path(profile).expanduser().resolve())))
     if keep_workdir:
         command.append("--keep-workdir")
     if workdir is not None:
@@ -814,8 +848,11 @@ def run_rehearsal(
             % (result.returncode, result.stdout[-1600:], result.stderr[-1600:])
         )
     production = _parse_report(result.stdout)
-    if production.get("status") != "passed":
-        raise RehearsalError(f"clean-room production report is not passed: {production.get('status')!r}")
+    production_status = production.get("status")
+    if production_status not in {"passed", "unverifiable"}:
+        raise RehearsalError(
+            f"clean-room production report is not passed/unverifiable: {production_status!r}"
+        )
     # The clean runner intentionally copies jobs into a new temporary fixture,
     # so compare the stable trailing relative path rather than an ephemeral
     # absolute pathname.
@@ -828,10 +865,33 @@ def run_rehearsal(
             break
     if not included_primary:
         raise RehearsalError("clean-room report does not include the persisted primary job")
+    bridge = production.get("canonical_bridge")
+    if not isinstance(bridge, Mapping):
+        raise RehearsalError("clean-room report is missing the canonical lens-cap-3mf bridge stage")
+    bridge_status = bridge.get("status")
+    if bridge_status not in {"passed", "unverifiable"}:
+        raise RehearsalError(f"canonical lens-cap-3mf bridge is not valid: {bridge_status!r}")
+    if require_external and bridge_status != "passed":
+        raise RehearsalError("--require-external requires a passing canonical lens-cap-3mf bridge")
+    if bridge_status == "passed":
+        design_brief = bridge.get("design_brief")
+        if not isinstance(design_brief, Mapping) or design_brief.get("status") != "passed":
+            raise RehearsalError("canonical bridge did not prove the approved design-brief gate")
     if artifact_dir is not None and not production.get("copied_artifacts"):
         raise RehearsalError("artifact_dir was requested but no 3MF was retained")
     report["production"] = production
-    report["status"] = "passed"
+    # A transcript can pass its routing/intake checks on a host without
+    # OpenSCAD, but that is not evidence that a real 3MF was produced.  Keep
+    # the interaction result separate and propagate the external production
+    # boundary to the top-level status instead of turning UNVERIFIABLE into a
+    # PASS.
+    report["interaction_status"] = "passed"
+    report["provider_generation_status"] = "recorded_fixture_not_replayed"
+    report["status"] = (
+        "passed"
+        if production_status == "passed" and bridge_status == "passed"
+        else "unverifiable"
+    )
     return report
 
 
@@ -840,6 +900,9 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("scenario", type=Path, help="structured user/agent rehearsal JSON")
     parser.add_argument("--bambu", choices=("auto", "never", "export", "slice"), default="never")
     parser.add_argument("--require-external", action="store_true")
+    parser.add_argument("--machine-profile", type=Path)
+    parser.add_argument("--process-profile", type=Path)
+    parser.add_argument("--filament-profile", type=Path)
     parser.add_argument("--keep-workdir", action="store_true")
     parser.add_argument("--workdir", type=Path)
     parser.add_argument("--artifact-dir", type=Path)
@@ -860,7 +923,8 @@ def _human_summary(report: Mapping[str, Any]) -> str:
         native_statuses.append(str(native.get("status", "unknown")) if isinstance(native, Mapping) else "unknown")
     return "\n".join(
         (
-            "status: passed",
+            f"status: {report.get('status', 'unknown')}",
+            f"interaction: {report.get('interaction_status', 'passed')}",
             f"scenario: {report.get('scenario_id')}",
             f"route: {' -> '.join(interaction.get('route', ())) }",
             "intake: "
@@ -868,6 +932,7 @@ def _human_summary(report: Mapping[str, Any]) -> str:
             f"foam={intake['foam_liner_status']}, "
             f"ribs={'on' if intake['friction_ribs_enabled'] else 'off'}",
             f"production: {production.get('runner', 'smoke_rehouse.py')} ({production.get('status')})",
+            f"canonical bridge: {production.get('canonical_bridge', {}).get('status', 'unknown')}",
             "native 3MF: " + (", ".join(native_statuses) if native_statuses else "unknown"),
             f"fit: {production.get('fit_status', 'unverifiable_until_coupon_measurement')}",
         )
@@ -885,6 +950,9 @@ def main(argv: list[str] | None = None) -> int:
             workdir=args.workdir,
             artifact_dir=args.artifact_dir,
             force_artifacts=args.force_artifacts,
+            machine_profile=args.machine_profile,
+            process_profile=args.process_profile,
+            filament_profile=args.filament_profile,
         )
     except (OSError, RehearsalError, ValueError) as exc:
         print(f"lens-cap rehearse-user-agent: error: {exc}", file=sys.stderr)

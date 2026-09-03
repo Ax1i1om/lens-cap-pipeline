@@ -4,40 +4,39 @@
   "bambu": "<BambuStudio.app>/Contents/MacOS/BambuStudio",
   "bambu_result": {
     "error_string": "Success.",
-    "export_time": 290,
-    "layer_height": 0.20000000298023224,
+    "export_time": 352,
+    "layer_height": 0.10000000149011612,
     "plate_index": 0,
-    "prepare_time": 3,
+    "prepare_time": 4,
     "return_code": 0,
     "sliced_plates": [
       {
         "feature_type_times": {
-          "Bottom surface": 38.06917953491211,
-          "Bridge": 56.676116943359375,
-          "Custom": 4.527979373931885,
-          "Inner wall": 273.26995849609375,
-          "Internal solid infill": 145.63816833496094,
-          "Outer wall": 294.94171142578125,
-          "Skirt": 5.887577056884766,
-          "Sparse infill": 726.541748046875,
-          "Top surface": 39.79173278808594,
-          "Travel": 92.23444366455078,
-          "Undefined": 89.19634246826172
+          "Bottom surface": 55.360164642333984,
+          "Bridge": 28.247894287109375,
+          "Custom": 34.597511291503906,
+          "Inner wall": 499.45489501953125,
+          "Internal solid infill": 198.70404052734375,
+          "Outer wall": 186.7813262939453,
+          "Sparse infill": 611.60693359375,
+          "Top surface": 27.58022117614746,
+          "Travel": 105.15912628173828,
+          "Undefined": 89.60748291015625
         },
         "filament_change_times": 0,
         "filaments": [
           {
-            "filament_id": "",
+            "filament_id": "GFA00",
             "id": 1,
-            "main_used_g": 0.0,
-            "total_used_g": 0.0
+            "main_used_g": 3.4132089614868164,
+            "total_used_g": 3.4132089614868164
           }
         ],
-        "generate_support_material_time": 2,
+        "generate_support_material_time": 1,
         "id": 1,
-        "infill_time": 3,
+        "infill_time": 7,
         "layer_filament_change": 0,
-        "main_predication": 1673.0416259765625,
+        "main_predication": 1712.9290771484375,
         "make_perimeters_time": 6,
         "obj_cached_cnt": 0,
         "objects": [
@@ -45,9 +44,9 @@
             "bbox": {
               "depth": 20.000001907348633,
               "height": 20.0,
-              "width": 20.0,
-              "x": 90.0,
-              "y": 90.00000762939453,
+              "width": 20.000001907348633,
+              "x": 80.00000762939453,
+              "y": 80.00000762939453,
               "z": 0.0
             },
             "id": 5,
@@ -55,15 +54,15 @@
             "triangle_count": 12
           }
         ],
-        "sliced_time": 72,
-        "sliced_time_with_cache": 37,
-        "total_predication": 1674.531494140625,
+        "sliced_time": 61,
+        "sliced_time_with_cache": 43,
+        "total_predication": 1731.9447021484375,
         "triangle_count": 12,
         "warning_message": ""
       }
     ],
-    "sparse_infill_density": 20.0,
-    "wall_loops": 2
+    "sparse_infill_density": 15.0,
+    "wall_loops": 4
   },
   "bambu_version": "BambuStudio-02.08.02.60:",
   "command": [
@@ -88,20 +87,203 @@
   ],
   "command_exit_code": 0,
   "determinism": "input/command reproducible; Bambu UUIDs, PNGs, timestamps, and G-code metadata may vary by release/run",
-  "generated_at_utc": "2026-09-02T19:03:23.970127+00:00",
+  "effective_profile_audit": {
+    "checked": {
+      "filament": {
+        "filament_diameter": {
+          "expected": [
+            "1.75"
+          ],
+          "observed": [
+            "1.75"
+          ]
+        },
+        "filament_type": {
+          "expected": [
+            "PLA"
+          ],
+          "observed": [
+            "PLA"
+          ]
+        }
+      },
+      "machine": {
+        "max_layer_height": {
+          "expected": [
+            "0.14"
+          ],
+          "observed": [
+            "0.14"
+          ]
+        },
+        "min_layer_height": {
+          "expected": [
+            "0.04"
+          ],
+          "observed": [
+            "0.04"
+          ]
+        },
+        "nozzle_diameter": {
+          "expected": [
+            "0.2"
+          ],
+          "observed": [
+            "0.2"
+          ]
+        }
+      },
+      "process": {
+        "initial_layer_line_width": {
+          "expected": "0.25",
+          "observed": "0.25"
+        },
+        "initial_layer_print_height": {
+          "expected": "0.1",
+          "observed": "0.1"
+        },
+        "inner_wall_line_width": {
+          "expected": "0.22",
+          "observed": "0.22"
+        },
+        "layer_height": {
+          "expected": "0.1",
+          "observed": "0.1"
+        },
+        "line_width": {
+          "expected": "0.22",
+          "observed": "0.22"
+        },
+        "outer_wall_line_width": {
+          "expected": "0.22",
+          "observed": "0.22"
+        },
+        "wall_loops": {
+          "expected": "4",
+          "observed": "4"
+        }
+      }
+    },
+    "scope": "resolved_profile_chain_and_effective_project_settings",
+    "status": "passed"
+  },
+  "generated_at_utc": "2026-09-03T10:27:17.213904+00:00",
   "input": "tools/3mf_adapter/fixtures/fixture-cube.stl",
   "input_sha256": "7d4a199ea1280f376efdad750a4f74a074cbc4e98cf2f4d4117f1852905f91a1",
+  "inputs": [
+    {
+      "path": "tools/3mf_adapter/fixtures/fixture-cube.stl",
+      "sha256": "7d4a199ea1280f376efdad750a4f74a074cbc4e98cf2f4d4117f1852905f91a1"
+    }
+  ],
   "mode": "slice",
+  "multipart": false,
   "output": "tools/3mf_adapter/fixtures/fixture-cube-bambu-sliced.3mf",
+  "palette_patch": {
+    "colors": [],
+    "status": "not_requested"
+  },
   "preparation": {
     "input_kind": "stl"
   },
+  "profile_resolution": {
+    "filament": {
+      "chain": [
+        {
+          "name": "fdm_filament_common",
+          "path": "<BambuStudio.app>/Contents/Resources/profiles/BBL/filament/fdm_filament_common.json",
+          "sha256": "8c7105b7d59a28f600c43a946f067b8b4d707b9711c0bf6b88e9166e48878548"
+        },
+        {
+          "name": "fdm_filament_pla",
+          "path": "<BambuStudio.app>/Contents/Resources/profiles/BBL/filament/fdm_filament_pla.json",
+          "sha256": "670d21ea6bdf1cd4b0a2bfddc743612ffd896cd6e5dbe767c25d2c4165c49a30"
+        },
+        {
+          "name": "Bambu PLA Basic @base",
+          "path": "<BambuStudio.app>/Contents/Resources/profiles/BBL/filament/Bambu PLA Basic @base.json",
+          "sha256": "7783968745a19570354ca0601258cd5b82a6c96f835b682741635095b49e9cc7"
+        },
+        {
+          "name": "Bambu PLA Basic @BBL A1M 0.2 nozzle",
+          "path": "<BambuStudio.app>/Contents/Resources/profiles/BBL/filament/Bambu PLA Basic @BBL A1M 0.2 nozzle.json",
+          "sha256": "4d3ad47c5384984540ca929d0da5292a92fd12f3950d7a867b8c0293044f226e"
+        }
+      ]
+    },
+    "machine": {
+      "chain": [
+        {
+          "name": "fdm_machine_common",
+          "path": "<BambuStudio.app>/Contents/Resources/profiles/BBL/machine/fdm_machine_common.json",
+          "sha256": "26ef8ee697849323e67d8e1a9026c175cebe3397e38c5091dddb5cd3fc52e94c"
+        },
+        {
+          "name": "fdm_bbl_3dp_001_common",
+          "path": "<BambuStudio.app>/Contents/Resources/profiles/BBL/machine/fdm_bbl_3dp_001_common.json",
+          "sha256": "2ca207f457c1f9b3eb25a1801adb2eaa8ddc5620f5a8945abb51a3fcddab5e47"
+        },
+        {
+          "name": "Bambu Lab A1 mini 0.4 nozzle",
+          "path": "<BambuStudio.app>/Contents/Resources/profiles/BBL/machine/Bambu Lab A1 mini 0.4 nozzle.json",
+          "sha256": "ca85210a9065eb658256385807cc715c3bb07727316a1be6818bfa6256bfbce8"
+        },
+        {
+          "name": "Bambu Lab A1 mini 0.2 nozzle",
+          "path": "<BambuStudio.app>/Contents/Resources/profiles/BBL/machine/Bambu Lab A1 mini 0.2 nozzle.json",
+          "sha256": "276a970d8bf5472392e8cb906bf71a4fb9b978818c15b0af1684a2814936855b"
+        }
+      ]
+    },
+    "process": {
+      "chain": [
+        {
+          "name": "fdm_process_common",
+          "path": "<BambuStudio.app>/Contents/Resources/profiles/BBL/process/fdm_process_common.json",
+          "sha256": "d7981c4b92854f251b8697e1bb621c63fe393f263fb8024ab63c401525d543d7"
+        },
+        {
+          "name": "fdm_process_single_common",
+          "path": "<BambuStudio.app>/Contents/Resources/profiles/BBL/process/fdm_process_single_common.json",
+          "sha256": "05b38ac1318e465e817978b36da51754f928da0172738a20bb3a8d4a69eb4769"
+        },
+        {
+          "name": "fdm_process_single_0.10_nozzle_0.2",
+          "path": "<BambuStudio.app>/Contents/Resources/profiles/BBL/process/fdm_process_single_0.10_nozzle_0.2.json",
+          "sha256": "9f2a228dc394cf2c3c4b0fbeb14d0693843513ddaadf97c037c7775ebaaa6a3d"
+        },
+        {
+          "name": "0.10mm Standard @BBL A1M 0.2 nozzle",
+          "path": "<BambuStudio.app>/Contents/Resources/profiles/BBL/process/0.10mm Standard @BBL A1M 0.2 nozzle.json",
+          "sha256": "ce92258ae92b997530b294c597828c187be5b080211efb03f5f83af39e32998b"
+        }
+      ]
+    }
+  },
+  "profiles": {
+    "filament": {
+      "path": "<BambuStudio.app>/Contents/Resources/profiles/BBL/filament/Bambu PLA Basic @BBL A1M 0.2 nozzle.json",
+      "post_run_sha256": "4d3ad47c5384984540ca929d0da5292a92fd12f3950d7a867b8c0293044f226e",
+      "sha256": "4d3ad47c5384984540ca929d0da5292a92fd12f3950d7a867b8c0293044f226e"
+    },
+    "machine": {
+      "path": "<BambuStudio.app>/Contents/Resources/profiles/BBL/machine/Bambu Lab A1 mini 0.2 nozzle.json",
+      "post_run_sha256": "276a970d8bf5472392e8cb906bf71a4fb9b978818c15b0af1684a2814936855b",
+      "sha256": "276a970d8bf5472392e8cb906bf71a4fb9b978818c15b0af1684a2814936855b"
+    },
+    "process": {
+      "path": "<BambuStudio.app>/Contents/Resources/profiles/BBL/process/0.10mm Standard @BBL A1M 0.2 nozzle.json",
+      "post_run_sha256": "ce92258ae92b997530b294c597828c187be5b080211efb03f5f83af39e32998b",
+      "sha256": "ce92258ae92b997530b294c597828c187be5b080211efb03f5f83af39e32998b"
+    }
+  },
   "profiles_are_external": true,
-  "python": "3.14.4",
+  "python": "3.11.15",
   "stderr_tail": "",
-  "stdout_tail": "[2026-09-03 03:03:23.545896] [0x0000000204b87100] [trace]   Initializing StaticPrintConfigs\n",
+  "stdout_tail": "[2026-09-03 18:27:16.670033] [0x0000000204b87100] [trace]   Initializing StaticPrintConfigs\n",
   "verification": {
-    "bytes": 55277,
+    "bytes": 56435,
+    "closed_direct_mesh_required": false,
     "entries": [
       "3D/3dmodel.model",
       "3D/Objects/object_1.model",
@@ -123,17 +305,144 @@
       "[Content_Types].xml",
       "_rels/.rels"
     ],
-    "gcode_bytes": 203057,
+    "gcode_bytes": 605743,
     "has_embedded_gcode": true,
     "model": {
+      "absolute_volume_mm3": 8000.000000000001,
+      "boundary_edges": 0,
+      "bounds": {
+        "max_mm": [
+          10.0,
+          10.0,
+          10.0
+        ],
+        "min_mm": [
+          -10.0,
+          -10.0,
+          -10.0
+        ],
+        "size_mm": [
+          20.0,
+          20.0,
+          20.0
+        ]
+      },
       "build_items": 1,
+      "component_references": 1,
+      "duplicate_triangles": 0,
+      "inconsistent_orientation_edges": 0,
+      "mesh_components": 1,
       "mesh_parts": 1,
+      "nonmanifold_edges": 0,
       "objects": 2,
       "parts": 2,
+      "transformed_build_items": 1,
+      "transformed_components": 1,
       "triangles": 12,
-      "vertices": 8
+      "unreferenced_vertices": 0,
+      "vertices": 8,
+      "volume_components": 1,
+      "zero_area_triangles": 0,
+      "zero_volume_components": 0
     },
     "path": "tools/3mf_adapter/fixtures/fixture-cube-bambu-sliced.3mf",
-    "sha256": "f9a454350b737df95b86cb806e036a0a24749cacfd163a611190ba82f2838e4e"
+    "sha256": "8d29f3ffbd946284df56d57fd9e812c392808e4e70d9dd4c74591d102d7536d5",
+    "single_positive_volume_required": false,
+    "slice_audit": {
+      "extrusion_move_count": 13438,
+      "extrusion_path_length_mm": 134390.0797466,
+      "extrusion_xy_max_mm": [
+        99.89,
+        99.89
+      ],
+      "extrusion_xy_min_mm": [
+        80.11,
+        80.11
+      ],
+      "extrusion_xy_size_mm": [
+        19.78,
+        19.78
+      ],
+      "gcode_files": [
+        "Metadata/plate_1.gcode"
+      ],
+      "gcode_md5": {
+        "Metadata/plate_1.gcode": "42451462d55655b3a7abd0e49d806be5"
+      },
+      "gcode_semantics": [
+        {
+          "config": {
+            "filament_diameter_mm": 1.75,
+            "filament_settings_id": "Bambu PLA Basic @BBL A1M 0.2 nozzle",
+            "filament_type": "PLA",
+            "initial_layer_height_mm": 0.1,
+            "layer_height_mm": 0.1,
+            "nozzle_diameter_mm": 0.2,
+            "print_settings_id": "0.10mm Standard @BBL A1M 0.2 nozzle",
+            "printer_settings_id": "Bambu Lab A1 mini 0.2 nozzle"
+          },
+          "declared_layer_count": 200,
+          "extrusion_path_length_mm": 134390.0797466,
+          "extrusion_xy_max_mm": [
+            99.89,
+            99.89
+          ],
+          "extrusion_xy_min_mm": [
+            80.11,
+            80.11
+          ],
+          "extrusion_xy_size_mm": [
+            19.78,
+            19.78
+          ],
+          "first_layer_z_mm": 0.1,
+          "header_max_z_mm": 20.0,
+          "last_layer_z_mm": 20.0,
+          "maximum_layer_height_mm": 0.1,
+          "minimum_layer_height_mm": 0.0999985,
+          "observed_extrusion_layer_count": 200,
+          "positive_extrusion_mm": 1096.2279700000418,
+          "positive_xy_extrusion_moves": 13438,
+          "unique_extrusion_xy_points": 1348
+        }
+      ],
+      "header_max_z_mm": 20.0,
+      "model_height_mm": 20.0,
+      "model_xy_size_mm": [
+        20.0,
+        20.0
+      ],
+      "nozzle_diameters_mm": [
+        0.2
+      ],
+      "plate_count": 1,
+      "print_object_count": 1,
+      "project_settings_audit": {
+        "filament_diameter_mm": [
+          1.75
+        ],
+        "filament_type": [
+          "PLA"
+        ],
+        "initial_layer_height_mm": [
+          0.1
+        ],
+        "layer_height_mm": [
+          0.1
+        ],
+        "nozzle_diameter_mm": [
+          0.2
+        ],
+        "status": "passed"
+      },
+      "scope": "gcode_md5_bambu_blocks_config_layers_monotonic_z_positive_extrusion_path_range_diversity_slice_info_project_settings_object_filament_nozzle_and_model_bounds",
+      "slice_info_layer_counts": [
+        200
+      ],
+      "status": "passed",
+      "used_object_filament_ids": [
+        "1"
+      ]
+    }
   }
 }

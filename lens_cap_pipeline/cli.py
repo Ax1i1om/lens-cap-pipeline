@@ -4,11 +4,13 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import os
 import sys
 from dataclasses import replace
 from pathlib import Path
 
+from .brief import BriefError, create_design_brief_scaffold, validate_design_brief
 from .config import (
     FRICTION_RIB_PROFILE_NAMES,
     ConfigError,
@@ -92,6 +94,31 @@ def _write_config(path: Path, data: dict) -> None:
         # Keep the real gripping measurement explicit; a nominal filter size
         # must never become a hidden fitted-cap default.
         lines.insert(5, f'measured_diameter_mm = {data["measured_diameter_mm"]}')
+    metadata = data.get("metadata")
+    if isinstance(metadata, dict) and metadata:
+        marker = next((i for i, line in enumerate(lines) if line == "[circle]"), len(lines))
+        metadata_lines = ["[metadata]"]
+        for key, value in metadata.items():
+            if not isinstance(key, str) or not key or not key.replace("_", "").isalnum():
+                raise ConfigError(f"init metadata key is not TOML-safe: {key!r}")
+            if isinstance(value, bool):
+                rendered = str(value).lower()
+            elif isinstance(value, str):
+                rendered = json.dumps(value)
+            elif isinstance(value, (int, float)) and not isinstance(value, bool):
+                if not math.isfinite(float(value)):
+                    raise ConfigError(f"init metadata.{key} must be finite")
+                rendered = str(value)
+            elif isinstance(value, list) and value and all(
+                isinstance(item, str) and item.strip() for item in value
+            ):
+                rendered = json.dumps(value, ensure_ascii=False)
+            else:
+                raise ConfigError(
+                    f"init metadata.{key} must be a scalar or a non-empty text list"
+                )
+            metadata_lines.append(f"{key} = {rendered}")
+        lines[marker:marker] = metadata_lines + [""]
     fit = data.get("fit")
     if isinstance(fit, dict):
         marker = next((i for i, line in enumerate(lines) if line == "[circle]"), len(lines))
@@ -105,6 +132,7 @@ def _write_config(path: Path, data: dict) -> None:
             "side_height_mm", "bare_clearance_mm", "friction_ribs_enabled",
             "friction_ribs_explicit", "friction_rib_profile", "friction_rib_count", "friction_rib_protrusion_mm",
             "friction_rib_width_mm", "friction_rib_height_mm", "friction_rib_start_mm",
+            "friction_rib_profile_derived", "friction_rib_profile_reference_cavity_mm",
             "retention_strategy",
         ):
             if fit.get(key) is None:
@@ -183,6 +211,18 @@ def _parser() -> argparse.ArgumentParser:
         help="finished front/relief diameter; optional when --measured-diameter is supplied",
     )
     init_parser.add_argument("--measured-diameter", type=float, default=None, help="actual gripping diameter for a fitted cap")
+    init_parser.add_argument(
+        "--adapter-nominal-ring",
+        type=float,
+        default=None,
+        help="optional nominal adapter-ring diameter used to derive the measured envelope",
+    )
+    init_parser.add_argument(
+        "--adapter-radial-wall",
+        type=float,
+        default=None,
+        help="optional radial adapter-wall thickness; requires --adapter-nominal-ring",
+    )
     init_parser.add_argument("--foam-thickness", type=float, default=None, help="uncompressed foam liner thickness in mm")
     init_parser.add_argument(
         "--friction-ribs",
@@ -199,7 +239,62 @@ def _parser() -> argparse.ArgumentParser:
     init_parser.add_argument("--nozzle", type=float, default=0.2)
     init_parser.add_argument("--output-dir", default="build")
     init_parser.add_argument("--job-slug", default="my-lens-cap")
+    init_parser.add_argument(
+        "--lens-identity",
+        help="human-readable canonical lens identity bound into the approved brief",
+    )
+    init_parser.add_argument(
+        "--display-text",
+        nargs="+",
+        help="closed ordered artwork text; focal length and aperture must be first",
+    )
     init_parser.add_argument("--force", action="store_true")
+
+    handoff_init_parser = sub.add_parser(
+        "handoff-init",
+        aliases=["init-handoff"],
+        help="create a review-required design-brief.json scaffold from a job and approved raster",
+    )
+    handoff_init_parser.add_argument("config", type=Path, help="job TOML/JSON created by lens-cap init")
+    handoff_init_parser.add_argument("--brief", type=Path, default=None, help="output design-brief.json path")
+    handoff_init_parser.add_argument("--brand", required=True, help="canonical lens brand")
+    handoff_init_parser.add_argument("--model", required=True, help="canonical lens model/variant")
+    handoff_init_parser.add_argument("--focal-length", type=float, required=True, help="numeric focal length in mm")
+    handoff_init_parser.add_argument(
+        "--maximum-aperture",
+        required=True,
+        help="maximum-aperture F-number anchor or full variable range, e.g. F1.4 or F3.5-5.6",
+    )
+    handoff_init_parser.add_argument(
+        "--maximum-aperture-display",
+        help="optional complete second-read F-number range, e.g. F3.5–5.6",
+    )
+    handoff_init_parser.add_argument("--focal-length-display", help="exact first-read token, e.g. 28–70mm")
+    handoff_init_parser.add_argument("--mount-or-revision")
+    handoff_init_parser.add_argument("--era")
+    handoff_init_parser.add_argument(
+        "--provider",
+        required=True,
+        help="image provider name recorded in the approval brief (no provider SDK is invoked)",
+    )
+    handoff_init_parser.add_argument("--prompt", type=Path, help="optional saved prompt record to hash")
+    handoff_init_parser.add_argument(
+        "--anchor-source",
+        action="append",
+        default=[],
+        help="source URL/archive identifier for a culture/history/rehousing anchor (repeatable)",
+    )
+    handoff_init_parser.add_argument("--force", action="store_true", help="replace an existing scaffold")
+    handoff_init_parser.add_argument("--json", action="store_true", help="emit the scaffold report as JSON")
+
+    handoff_check_parser = sub.add_parser(
+        "handoff-check",
+        aliases=["check-handoff"],
+        help="verify an approved design brief against the job raster before the 3MF bridge",
+    )
+    handoff_check_parser.add_argument("config", type=Path)
+    handoff_check_parser.add_argument("--brief", type=Path, default=None)
+    handoff_check_parser.add_argument("--json", action="store_true")
     return parser
 
 
@@ -347,12 +442,72 @@ def main(argv: list[str] | None = None) -> int:
                 raise ConfigError("init needs --face-diameter, or --measured-diameter for a fitted cap")
             if args.foam_thickness is not None and args.measured_diameter is None:
                 raise ConfigError("--foam-thickness requires --measured-diameter for a fitted cap")
+            if (args.lens_identity is None) != (args.display_text is None):
+                raise ConfigError(
+                    "--lens-identity and --display-text must be supplied together for a bound release job"
+                )
+            if args.display_text is not None and len(args.display_text) < 2:
+                raise ConfigError("--display-text needs focal length and aperture as its first two values")
+            adapter_values = (args.adapter_nominal_ring, args.adapter_radial_wall)
+            if any(value is not None for value in adapter_values):
+                if not all(value is not None for value in adapter_values):
+                    raise ConfigError(
+                        "--adapter-nominal-ring and --adapter-radial-wall must be supplied together"
+                    )
+                if args.measured_diameter is None:
+                    raise ConfigError("adapter-envelope fields require --measured-diameter")
+                assert args.adapter_nominal_ring is not None
+                assert args.adapter_radial_wall is not None
+                if (
+                    not math.isfinite(args.adapter_nominal_ring)
+                    or args.adapter_nominal_ring <= 0
+                    or not math.isfinite(args.adapter_radial_wall)
+                    or args.adapter_radial_wall < 0
+                ):
+                    raise ConfigError("adapter nominal diameter must be > 0 and radial wall must be >= 0")
+                derived_adapter_diameter = args.adapter_nominal_ring + 2.0 * args.adapter_radial_wall
+                if not math.isclose(
+                    derived_adapter_diameter,
+                    args.measured_diameter,
+                    rel_tol=0.0,
+                    abs_tol=0.05,
+                ):
+                    raise ConfigError(
+                        "--measured-diameter must equal --adapter-nominal-ring + "
+                        "2 * --adapter-radial-wall (within 0.05 mm)"
+                    )
             # A measured fitted diameter is the default finished face size;
             # keep the optional override only when explicitly supplied.
             face = args.face_diameter if args.face_diameter is not None else args.measured_diameter
-            data = template_config(_init_source_for_config(args.source, target), face, args.output_dir)
+            data = template_config(
+                _init_source_for_config(args.source, target),
+                face,
+                args.output_dir,
+                args.nozzle,
+            )
             data["job_slug"] = args.job_slug
             data["nozzle_mm"] = args.nozzle
+            metadata = data.setdefault("metadata", {})
+            if args.lens_identity is not None:
+                assert args.display_text is not None
+                if not args.lens_identity.strip() or not all(
+                    isinstance(item, str) and item.strip() for item in args.display_text
+                ):
+                    raise ConfigError("lens identity and display text must be non-empty")
+                metadata.update(
+                    {
+                        "lens_identity": args.lens_identity.strip(),
+                        "display_text": list(args.display_text),
+                    }
+                )
+            if args.adapter_nominal_ring is not None:
+                metadata.update(
+                    {
+                        "adapter_nominal_ring_mm": args.adapter_nominal_ring,
+                        "adapter_radial_wall_mm": args.adapter_radial_wall,
+                        "adapter_derived_mating_diameter_mm": derived_adapter_diameter,
+                    }
+                )
             # Keep one fit mapping alive for all optional mechanical flags.
             # Previously this was created only inside the foam branch, so
             # ``init --friction-rib-profile ...`` without ``--foam-thickness``
@@ -413,6 +568,33 @@ def main(argv: list[str] | None = None) -> int:
                 fit_data["friction_rib_profile"] = profile
                 for key, value in defaults.items():
                     fit_data[key] = value
+                # Keep the resolved numbers readable while recording that
+                # they came from a profile.  On a later diameter/foam edit,
+                # the loader can recompute them; a deliberate numeric edit
+                # is automatically preserved as an override.
+                fit_data["friction_rib_profile_derived"] = True
+                fit_data["friction_rib_profile_reference_cavity_mm"] = profile_cavity
+            else:
+                # The default profile is also derived metadata.  Keep the
+                # starter TOML self-describing, but allow a later change to
+                # measured diameter or liner stack to refresh circumference-
+                # dependent values instead of silently retaining stale ones.
+                profile = normalize_friction_rib_profile(
+                    fit_data.get("friction_rib_profile", "light_tapered")
+                )
+                profile_base = (
+                    float(args.measured_diameter)
+                    if args.measured_diameter is not None
+                    else float(face)
+                )
+                if fit_data.get("foam_liner_status") == "foam" and fit_data.get("liner_thickness_mm") is not None:
+                    profile_cavity = profile_base + 2.0 * float(fit_data["liner_thickness_mm"]) * (
+                        1.0 - float(fit_data.get("compression_fraction", 0.20))
+                    )
+                else:
+                    profile_cavity = profile_base + float(fit_data.get("bare_clearance_mm", 0.40))
+                fit_data["friction_rib_profile_derived"] = True
+                fit_data["friction_rib_profile_reference_cavity_mm"] = profile_cavity
             # Keep the default in the generated config so a job is portable
             # and self-describing.  If the user explicitly chose a flag, mark
             # that decision separately from the enabled/disabled value.
@@ -445,6 +627,35 @@ def main(argv: list[str] | None = None) -> int:
                 output_path = target.parent / output_path
             output_path.resolve().mkdir(parents=True, exist_ok=True)
             _emit({"status": "passed", "path": str(target.resolve())})
+            return 0
+        if args.command in {"handoff-init", "init-handoff"}:
+            config = load_config(args.config)
+            report = create_design_brief_scaffold(
+                config,
+                args.brief,
+                brand=args.brand,
+                model=args.model,
+                focal_length_mm=args.focal_length,
+                maximum_aperture=args.maximum_aperture,
+                focal_length_display=args.focal_length_display,
+                maximum_aperture_display=args.maximum_aperture_display,
+                mount_or_revision=args.mount_or_revision,
+                era=args.era,
+                provider=args.provider,
+                prompt_path=args.prompt,
+                anchor_sources=args.anchor_source,
+                # A scaffold always starts unapproved. Approval requires a
+                # human to replace and review its anchor/licence placeholders;
+                # a one-shot flag would imply that work had already happened.
+                approved=False,
+                force=args.force,
+            )
+            _emit(report, as_json=True)
+            return 0
+        if args.command in {"handoff-check", "check-handoff"}:
+            config = load_config(args.config)
+            report = validate_design_brief(config, args.brief)
+            _emit(report, as_json=args.json)
             return 0
         if args.command == "doctor":
             config = load_config(args.config) if args.config else None
@@ -554,7 +765,7 @@ def main(argv: list[str] | None = None) -> int:
         # An unavailable optional adapter is a truthful pending result, not a
         # process error; strict mode promotes it to a failing exit status.
         return 0 if payload["status"] in {"passed", "unverifiable", "available"} else 1
-    except (ConfigError, ProcessError, ModelError, ExternalToolError, OSError, ValueError) as exc:
+    except (BriefError, ConfigError, ProcessError, ModelError, ExternalToolError, OSError, ValueError) as exc:
         print(f"lens-cap: error: {exc}", file=sys.stderr)
         return 2
 

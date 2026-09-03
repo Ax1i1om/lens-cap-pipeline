@@ -4,7 +4,7 @@ job_slug = "jena-135-f3-5-example"
 source_art = "art/master.ppm"
 output_dir = "build"
 face_diameter_mm = 95.0
-grid_size = 1000
+grid_size = 475
 nozzle_mm = 0.2
 safe_border_mm = 0.4
 

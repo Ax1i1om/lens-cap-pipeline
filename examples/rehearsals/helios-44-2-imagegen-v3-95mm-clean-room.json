@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "scenario_id": "helios-44-2-imagegen-v3-95mm-clean-room",
+  "workspace": {
+    "conversation_history": "none",
+    "filesystem": "isolated_temp"
+  },
+  "conversation": {
+    "turns": [
+      {
+        "speaker": "user",
+        "text": "这是全新的干净任务：请为 IronGlass REHOUSE Helios-44-2 58mm F2 设计圆形镜头盖正面，58 和 F2 是主要信息，并完成可打印的 3MF。"
+      },
+      {
+        "speaker": "agent",
+        "text": "我会排他地按 $lens-cap-imagegen → $lens-cap-production 执行，不并行使用通用设计 Skill。先研究并生成待审批图稿；在任何建模或 3MF 命令前只问一次：实际卡合圆柱外径（包括转接圈外壁）是多少，是否贴泡棉及其未压缩厚度，内壁摩擦凸条保留默认还是关闭？"
+      },
+      {
+        "speaker": "user",
+        "text": "实际卡合外径 95 mm，就是 95 mm 名义环且径向转接壁为 0；不贴泡棉；摩擦凸条按默认开启，用 light_tapered。"
+      },
+      {
+        "speaker": "agent",
+        "text": "已把实测 95 mm、adapter 95+2×0、foam=none 和默认 light_tapered 凸条写入 jobs/95mm/job.toml。批准图稿与严格 brief 通过后运行 ./bin/lens-cap-3mf jobs/95mm/job.toml --force --json；完成原生一体 3MF 和 Core 校验后，实体卡合仍标记为需 coupon。"
+      }
+    ]
+  },
+  "route": {
+    "skills": ["lens-cap-imagegen", "lens-cap-production"],
+    "sequence": "sequential",
+    "generic_parallel_skills": []
+  },
+  "intake": {
+    "asked_once": true,
+    "persisted_in_job_toml": true,
+    "questions": [
+      "mating_outside_diameter_mm",
+      "foam_liner_plan_and_uncompressed_thickness_mm",
+      "friction_rib_preference"
+    ],
+    "answer_turn_index": 2,
+    "answer": {
+      "mating_outside_diameter_mm": 95,
+      "adapter_nominal_ring_mm": 95,
+      "adapter_radial_wall_mm": 0,
+      "foam_liner_status": "none",
+      "liner_thickness_mm": null,
+      "friction_ribs_enabled": true,
+      "friction_ribs_explicit": false,
+      "friction_rib_profile": "light_tapered"
+    }
+  },
+  "fixture": {
+    "path": "examples/fixtures/helios-44-2-rehouse-imagegen-v3",
+    "primary_job": "jobs/95mm/job.toml"
+  },
+  "production": {
+    "endpoint": "./bin/lens-cap-3mf",
+    "bambu_mode": "never",
+    "artifact_policy": "retain when --artifact-dir is supplied"
+  }
+}

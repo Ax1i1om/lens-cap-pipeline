@@ -207,8 +207,6 @@ def _mechanical_values(config: PipelineConfig) -> dict[str, Any]:
             raise ModelError("friction rib dimensions must be positive")
         if rib_start + rib_height > side:
             raise ModelError("friction ribs must lie within side_height_mm")
-        if rib_width < nozzle:
-            raise ModelError("friction_rib_width_mm must be >= nozzle_mm")
         # Width is a tangential footprint on the actual cavity.  Use the
         # same derived diameter as the SCAD angle calculation and config
         # gate; using the bare measured barrel here made foam-lined jobs
@@ -218,6 +216,21 @@ def _mechanical_values(config: PipelineConfig) -> dict[str, Any]:
             raise ModelError("friction_rib_width_mm is too wide for the selected rib count")
         if rib_protrusion >= measured / 4.0:
             raise ModelError("friction_rib_protrusion_mm is too large for the mating diameter")
+        audit_angle_deg = min(
+            8.0,
+            360.0 * rib_width / (math.pi * cavity),
+            180.0 / rib_count,
+        )
+        audit_tip_angle_deg = audit_angle_deg * 0.55
+        audit_tip_radius = cavity / 2.0 - rib_protrusion
+        audit_tip_chord_mm = 2.0 * audit_tip_radius * math.sin(
+            math.radians(audit_tip_angle_deg / 2.0)
+        )
+        if audit_tip_chord_mm < nozzle:
+            raise ModelError(
+                "friction rib contact-tip width must be >= nozzle_mm; "
+                "increase friction_rib_width_mm"
+            )
         if foam_status == "foam":
             # A rib may add local compression, but it must not consume the
             # entire already-compressed foam gap.  This hard floor prevents a
@@ -268,6 +281,28 @@ def _mechanical_values(config: PipelineConfig) -> dict[str, Any]:
         if friction_enabled and foam_status == "none" and rib_tip_diameter is not None
         else None
     )
+    # The conservative default intentionally leaves a small nominal clearance
+    # on a bare barrel (the ribs are a lead-in/anti-wobble aid, not a claim of
+    # guaranteed plastic interference).  Make that fact machine-visible so a
+    # new user cannot mistake a green file/package check for a retention proof.
+    if friction_enabled and foam_status == "none" and bare_interference is not None:
+        if bare_interference <= 0:
+            retention_status = "guide_only_clearance"
+            retention_warning = (
+                "configured ribs leave nominal bare-plastic clearance; print a fit coupon "
+                "and tune protrusion/profile before relying on retention"
+            )
+        else:
+            retention_status = "nominal_interference"
+            retention_warning = None
+    elif friction_enabled and foam_status == "foam":
+        retention_status = "foam_contact_unverified"
+        retention_warning = (
+            "rib/foam contact is a provisional stack-up; print a same-material fit coupon"
+        )
+    else:
+        retention_status = "smooth_wall" if not friction_enabled else "unverified"
+        retention_warning = None
     return {
         "measured_diameter_mm": measured,
         "foam_liner_status": foam_status,
@@ -291,8 +326,18 @@ def _mechanical_values(config: PipelineConfig) -> dict[str, Any]:
         "friction_rib_wall_overlap_mm": rib_wall_overlap,
         "friction_rib_angle_deg": rib_angle_deg,
         "friction_rib_tip_angle_deg": rib_tip_angle_deg,
+        "friction_rib_tip_width_mm": (
+            2.0
+            * (cavity / 2.0 - rib_protrusion)
+            * math.sin(math.radians(rib_tip_angle_deg / 2.0))
+            if friction_enabled
+            else 0.0
+        ),
+        "nozzle_mm": nozzle,
         "friction_rib_tip_diameter_mm": rib_tip_diameter,
         "friction_rib_bare_interference_mm": bare_interference,
+        "friction_rib_retention_status": retention_status,
+        "friction_rib_fit_warning": retention_warning,
         "foam_local_compression_fraction": (
             compression + rib_protrusion / liner
             if friction_enabled and foam_status == "foam" and liner
@@ -344,6 +389,20 @@ def _relief_entries(config: PipelineConfig, process_result: Any, model_dir: Path
             raise ModelError(
                 f"relief SVG for {palette.name!r} differs from the passed process report; rerun process"
             )
+        try:
+            mask_pixels = int(expected_stats["pixels"])
+        except (KeyError, TypeError, ValueError, OverflowError) as exc:
+            raise ModelError(
+                f"process report has no valid mask pixel count for palette colour {palette.name!r}"
+            ) from exc
+        if mask_pixels < 0:
+            raise ModelError(
+                f"process report has a negative mask pixel count for palette colour {palette.name!r}"
+            )
+        # Optional empty palette entries remain documented in the process
+        # report but must not create phantom height/selectors in CAD audits.
+        if mask_pixels == 0:
+            continue
         entries.append(
             {
                 "index": palette.index,
@@ -352,6 +411,7 @@ def _relief_entries(config: PipelineConfig, process_result: Any, model_dir: Path
                 "height_mm": float(palette.height_mm),
                 "svg": Path(os.path.relpath(vector_path, model_dir)).as_posix(),
                 "svg_sha256": actual_hash,
+                "mask_pixels": mask_pixels,
             }
         )
     return entries

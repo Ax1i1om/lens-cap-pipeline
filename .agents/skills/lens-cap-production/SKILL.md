@@ -1,18 +1,18 @@
 ---
 name: lens-cap-production
 description: >
-  PRIMARY production router for lens-cap requests that involve a printable
-  front, relief, fitted cap, CAD, SCAD, STL, 3MF, or printer handoff. When
-  lens-cap intent is present, use this skill instead of generic mechanical-CAD,
-  product-design, graphic-design, logo, poster, or other design skills; do not
-  invoke those skills in parallel. It turns approved lens-cap artwork and
-  current fit measurements into a reproducible mask, relief, OpenSCAD, and
-  printer-handoff package. A named camera lens plus a requested circular front,
-  relief, fitted cap, circular image/artwork, lens-cover model, printable model,
-  or 3MF is the same route even when “lens cap” is omitted; optical design,
-  repair, and an unrelated product photograph are not. Natural wording such as
-  “make a printable model for this lens” still requires a named lens and a
-  front/cap deliverable. It is not the route for image-only concept art.
+  PRIMARY, exclusive production route for an explicit lens cap/front cap with a
+  physical, fitted, printable, relief, model/part, CAD/SCAD/STL/3MF, or printer
+  handoff request. In established lens-cap context only, also accept the
+  controlled named-lens-plus-format/printable-model shorthand. Turn approved cap artwork
+  and current fit measurements into a reproducible mask, relief, OpenSCAD, and
+  printer package. Do not invoke generic mechanical-CAD, product, graphic,
+  logo, poster, or other design skills in parallel. Reject formats owned by
+  metadata/photos, printable covers/cards/posters, optical design/tests,
+  repair, product photos, image-only circular artwork, and requests merely to
+  inspect format support or explain export. Do not select for a negated cap
+  object or meta work on the Skill, generator, docs, task, tests, status,
+  triggers, or supported formats.
 metadata:
   short-description: Reproducible lens-cap production
   routing: primary-exclusive-for-lens-cap-production
@@ -20,6 +20,7 @@ metadata:
   # strict Skill frontmatter validation.
   triggers:
     - "make a printable lens cap"
+    - "make a cap for a named lens"
     - "printable lens cap"
     - "lens cap model"
     - "lens-cap model"
@@ -37,20 +38,15 @@ metadata:
     - "lens-cap production"
     - "lens-cap STL"
     - "lens-cap SCAD"
-    - "lens front relief"
-    - "lens badge model"
-    - "circular lens badge model"
-    - "lens front medallion model"
-    - "lens front 3MF"
-    - "lens relief model"
-    - "circular lens relief"
-    - "circular front pattern"
-    - "circular lens front"
-    - "circular lens image"
-    - "circular lens artwork"
-    - "lens cover model"
-    - "printable model for a lens"
-    - "printable lens model"
+    - "lens-cap front relief"
+    - "lens-cap badge model"
+    - "circular lens-cap badge model"
+    - "lens-cap front medallion model"
+    - "lens-cap front 3MF"
+    - "lens-cap relief model"
+    - "circular lens-cap relief"
+    - "front-cap model"
+    - "printable front-cap model"
     - "镜头盖模型"
     - "镜头盖卡合"
     - "可打印镜头盖"
@@ -59,27 +55,17 @@ metadata:
     - "镜头盖浮雕"
     - "镜头盖 3MF"
     - "镜头盖 STL"
-    - "镜头正面浮雕"
-    - "镜头徽章模型"
-    - "圆形镜头徽章模型"
-    - "镜头正面徽章模型"
-    - "镜头正面图案模型"
-    - "圆形镜头正面"
-    - "镜头正面 3MF"
-    - "镜头浮雕模型"
-    - "圆形镜头浮雕"
-    - "圆形正面浮雕"
-    - "镜头圆形图像"
-    - "圆形镜头图像"
-    - "镜头圆形艺术图"
-    - "圆形镜头艺术图"
-    - "设计镜头圆形图像"
-    - "设计镜头圆形艺术图"
-    - "镜头闷盖模型"
-    - "镜头帽模型"
-    - "镜头罩模型"
-    - "可打印镜头模型"
-    - "镜头可打印模型"
+    - "镜头盖正面浮雕"
+    - "镜头盖徽章模型"
+    - "圆形镜头盖徽章模型"
+    - "镜头盖正面徽章模型"
+    - "镜头盖正面图案模型"
+    - "镜头盖正面 3MF"
+    - "镜头盖浮雕模型"
+    - "圆形镜头盖浮雕"
+    - "前盖正面浮雕"
+    - "镜头前盖模型"
+    - "实体盖模型"
 ---
 
 # Lens-cap production
@@ -96,13 +82,22 @@ second creative Skill to redraw the same cap. Non-design support such as web
 research, OpenSCAD, and the repository CLI is allowed. An explicit request for
 a separate unrelated deliverable is the only exception.
 
-A named camera lens plus a request for a circular front surface, relief, fitted
-cap, circular image/artwork, lens-cover model, printable model, or 3MF is
-production intent even when the literal phrase “lens cap” is omitted. Natural
-variants such as “make a printable model for this lens” are included only when
-the requested object is the cap/front surface. Do not route optical design,
-lens repair, or an unrelated product photograph through this Skill solely
-because a lens name appears.
+A named camera lens plus STL/SCAD/CAD/3MF or printable-model wording is a
+controlled production shorthand only inside an already established lens-cap
+task. A clean request requires an explicit lens-cap/front-cap object and a physical, fitted, printable,
+model/part, file-format, or printer-handoff signal. Bare `3MF` or `printable`
+inside metadata, a photo export, article/card/poster, cover, or badge is not
+enough. Lens body/barrel, focusing ring/gear, hood, mount, cage, plate, label,
+case, and grip deliverables are not caps and cannot borrow sticky context.
+Image-only circular art is the imagegen route, not production. Do not route
+optical design, lens repair, or unrelated product photography solely because
+a lens name appears.
+Require affirmative cap ownership: local negations (`anything but/other than a
+lens cap`, `除镜头盖外`) and meta requests to inspect, audit, fix, test, or show
+the Skill/generator/docs/task/formats are not production. Quoted cap requests
+inside prompt/route tests, interaction simulations/replays, and explicit
+read-only/no-file audits are test data, not production. This remains true in
+sticky lens-cap context.
 
 This skill is the decision layer for the open-source lens-cap-pipeline
 repository. Keep research, approved artwork, deterministic processing,
@@ -119,6 +114,10 @@ identity anchor. If the brief supplies the optional sibling
 `28–70mm`), preserve that exact token as the first display item and validate it
 as a positive ascending number/range beginning at the numeric anchor; prime
 briefs may omit it and retain numeric behavior.
+For a variable-aperture zoom, `maximum_aperture` remains the first-end F-number
+anchor, optional `maximum_aperture_display` carries the normalized full range,
+and the complete range must remain `display_text[1]`. This schema does not yet
+accept T-stop notation.
 
 ## Intake contract
 
@@ -154,6 +153,11 @@ explicit face diameter and nozzle/minimum-feature limit.
 The bundled model uses neutral, vertical friction ribs as a light retention aid;
 when foam is present they can locally increase compression, so keep the
 provisional setting subject to a fit-coupon check.
+If the measurement came from a step-up/rehousing adapter, optionally persist
+`metadata.adapter_nominal_ring_mm` and the radial
+`metadata.adapter_radial_wall_mm`; when present the config gate requires
+`nominal + 2 * wall = measured diameter`. These are audit components, not an
+extra mandatory intake when the actual gripping diameter is already known.
 
 When a user asks for a shape closer to a supplied reference with chunky inner
 projections, select the neutral `friction_rib_profile = "wide_tapered"`: six
@@ -238,12 +242,27 @@ From a clean clone:
     . .venv/bin/activate
     # Windows PowerShell: .venv\Scripts\Activate.ps1
     lenscap init jobs/name/job.toml --source art/master.png \
-      --measured-diameter 95 --foam-thickness 1.5
-    # edit circle and palette, then:
-    lenscap build jobs/name/job.toml --force --export-openscad --bambu-handoff
-    lenscap validate jobs/name/job.toml
-    # actual native 3MF release (the bridge also verifies the package)
+      --measured-diameter 95 --foam-thickness 1.5 \
+      --lens-identity "Helios / Zenit Helios-44-2 58mm F2" \
+      --display-text 58 F2 "HELIOS 44-2" "REHOUSED CINEMA" M42
+    # review circle, palette/relief heights, grid, filters/cleanup, and assembly
+    # mode before scaffolding so the approved brief binds their final values
+    # after saving/reviewing the provider result, create and check the brief:
+    lens-cap handoff-init jobs/name/job.toml --brand "Helios / Zenit" \
+      --model "Helios-44-2" --focal-length 58 --maximum-aperture F2 \
+      --provider "OpenAI built-in image_gen" \
+      --anchor-source https://www.zenitcamera.com/mans/zenit-e/zenit-e-eng.html
+    # use a positive sourced/verified evidence state, replace all placeholders,
+    # and explain any semantic N/A licence before approving; then:
+    lens-cap handoff-check jobs/name/job.toml --json
+    # the bridge itself reruns build, projection, export, and verification:
     ./bin/lens-cap-3mf jobs/name/job.toml --force --json
+
+The strict brief gate accepts only evidence states beginning with a positive
+`verified`, `sourced`, `documented`, `attested`, or `archived` status. Negated
+phrases fail. A permission that does not apply still needs a reasoned sentence
+such as `not applicable — no third-party mark rendered`; bare `NONE`/`N/A`
+fails.
 
 For release comparisons, use `./scripts/bootstrap.py --dev --locked`
 when `uv` is installed; the unlocked helper is fine for ordinary development
@@ -267,10 +286,21 @@ report remain explicitly unverified.
 The `bin/lens-cap-3mf` bridge is the canonical endpoint when the user asks for
 an actual 3MF: it reruns the public build, exports the integrated native package
 through `tools/3mf_adapter`, and verifies ZIP/Core XML, mesh indices, and
-bounds. Add `--bambu slice` with three explicit local profiles for a sliced
-printer project. If OpenSCAD is unavailable, return `UNVERIFIABLE` with an
+bounds, required palette assignments, and enabled rib positions in the final
+mesh. Before it starts, it requires the same passing `design-brief.json` as
+`handoff-check`; a missing, unapproved, or current-job-mismatched brief is an explicit `FAILED`
+handoff failure. Every non-null mechanical value declared in the brief must
+match the active job; null diameter fields let one approved artwork serve
+several size variants while each TOML remains mechanically authoritative. Add
+`--bambu slice` with three explicit local profiles for a sliced printer
+project. If OpenSCAD is unavailable, return `UNVERIFIABLE` with an
 actionable installation or external-STL alternative; never call SCAD or a
 handoff JSON a 3MF.
+Do not end an actual-3MF request after `build`, SCAD, STL, a Bambu handoff JSON,
+or a command suggestion. Success requires that the bridge returned `passed`,
+the reported `.3mf` exists, and its package verification passed. A portable
+preflight may exit cleanly with a top-level `unverifiable`; that is useful
+diagnosis, not completed production.
 
 Run stages independently when debugging:
 

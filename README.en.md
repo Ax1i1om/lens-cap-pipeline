@@ -69,12 +69,17 @@ natural-language request), run the dependency-free manifest resolver:
 ```sh
 python3 scripts/resolve_skill_route.py \
   "Design a circular lens-cap front for Sigma 28-70mm F2.8 and export a 3MF"
+# Only an established lens-cap task may omit the cap/front surface:
+python3 scripts/resolve_skill_route.py "test Sigma 28-70" \
+  --lens-cap-context
 ```
 
 It checks the exclusive `lens-cap-imagegen -> lens-cap-production` order but
 does not generate artwork or CAD. Use `--named-lens` when the lens identity is
 provided by an attachment/catalog rather than text. It is a host shim, not a
-replacement for loading the Skills.
+replacement for loading the Skills. A clean task rejects terse “test this
+lens” wording; pass `--lens-cap-context` only when the caller knows the current
+task has already established lens-cap intent.
 
 > **Alpha distribution boundary:** installing only the CLI wheel does not
 > include the two companion Skills, `bin/lens-cap-3mf`, or
@@ -98,12 +103,22 @@ On Windows, use `py -3 scripts/install_skills.py ...` or the companion
 ```sh
 lens-cap init jobs/my-lens/job.toml \
   --source jobs/my-lens/art/master.png \
-  --measured-diameter 95 \
+  --measured-diameter 85 \
+  --adapter-nominal-ring 80 \
+  --adapter-radial-wall 2.5 \
   --foam-thickness 1.5 \
-  --job-slug my-lens-cap
+  --job-slug mamiya-sekor-c-80-f1-9-cap \
+  --lens-identity "Mamiya-Sekor C 80mm F1.9" \
+  --display-text 80 F1.9 "MAMIYA-SEKOR C" 645 "REHOUSED MEDIUM FORMAT"
 # Edit the circle and palette, then process:
 lens-cap build jobs/my-lens/job.toml --force
 ```
+
+`--adapter-nominal-ring` and `--adapter-radial-wall` are an optional provenance
+decomposition and must be supplied together. The CLI checks
+`80 + 2 × 2.5 = 85 mm` within 0.05 mm and records the values under `[metadata]`.
+The measured mating diameter remains the only required mechanical dimension;
+when it was measured directly, the adapter decomposition need not be supplied.
 
 The output directory contains `process-master.png`, same-canvas
 `masks/*.png` and `vector/*.svg`, role masks/overlay, `process-report.json`
@@ -165,8 +180,16 @@ successful process run; it is not a config-only lint command.
 When the requested deliverable is an actual 3MF, use the repository's
 one-command bridge instead of stopping at the SCAD/handoff stage. It reruns the
 public build path, audits the same-canvas relief, exports an integrated native
-3MF, and verifies the package with the dependency-free adapter. OpenSCAD is the
-only external requirement for the native one-piece output:
+3MF, and verifies the package with the dependency-free adapter. When ribs are
+enabled, it checks every expected angular position at the rib start, interior
+cross-sections, and end, plus connected full-height axial contact columns and
+full-width tip faces directly in the final 3MF mesh. It also requires non-empty triangle assignments
+for every required palette colour and rejects used colours outside the active
+job. OpenSCAD is the only external requirement for the native one-piece output.
+An actual 3MF
+request is complete only when the target `.3mf` exists and passes this
+verification; a PNG, SCAD, STL, handoff JSON, command recipe, or passed
+preflight is not a successful 3MF delivery:
 
 ```sh
 ./bin/lens-cap-3mf jobs/my-lens/job.toml --force --json
@@ -176,6 +199,62 @@ only external requirement for the native one-piece output:
   --process-profile /path/to/process.json \
   --filament-profile /path/to/filament.json --json
 ```
+
+The `lens-cap-3mf` bridge is a release endpoint and now validates a
+`design-brief.json` before creating any derivative. The brief must set
+`generation.approved=true`, bind the current `source_art` SHA-256, preserve
+focal-length/aperture order, and include source-backed anchor and licence
+records. Discovery checks `[metadata].design_brief`, then the nearest
+ancestor `design-brief.json`; pass `--brief PATH` when the brief is elsewhere.
+Missing, unapproved, or current-job-mismatched briefs return `FAILED` with a non-zero exit code,
+so a bare TOML/PNG cannot be mistaken for an approved 3MF. Private
+`process`/`model` experiments may still use the core CLI directly.
+
+To bootstrap the handoff after saving a provider result, create a review-only
+scaffold (no image provider is called and approval is never implied):
+
+```sh
+lens-cap handoff-init jobs/my-lens/job.toml \
+  --brand Mamiya --model "Mamiya-Sekor C 80mm F1.9" \
+  --focal-length 80 --maximum-aperture F1.9 \
+  --provider "OpenAI built-in image_gen" \
+  --anchor-source https://www.suaudeau.eu/memo/Manuels/Mamiya_M645_Service_Manual.pdf
+# After reviewing the source, start anchor.evidence_state with a positive
+# sourced/verified status. Complete every REPLACE, all three provenance licence
+# fields, and notes; when one is inapplicable, give a reasoned sentence such as
+# "not applicable — no third-party mark rendered". Then review the text/circle.
+lens-cap handoff-check jobs/my-lens/job.toml --json
+./bin/lens-cap-3mf jobs/my-lens/job.toml --force --json
+```
+
+The scaffold records candidate hashes, mechanical values, and an alpha-circle
+suggestion. Opaque artwork still needs a human-reviewed `[circle]` center and
+radius in the TOML. Pass `init --lens-identity` and `--display-text` together;
+the first two text entries must agree with the handoff focal length/aperture,
+and every secondary model/system line is copied verbatim into `display_text`
+and `allowed_text`. The strict gate requires that complete ordered set to equal
+the job metadata. It also requires the job's normalized identity text to
+contain the brief brand, model, focal length, and F-number.
+For a variable-aperture zoom, pass either `--maximum-aperture F3.5-5.6` or a
+first-end anchor plus `--maximum-aperture-display F3.5-5.6`; en-dash input is
+accepted and normalized, while the complete range remains `display_text[1]`.
+This brief schema intentionally rejects T-stop notation for now.
+`handoff-init --provider` is required, and its `next` output lists the remaining
+evidence-state, licence, text, circle, and approval reviews.
+The scaffold also freezes the current `[circle]`, complete palette (roles, RGB,
+relief heights, and related fields), grid, safe border, prefilter, cleanup, and
+assembly mode under `job_binding`; any post-approval job drift fails. Review an
+opaque source's TOML circle before scaffolding. If one of those values changes
+afterward, rerun the same `handoff-init --force` command to refresh the snapshot
+before filling the human-review fields. Every
+anchor needs a reviewable http(s) source or explicit `archive:` identifier plus
+substantive summary/context/motif/recognition fields; a bare `x` cannot pass.
+`handoff-init` refuses to overwrite an existing brief
+unless `--force` is explicit; `handoff-check` and the 3MF bridge share the
+same strict validator. The brief is a semantic, provenance, and human-approval
+snapshot for one artwork. Each `job.toml` remains the mechanical authority for
+its size variant—diameter, liner, ribs, and print settings in a brief summary
+must not override the job.
 
 On Windows, use `py -3 scripts/build_3mf.py jobs/my-lens/job.toml --force --json`
 or `bin/lens-cap-3mf.cmd`; the remaining options are identical.
@@ -193,26 +272,43 @@ placement can therefore vary between Codex hosts without changing artwork or
 model semantics.
 
 To rehearse the complete route as a new user with no conversation context, run
-the clean-room fixture runner. By default it copies only the approved
-Helios-44-2 REHOUSE artwork, brief, prompt, and the 95/82/77 mm jobs into a
-temporary checkout. Pass `--fixture` to run the independent Mamiya-Sekor C
-80mm F1.9 REHOUSE sample as a cross-brand leakage test. The runner invokes the
-public CLI, audits same-canvas relief projections, and emits native OpenSCAD
-3MF packages when OpenSCAD is installed. With a compatible Bambu Studio
-installation it also slices one package:
+the clean-room fixture runner. The default fixture is the fresh, actually
+ImageGen-produced and human-approved Helios-44-2 REHOUSE v3 artwork. It has one
+95 mm job and sends that job through the canonical bridge. The v2 fixture is
+retained as the legacy 77/82/95 mm multi-diameter matrix; the independent
+Mamiya-Sekor C 80mm F1.9 fixture covers cross-brand, adapter-wall, and foam
+combinations. The runner invokes the public CLI and audits same-canvas relief
+projections, but emits and verifies native 3MF packages only when a compatible
+OpenSCAD is installed:
 
 ```sh
-python3 scripts/smoke_rehouse.py --bambu never --json
 python3 scripts/smoke_rehouse.py \
-  --fixture examples/fixtures/mamiya-sekor-c-80-f1-9-rehouse \
-  --bambu never --json
-# fresh ImageGen Helios-44-2 REHOUSE sample (77/82/95 mm envelopes)
+  --fixture examples/fixtures/helios-44-2-rehouse-imagegen-v3 \
+  --bridge-job jobs/95mm/job.toml --bambu never --json
+# legacy 77/82/95 mm multi-diameter matrix
 python3 scripts/smoke_rehouse.py \
   --fixture examples/fixtures/helios-44-2-rehouse-imagegen-v2 \
   --bambu never --json
-# host-level verification (requires OpenSCAD; Bambu profiles are optional)
-python3 scripts/smoke_rehouse.py --bambu auto --require-external --keep-workdir --json
+# cross-brand adapter-wall and foam matrix
+python3 scripts/smoke_rehouse.py \
+  --fixture examples/fixtures/mamiya-sekor-c-80-f1-9-rehouse \
+  --bambu never --json
+# host-level verification (strictly requires OpenSCAD, Bambu Studio, and all profiles)
+python3 scripts/smoke_rehouse.py \
+  --fixture examples/fixtures/helios-44-2-rehouse-imagegen-v3 \
+  --bridge-job jobs/95mm/job.toml --bambu auto \
+  --require-external --keep-workdir \
+  --machine-profile /path/to/machine.json \
+  --process-profile /path/to/process.json \
+  --filament-profile /path/to/filament.json --json
 ```
+
+On a portable host without OpenSCAD, the smoke runner may still exit zero so CI
+can retain diagnostics, but its top-level `status` is `unverifiable`.
+`deterministic_preflight_status=passed` means only that the approved packet,
+deterministic image stages, and projection preflight passed;
+`native_3mf_complete=false` means no actual 3MF delivery was completed. Add
+`--require-external` to turn that boundary into a hard failure.
 
 To audit the conversation boundary as well as the files, run the structured
 new-user rehearsal. It checks the exclusive Skill sequence, the one grouped
@@ -220,6 +316,10 @@ diameter/foam/rib intake, and persistence into the job TOML before invoking
 the same production runner in an isolated temporary fixture:
 
 ```sh
+python3 scripts/rehearse_user_agent.py \
+  examples/rehearsals/helios-44-2-imagegen-v3-95mm-clean-room.json \
+  --bambu never --json
+# legacy Helios multi-diameter interaction transcript
 python3 scripts/rehearse_user_agent.py \
   examples/rehearsals/helios-44-2-rehouse-clean-room.json \
   --bambu never --json
@@ -229,16 +329,20 @@ python3 scripts/rehearse_user_agent.py \
   --bambu never --json
 ```
 
-For one portable gate covering route resolution, both cross-brand fixtures, and
-both interaction transcripts, run `make smoke-all` (or `make acceptance`) from
-the repository root. It skips desktop slicers; use the documented
-`--require-external` commands when OpenSCAD/Bambu are available.
+For one portable gate covering route resolution, all three fixtures, and all
+three interaction transcripts, run `make smoke-all` (or `make acceptance`) from
+the repository root. It may report external stages as `unverifiable`; a 3MF
+completion claim still requires the documented `--require-external` run plus an
+existing, verified artifact.
 
 Copy the JSON scenario for another lens or adapter envelope; its
 `fixture.primary_job` must agree with the answered diameter, liner thickness,
 and rib profile. Add `--artifact-dir PATH --force-artifacts` when a rehearsal's
-3MF snapshots should be retained. This validates the interaction and file
-chain, not pixel-identical provider output or physical fit.
+3MF snapshots should be retained. The transcript runner does not invoke
+ImageGen again: it treats the candidate, prompt record, and human approval in
+the fixture as the provider boundary and rehearses only the deterministic
+route after that point. It therefore does not claim pixel-identical provider
+output, turn an interaction `passed` into a 3MF success, or prove physical fit.
 
 The smoke gate also rejects an unapproved artwork handoff, a missing
 source-backed culture/rehousing anchor, or a prompt/artwork path that escapes
@@ -263,8 +367,11 @@ slicer G-code:
 python3 tools/3mf_adapter/three_mf_adapter.py verify path/to/model.3mf
 python3 tools/3mf_adapter/three_mf_adapter.py verify path/to/sliced.3mf --require-slice
 ```
-This validates package/XML/mesh structure and G-code presence; it is not a
-substitute for a slicer preview or a physical fit coupon.
+This validates package/XML/mesh structure and, for slices, unique ordered
+G-code blocks, config/slice metadata, monotonic Z layers, per-layer extrusion,
+and non-degenerate XY motion whose range and diversity are plausible for the
+model envelope. A ZIP containing a few forged G-code lines is rejected. It is
+not a substitute for a slicer preview or a physical fit coupon.
 
 After exporting meshes, use the public projection audit to compare each relief
 STL with its same-canvas mask and catch translation, mirroring, white borders,
@@ -312,6 +419,14 @@ configuration. User-supplied SCAD/3MF archives and MakerWorld pages are
 reference observations only: record their provenance and licence, but regenerate
 current geometry from measured inputs instead of copying meshes or assets.
 
+If the user also knows the adapter's nominal diameter and one-side radial wall,
+record the optional `--adapter-nominal-ring` and `--adapter-radial-wall` pair.
+Both must be present and satisfy
+`nominal diameter + 2 × radial wall = measured_diameter_mm` within 0.05 mm.
+These values audit where the envelope came from; they are not a fourth required
+intake answer, and the measured mating diameter remains the sole required
+mechanical value.
+
 ## Fidelity and safety gates
 
 Colour-distance arithmetic is fixed at `int32` deltas and `int64` accumulation;
@@ -331,6 +446,14 @@ not tied to one machine. The original TOML remains the runtime source, while
 the adapter report records the resolved tool basename, version, and output
 hashes.
 
+Native 3MF publication also removes OpenSCAD's volatile creation timestamp,
+replaces generated UUID attributes with content-derived UUIDv5 values, and
+rewrites ZIP entries in a fixed order with fixed metadata. Repeated output can
+therefore be compared byte-for-byte under the same OpenSCAD/Python/zlib
+toolchain. Across versions, compare source/config hashes, mesh semantics,
+bounds, projection, materials, and rib gates; different OpenSCAD tessellation
+or compression-library bytes are not promised to match.
+
 For byte-level release comparisons, prefer a lossless PNG/PPM master and use
 `bootstrap.py --locked` to pin dependencies. JPEG decoding can vary with the
 Pillow/libjpeg versions on a host; the source lock detects substitution but
@@ -344,8 +467,11 @@ and [`docs/release-checklist.md`](docs/release-checklist.md) for the full contra
 
 Copy [`examples/job-manifest.template.json`](examples/job-manifest.template.json)
 beside a job and fill in the allowed text/marks, legacy-token deny-list,
-artwork hash, brand/film provenance, licences, and fit evidence. The manifest
-locks semantic identity; the TOML locks pixel processing and geometry. The
+artwork hash, brand/film provenance, licences, and fit evidence. The brief or
+manifest is a semantic/provenance snapshot for the approved artwork; each job
+TOML is the authority for pixel processing and that size variant's mechanical
+geometry. One brief may serve multiple sizes, so its mechanical summary must
+not override a job's measured diameter, liner, or rib settings. The
 current `validate` command primarily audits deterministic files: a private
 experiment may run without a completed manifest, but a public release must
 mark missing identity/licence evidence `UNVERIFIABLE` rather than treating a

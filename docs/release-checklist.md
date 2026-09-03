@@ -23,9 +23,11 @@ Use this checklist for each tagged release and for each published lens job.
       NumPy/Pillow, OpenSCAD and slicer versions in the release note.
 - [ ] `python -m pytest`, `python -m compileall -q lens_cap_pipeline` and CI
       pass on all supported Python versions.
-- [ ] For a fitted/model release (with `measured_diameter_mm`),
-      `lens-cap build <job.toml> --force` completes; if OpenSCAD is available,
-      `--export-openscad` and `--external` are recorded.
+- [ ] For any release that claims an actual 3MF,
+      `./bin/lens-cap-3mf <job.toml> --force --json` returns `passed`, the
+      reported `.3mf` exists, and the adjacent release report records
+      `scripts/build_3mf.py` as its runner. A successful `lens-cap build`, SCAD,
+      STL, or handoff JSON alone is not the release endpoint.
 - [ ] No private source art, credentials, printer identifiers, or unlicensed
       film/logo material is committed.
 - [ ] A changelog/release note names breaking config or output changes.
@@ -80,6 +82,12 @@ Use this checklist for each tagged release and for each published lens job.
       radial protrusion, tangential width, and axial start/height. When foam and
       ribs are combined, check local rib interference on the coupon; nominal
       cavity diameter alone is not evidence of safe compression or retention.
+- [ ] For a claimed native one-piece 3MF, the release report's
+      `friction_rib_mesh_audit` passes and detects every expected angular rib
+      position at five cross-sections (start, three interior slices, and end),
+      plus 15 full-height axial contact columns per rib and connected,
+      full-width tip faces. This proves structural presence in the final mesh
+      only; it does not replace a physical fit coupon.
 - [ ] The selected neutral `friction_rib_profile` is recorded. Use
       `light_tapered` for the compatibility default or `wide_tapered` for the
       broad, reference-like six-wedge profile; explicit numeric rib overrides
@@ -93,8 +101,22 @@ Use this checklist for each tagged release and for each published lens job.
       present when those stages are claimed (`mesh`/`handoff` aliases are
       allowed for legacy scripts).
 - [ ] CAD/3MF import uses one shared canvas and preserves text/motif positions.
-- [ ] Slicer name/version, nozzle, layer height, material slots, orientation,
-      support, purge tower and preview are recorded.
+- [ ] The native 3MF `material_assignment_audit` has non-empty triangle
+      assignments for every required current-job palette colour and no used
+      colour outside that palette; a single object/mesh may still be
+      multi-material through per-triangle assignments.
+- [ ] For a claimed Bambu project, record the exact machine/process/filament
+      profile input and post-run SHA-256 values, every resolved inheritance
+      file and hash, and a passed `effective_profile_audit` showing the project
+      settings match the resolved profiles. Also record slicer name/version,
+      nozzle, layer height, material slots, orientation, support, purge tower,
+      and preview.
+- [ ] For a claimed sliced 3MF, `verification.slice_audit` passes: the G-code
+      MD5 and project/slice bindings agree, layer Z is monotonic and consistent
+      with the model height/config, every declared layer has positive extrusion,
+      and the extrusion path has non-degenerate XY range/diversity plausible for
+      the model bounds. G-code presence or byte count alone is not release
+      evidence.
 - [ ] STL projection/geometry audit passes, or the job is clearly marked
       `UNVERIFIABLE` with the reason.
 

@@ -1,0 +1,991 @@
+{
+  "bambu_3mf": {
+    "bambu": "<BambuStudio.app>/Contents/MacOS/BambuStudio",
+    "bytes": 2458834,
+    "closed_part_preparation": [
+      {
+        "filename": "helios-44-2-rehouse-imagegen-v3-95mm-base.stl",
+        "mesh": {
+          "absolute_volume_mm3": 26099.664373158317,
+          "boundary_edges": 0,
+          "bounds": {
+            "max_mm": [
+              50.099998474121094,
+              50.099998474121094,
+              16.000999450683594
+            ],
+            "min_mm": [
+              -50.099998474121094,
+              -50.099998474121094,
+              0.0
+            ],
+            "size_mm": [
+              100.19999694824219,
+              100.19999694824219,
+              16.000999450683594
+            ]
+          },
+          "face_connected_components": 1,
+          "inconsistent_orientation_edges": 0,
+          "nonmanifold_edges": 0,
+          "path": "helios-44-2-rehouse-imagegen-v3-95mm-base.stl",
+          "positive_volume_components": 1,
+          "sha256": "a973b694238cedc809b4c7d1a08675d72b3e24e85fc5d35ecd5dfd24ecedd951",
+          "solid": true,
+          "status": "passed",
+          "surface_fingerprint": {
+            "algorithm": "blake2b128-triangle-multiset-xor-sum-v1",
+            "coordinate_quantum_mm": 0.0001,
+            "sha256": "20b993e0ea5ef02a18801af91113d17c850c87edb38f1801ccfdfa7f7fb92353",
+            "triangle_count": 4556
+          },
+          "triangles": 4556,
+          "unique_edges": 6834,
+          "vertices": 2280,
+          "zero_volume_components": 0
+        },
+        "name": "black",
+        "role": "base",
+        "selector": "base",
+        "sha256": "a973b694238cedc809b4c7d1a08675d72b3e24e85fc5d35ecd5dfd24ecedd951"
+      },
+      {
+        "filename": "helios-44-2-rehouse-imagegen-v3-95mm-gray_relief.stl",
+        "mesh": {
+          "absolute_volume_mm3": 271.10554144774795,
+          "boundary_edges": 0,
+          "bounds": {
+            "max_mm": [
+              46.5,
+              46.900001525878906,
+              16.400999069213867
+            ],
+            "min_mm": [
+              -46.70000076293945,
+              -46.29999923706055,
+              16.0
+            ],
+            "size_mm": [
+              93.20000076293945,
+              93.20000076293945,
+              0.4009990692138672
+            ]
+          },
+          "face_connected_components": 1130,
+          "inconsistent_orientation_edges": 0,
+          "nonmanifold_edges": 0,
+          "path": "helios-44-2-rehouse-imagegen-v3-95mm-gray_relief.stl",
+          "positive_volume_components": 1130,
+          "sha256": "2b600e7b2d81b239fbe3a46b63849e0bc97f4d4fe99ad735c4dfbb7e6ff5bcda",
+          "solid": true,
+          "status": "passed",
+          "surface_fingerprint": {
+            "algorithm": "blake2b128-triangle-multiset-xor-sum-v1",
+            "coordinate_quantum_mm": 0.0001,
+            "sha256": "95957fc4852ef0199ccd1130370640a1c8e8b4b3995c18d6631c8d48fbc44d40",
+            "triangle_count": 103032
+          },
+          "triangles": 103032,
+          "unique_edges": 154548,
+          "vertices": 53760,
+          "zero_volume_components": 0
+        },
+        "name": "gray",
+        "role": "relief",
+        "selector": "gray_relief",
+        "sha256": "2b600e7b2d81b239fbe3a46b63849e0bc97f4d4fe99ad735c4dfbb7e6ff5bcda"
+      },
+      {
+        "filename": "helios-44-2-rehouse-imagegen-v3-95mm-ivory_relief.stl",
+        "mesh": {
+          "absolute_volume_mm3": 989.7494461381548,
+          "boundary_edges": 0,
+          "bounds": {
+            "max_mm": [
+              46.5,
+              46.900001525878906,
+              16.60099983215332
+            ],
+            "min_mm": [
+              -46.5,
+              -46.29999923706055,
+              16.0
+            ],
+            "size_mm": [
+              93.0,
+              93.20000076293945,
+              0.6009998321533203
+            ]
+          },
+          "face_connected_components": 167,
+          "inconsistent_orientation_edges": 0,
+          "nonmanifold_edges": 0,
+          "path": "helios-44-2-rehouse-imagegen-v3-95mm-ivory_relief.stl",
+          "positive_volume_components": 167,
+          "sha256": "973332cd4d86eb28f2a0484ee4322e9494a0ee16dbf4e4a169c83f16018506cb",
+          "solid": true,
+          "status": "passed",
+          "surface_fingerprint": {
+            "algorithm": "blake2b128-triangle-multiset-xor-sum-v1",
+            "coordinate_quantum_mm": 0.0001,
+            "sha256": "e8e36e34437293ede41267be955a29760094e482636fd0469360547792b0bbff",
+            "triangle_count": 192024
+          },
+          "triangles": 192024,
+          "unique_edges": 288036,
+          "vertices": 96324,
+          "zero_volume_components": 0
+        },
+        "name": "ivory",
+        "role": "relief",
+        "selector": "ivory_relief",
+        "sha256": "973332cd4d86eb28f2a0484ee4322e9494a0ee16dbf4e4a169c83f16018506cb"
+      }
+    ],
+    "effective_profile_audit": {
+      "checked": {
+        "filament": {
+          "filament_diameter": {
+            "expected": [
+              "1.75"
+            ],
+            "observed": [
+              "1.75",
+              "1.75",
+              "1.75"
+            ]
+          },
+          "filament_type": {
+            "expected": [
+              "PLA"
+            ],
+            "observed": [
+              "PLA",
+              "PLA",
+              "PLA"
+            ]
+          }
+        },
+        "machine": {
+          "max_layer_height": {
+            "expected": [
+              "0.14"
+            ],
+            "observed": [
+              "0.14"
+            ]
+          },
+          "min_layer_height": {
+            "expected": [
+              "0.04"
+            ],
+            "observed": [
+              "0.04"
+            ]
+          },
+          "nozzle_diameter": {
+            "expected": [
+              "0.2"
+            ],
+            "observed": [
+              "0.2"
+            ]
+          }
+        },
+        "process": {
+          "initial_layer_line_width": {
+            "expected": "0.25",
+            "observed": "0.25"
+          },
+          "initial_layer_print_height": {
+            "expected": "0.1",
+            "observed": "0.1"
+          },
+          "inner_wall_line_width": {
+            "expected": "0.22",
+            "observed": "0.22"
+          },
+          "layer_height": {
+            "expected": "0.1",
+            "observed": "0.1"
+          },
+          "line_width": {
+            "expected": "0.22",
+            "observed": "0.22"
+          },
+          "outer_wall_line_width": {
+            "expected": "0.22",
+            "observed": "0.22"
+          },
+          "wall_loops": {
+            "expected": "4",
+            "observed": "4"
+          }
+        }
+      },
+      "scope": "resolved_profile_chain_and_effective_project_settings",
+      "status": "passed"
+    },
+    "gcode_bytes": 0,
+    "manifest": "<external>/helios-44-2-rehouse-imagegen-v3-95mm-bambu-project.3mf.manifest.json",
+    "mesh_audit": {
+      "absolute_volume_mm3": 27360.519358456946,
+      "boundary_edges": 0,
+      "duplicate_triangles": 0,
+      "inconsistent_orientation_edges": 0,
+      "nonmanifold_edges": 0,
+      "positive_volume_components": 1298,
+      "scope": "all_bambu_part_meshes_closed_oriented_and_positive_volume",
+      "status": "passed",
+      "unreferenced_vertices": 0,
+      "zero_area_triangles": 0,
+      "zero_volume_components": 0
+    },
+    "mode": "export",
+    "multipart_audit": {
+      "declared_nozzle_values_mm": [
+        0.2
+      ],
+      "nozzle_mm": 0.2,
+      "part_count": 3,
+      "parts": [
+        {
+          "color": "#111211",
+          "extruder": 1,
+          "name": "black",
+          "role": "base",
+          "source": "helios-44-2-rehouse-imagegen-v3-95mm-base.stl"
+        },
+        {
+          "color": "#747471",
+          "extruder": 2,
+          "name": "gray",
+          "role": "relief",
+          "source": "helios-44-2-rehouse-imagegen-v3-95mm-gray_relief.stl"
+        },
+        {
+          "color": "#F2E7D3",
+          "extruder": 3,
+          "name": "ivory",
+          "role": "relief",
+          "source": "helios-44-2-rehouse-imagegen-v3-95mm-ivory_relief.stl"
+        }
+      ],
+      "scope": "bambu_parts_extruders_palette_all_nozzles_core_transforms_world_bounds_volume_and_surface_fingerprints",
+      "status": "passed",
+      "surface_fingerprints": [
+        {
+          "algorithm": "blake2b128-triangle-multiset-xor-sum-v1",
+          "coordinate_quantum_mm": 0.0001,
+          "sha256": "20b993e0ea5ef02a18801af91113d17c850c87edb38f1801ccfdfa7f7fb92353",
+          "triangle_count": 4556
+        },
+        {
+          "algorithm": "blake2b128-triangle-multiset-xor-sum-v1",
+          "coordinate_quantum_mm": 0.0001,
+          "sha256": "95957fc4852ef0199ccd1130370640a1c8e8b4b3995c18d6631c8d48fbc44d40",
+          "triangle_count": 103032
+        },
+        {
+          "algorithm": "blake2b128-triangle-multiset-xor-sum-v1",
+          "coordinate_quantum_mm": 0.0001,
+          "sha256": "e8e36e34437293ede41267be955a29760094e482636fd0469360547792b0bbff",
+          "triangle_count": 192024
+        }
+      ],
+      "world_bounds": [
+        {
+          "max_mm": [
+            50.0999985,
+            50.0999985,
+            16.00099946
+          ],
+          "min_mm": [
+            -50.0999985,
+            -50.0999985,
+            0.0
+          ],
+          "size_mm": [
+            100.199997,
+            100.199997,
+            16.00099946
+          ]
+        },
+        {
+          "max_mm": [
+            46.499998119,
+            46.899999644,
+            16.400998081
+          ],
+          "min_mm": [
+            -46.699998881,
+            -46.299997356,
+            15.999999012
+          ],
+          "size_mm": [
+            93.199997,
+            93.199997,
+            0.40099906900000004
+          ]
+        },
+        {
+          "max_mm": [
+            46.5,
+            46.899999644,
+            16.60100077
+          ],
+          "min_mm": [
+            -46.5,
+            -46.299997356,
+            16.000000938
+          ],
+          "size_mm": [
+            93.0,
+            93.199997,
+            0.600999832
+          ]
+        }
+      ]
+    },
+    "output": "<external>/helios-44-2-rehouse-imagegen-v3-95mm-bambu-project.3mf",
+    "profile_inputs": {
+      "filament": {
+        "path": "<BambuStudio.app>/Contents/Resources/profiles/BBL/filament/Bambu PLA Basic @BBL A1M 0.2 nozzle.json",
+        "post_run_sha256": "4d3ad47c5384984540ca929d0da5292a92fd12f3950d7a867b8c0293044f226e",
+        "sha256": "4d3ad47c5384984540ca929d0da5292a92fd12f3950d7a867b8c0293044f226e"
+      },
+      "machine": {
+        "path": "<BambuStudio.app>/Contents/Resources/profiles/BBL/machine/Bambu Lab A1 mini 0.2 nozzle.json",
+        "post_run_sha256": "276a970d8bf5472392e8cb906bf71a4fb9b978818c15b0af1684a2814936855b",
+        "sha256": "276a970d8bf5472392e8cb906bf71a4fb9b978818c15b0af1684a2814936855b"
+      },
+      "process": {
+        "path": "<BambuStudio.app>/Contents/Resources/profiles/BBL/process/0.10mm Standard @BBL A1M 0.2 nozzle.json",
+        "post_run_sha256": "ce92258ae92b997530b294c597828c187be5b080211efb03f5f83af39e32998b",
+        "sha256": "ce92258ae92b997530b294c597828c187be5b080211efb03f5f83af39e32998b"
+      }
+    },
+    "profile_resolution": {
+      "filament": {
+        "chain": [
+          {
+            "name": "fdm_filament_common",
+            "path": "<BambuStudio.app>/Contents/Resources/profiles/BBL/filament/fdm_filament_common.json",
+            "sha256": "8c7105b7d59a28f600c43a946f067b8b4d707b9711c0bf6b88e9166e48878548"
+          },
+          {
+            "name": "fdm_filament_pla",
+            "path": "<BambuStudio.app>/Contents/Resources/profiles/BBL/filament/fdm_filament_pla.json",
+            "sha256": "670d21ea6bdf1cd4b0a2bfddc743612ffd896cd6e5dbe767c25d2c4165c49a30"
+          },
+          {
+            "name": "Bambu PLA Basic @base",
+            "path": "<BambuStudio.app>/Contents/Resources/profiles/BBL/filament/Bambu PLA Basic @base.json",
+            "sha256": "7783968745a19570354ca0601258cd5b82a6c96f835b682741635095b49e9cc7"
+          },
+          {
+            "name": "Bambu PLA Basic @BBL A1M 0.2 nozzle",
+            "path": "<BambuStudio.app>/Contents/Resources/profiles/BBL/filament/Bambu PLA Basic @BBL A1M 0.2 nozzle.json",
+            "sha256": "4d3ad47c5384984540ca929d0da5292a92fd12f3950d7a867b8c0293044f226e"
+          }
+        ]
+      },
+      "machine": {
+        "chain": [
+          {
+            "name": "fdm_machine_common",
+            "path": "<BambuStudio.app>/Contents/Resources/profiles/BBL/machine/fdm_machine_common.json",
+            "sha256": "26ef8ee697849323e67d8e1a9026c175cebe3397e38c5091dddb5cd3fc52e94c"
+          },
+          {
+            "name": "fdm_bbl_3dp_001_common",
+            "path": "<BambuStudio.app>/Contents/Resources/profiles/BBL/machine/fdm_bbl_3dp_001_common.json",
+            "sha256": "2ca207f457c1f9b3eb25a1801adb2eaa8ddc5620f5a8945abb51a3fcddab5e47"
+          },
+          {
+            "name": "Bambu Lab A1 mini 0.4 nozzle",
+            "path": "<BambuStudio.app>/Contents/Resources/profiles/BBL/machine/Bambu Lab A1 mini 0.4 nozzle.json",
+            "sha256": "ca85210a9065eb658256385807cc715c3bb07727316a1be6818bfa6256bfbce8"
+          },
+          {
+            "name": "Bambu Lab A1 mini 0.2 nozzle",
+            "path": "<BambuStudio.app>/Contents/Resources/profiles/BBL/machine/Bambu Lab A1 mini 0.2 nozzle.json",
+            "sha256": "276a970d8bf5472392e8cb906bf71a4fb9b978818c15b0af1684a2814936855b"
+          }
+        ]
+      },
+      "process": {
+        "chain": [
+          {
+            "name": "fdm_process_common",
+            "path": "<BambuStudio.app>/Contents/Resources/profiles/BBL/process/fdm_process_common.json",
+            "sha256": "d7981c4b92854f251b8697e1bb621c63fe393f263fb8024ab63c401525d543d7"
+          },
+          {
+            "name": "fdm_process_single_common",
+            "path": "<BambuStudio.app>/Contents/Resources/profiles/BBL/process/fdm_process_single_common.json",
+            "sha256": "05b38ac1318e465e817978b36da51754f928da0172738a20bb3a8d4a69eb4769"
+          },
+          {
+            "name": "fdm_process_single_0.10_nozzle_0.2",
+            "path": "<BambuStudio.app>/Contents/Resources/profiles/BBL/process/fdm_process_single_0.10_nozzle_0.2.json",
+            "sha256": "9f2a228dc394cf2c3c4b0fbeb14d0693843513ddaadf97c037c7775ebaaa6a3d"
+          },
+          {
+            "name": "0.10mm Standard @BBL A1M 0.2 nozzle",
+            "path": "<BambuStudio.app>/Contents/Resources/profiles/BBL/process/0.10mm Standard @BBL A1M 0.2 nozzle.json",
+            "sha256": "ce92258ae92b997530b294c597828c187be5b080211efb03f5f83af39e32998b"
+          }
+        ]
+      }
+    },
+    "sha256": "7f1596a3eadc0f654cf9a325ed0c50dbb9f5d5abf63449f60f6cbd6ba23814dc"
+  },
+  "build": {
+    "command": [
+      "<external>/python3.11",
+      "-m",
+      "lens_cap_pipeline.cli",
+      "build",
+      "examples/fixtures/helios-44-2-rehouse-imagegen-v3/jobs/95mm/job.toml",
+      "--force",
+      "--external",
+      "--export-openscad",
+      "--json",
+      "--openscad",
+      "<external>/OpenSCAD"
+    ],
+    "returncode": 0,
+    "status": "passed",
+    "stderr_tail": ""
+  },
+  "design_brief": {
+    "anchor_count": 4,
+    "candidate_path": "<external>/master.png",
+    "candidate_sha256": "f6eb8046c61e1359783c1a869722bc8da3a4d76acdbf1782a6bde2121ea48e1e",
+    "culture_anchor_count": 1,
+    "display_text": [
+      "58",
+      "F2",
+      "HELIOS 44-2",
+      "REHOUSED CINEMA",
+      "M42"
+    ],
+    "identity": {
+      "brand": "Helios / Zenit",
+      "focal_length_display": "58",
+      "focal_length_mm": 58.0,
+      "maximum_aperture": "F2",
+      "maximum_aperture_display": "F2",
+      "model": "Helios-44-2"
+    },
+    "job_identity_binding_checked": true,
+    "path": "<external>/design-brief.json",
+    "physical_fit_checked": [
+      "adapter_derived_mating_diameter_mm",
+      "adapter_nominal_ring_mm",
+      "adapter_radial_wall_mm",
+      "bare_clearance_mm",
+      "bottom_thickness_mm",
+      "compression_fraction",
+      "compression_is_assumption",
+      "face_target_mm",
+      "foam_liner_status",
+      "friction_rib_count",
+      "friction_rib_height_mm",
+      "friction_rib_profile",
+      "friction_rib_profile_derived",
+      "friction_rib_protrusion_mm",
+      "friction_rib_start_mm",
+      "friction_rib_width_mm",
+      "friction_ribs_enabled",
+      "friction_ribs_explicit",
+      "measured_diameter_mm",
+      "nozzle_mm",
+      "retention_strategy",
+      "side_height_mm",
+      "wall_thickness_mm"
+    ],
+    "sha256": "1335a048ec410514984a999e39b80e00b3f5c07dc759ee218702ec4d28aec4a5",
+    "status": "passed"
+  },
+  "fit_status": "unverifiable_until_coupon_measurement",
+  "friction_rib_mesh_audit": {
+    "angular_tolerance_deg": 1.0,
+    "axial_continuity_sample_hits": [
+      {
+        "continuous_columns": 15,
+        "maximum_surface_intersections": 4,
+        "minimum_inside_interval_mm": 8.0,
+        "position": 0
+      },
+      {
+        "continuous_columns": 15,
+        "maximum_surface_intersections": 4,
+        "minimum_inside_interval_mm": 8.0,
+        "position": 1
+      },
+      {
+        "continuous_columns": 15,
+        "maximum_surface_intersections": 4,
+        "minimum_inside_interval_mm": 8.0,
+        "position": 2
+      },
+      {
+        "continuous_columns": 15,
+        "maximum_surface_intersections": 4,
+        "minimum_inside_interval_mm": 8.0,
+        "position": 3
+      },
+      {
+        "continuous_columns": 15,
+        "maximum_surface_intersections": 4,
+        "minimum_inside_interval_mm": 8.0,
+        "position": 4
+      },
+      {
+        "continuous_columns": 15,
+        "maximum_surface_intersections": 4,
+        "minimum_inside_interval_mm": 8.0,
+        "position": 5
+      },
+      {
+        "continuous_columns": 15,
+        "maximum_surface_intersections": 4,
+        "minimum_inside_interval_mm": 8.0,
+        "position": 6
+      },
+      {
+        "continuous_columns": 15,
+        "maximum_surface_intersections": 4,
+        "minimum_inside_interval_mm": 7.999999999999998,
+        "position": 7
+      },
+      {
+        "continuous_columns": 15,
+        "maximum_surface_intersections": 4,
+        "minimum_inside_interval_mm": 8.0,
+        "position": 8
+      },
+      {
+        "continuous_columns": 15,
+        "maximum_surface_intersections": 4,
+        "minimum_inside_interval_mm": 8.0,
+        "position": 9
+      },
+      {
+        "continuous_columns": 15,
+        "maximum_surface_intersections": 4,
+        "minimum_inside_interval_mm": 7.999999999999998,
+        "position": 10
+      },
+      {
+        "continuous_columns": 15,
+        "maximum_surface_intersections": 4,
+        "minimum_inside_interval_mm": 7.999999999999998,
+        "position": 11
+      }
+    ],
+    "axial_continuity_samples_per_rib": 15,
+    "axial_span_mm": [
+      1.0,
+      9.0
+    ],
+    "cross_section_sample_hits": [
+      {
+        "end": 15,
+        "interior": [
+          15,
+          15,
+          15
+        ],
+        "position": 0,
+        "start": 15
+      },
+      {
+        "end": 15,
+        "interior": [
+          15,
+          15,
+          15
+        ],
+        "position": 1,
+        "start": 15
+      },
+      {
+        "end": 15,
+        "interior": [
+          15,
+          15,
+          15
+        ],
+        "position": 2,
+        "start": 15
+      },
+      {
+        "end": 15,
+        "interior": [
+          15,
+          15,
+          15
+        ],
+        "position": 3,
+        "start": 15
+      },
+      {
+        "end": 15,
+        "interior": [
+          15,
+          15,
+          15
+        ],
+        "position": 4,
+        "start": 15
+      },
+      {
+        "end": 15,
+        "interior": [
+          15,
+          15,
+          15
+        ],
+        "position": 5,
+        "start": 15
+      },
+      {
+        "end": 15,
+        "interior": [
+          15,
+          15,
+          15
+        ],
+        "position": 6,
+        "start": 15
+      },
+      {
+        "end": 15,
+        "interior": [
+          15,
+          15,
+          15
+        ],
+        "position": 7,
+        "start": 15
+      },
+      {
+        "end": 15,
+        "interior": [
+          15,
+          15,
+          15
+        ],
+        "position": 8,
+        "start": 15
+      },
+      {
+        "end": 15,
+        "interior": [
+          15,
+          15,
+          15
+        ],
+        "position": 9,
+        "start": 15
+      },
+      {
+        "end": 15,
+        "interior": [
+          15,
+          15,
+          15
+        ],
+        "position": 10,
+        "start": 15
+      },
+      {
+        "end": 15,
+        "interior": [
+          15,
+          15,
+          15
+        ],
+        "position": 11,
+        "start": 15
+      }
+    ],
+    "cross_section_samples_per_end": 15,
+    "cross_section_samples_per_interior_slice": 15,
+    "declared_tip_width_mm": 0.6586110984278112,
+    "detected_end_positions": 12,
+    "detected_start_positions": 12,
+    "expected_rib_count": 12,
+    "integrated_vertical_edge_hits": 24,
+    "integrated_vertical_edge_positions": 12,
+    "interior_cross_section_z_mm": [
+      3.008,
+      5.024,
+      7.056
+    ],
+    "main_component_vertices": [
+      32736
+    ],
+    "mesh_component_counts": [
+      1
+    ],
+    "minimum_accepted_cross_section_width_mm": 0.59274998858503,
+    "minimum_full_height_tip_face_width_mm": 0.65861,
+    "minimum_observed_tip_width_mm": 0.65861,
+    "minimum_observed_wall_attachment_width_mm": 0.736752,
+    "nozzle_mm": 0.2,
+    "radial_tolerance_mm": 0.03,
+    "referenced_vertices": 32736,
+    "scope": "referenced_connected_full_width_tip_faces_full_height_axial_contact_columns_and_start_interior_end_wall_cross_sections_physical_fit_requires_coupon",
+    "status": "passed",
+    "tip_radius_mm": 47.6,
+    "tip_vertex_hits": 48,
+    "unused_vertices": 0
+  },
+  "job": "job.toml",
+  "job_sha256": "92fe7e59ae9889b73c7a250a25fc54f72dd13c0d812d13f56db78d617c01b364",
+  "material_assignment_audit": {
+    "colors": {
+      "black": {
+        "active_in_process_mask": true,
+        "displaycolor": "#111211FF",
+        "expected_mask_footprint_mm2": 4730.240000000001,
+        "minimum_projected_area_ratio": 0.2,
+        "projected_triangle_area_mm2": 13448.80564092667,
+        "required": true,
+        "role": "base",
+        "triangle_count": 18163
+      },
+      "gray": {
+        "active_in_process_mask": true,
+        "displaycolor": "#747471FF",
+        "expected_mask_footprint_mm2": 676.0800000000002,
+        "minimum_projected_area_ratio": 0.2,
+        "projected_triangle_area_mm2": 676.0799946399482,
+        "required": true,
+        "role": "relief",
+        "triangle_count": 26547
+      },
+      "ivory": {
+        "active_in_process_mask": true,
+        "displaycolor": "#F2E7D3FF",
+        "expected_mask_footprint_mm2": 1646.8400000000004,
+        "minimum_projected_area_ratio": 0.2,
+        "projected_triangle_area_mm2": 1646.8399999999192,
+        "required": true,
+        "role": "relief",
+        "triangle_count": 20758
+      }
+    },
+    "scope": "final_3mf_triangle_material_assignments_and_named_relief_masks",
+    "spatial_mask_binding": {
+      "gray": {
+        "expected_base_z_mm": 16.0,
+        "expected_pixels": 16902,
+        "expected_top_z_mm": 16.401,
+        "extra_pixels_outside_tolerance": 0,
+        "mask": "gray.png",
+        "mask_sha256": "4382f49b8714e286fe407fd183738489045c8b097021812a36001c54096dfa14",
+        "missing_pixels_outside_tolerance": 0,
+        "out_of_xy_envelope_triangles": 0,
+        "out_of_z_envelope_triangles": 0,
+        "projected_area_tolerance_mm2": 3.3804000000000007,
+        "projected_pixels": 26281,
+        "projected_triangle_area_mm2": 676.0799946399482,
+        "raw_iou": 0.6431262128533922,
+        "resolution_px": 475,
+        "tolerance_pixels": 1,
+        "top_triangle_count": 8865
+      },
+      "ivory": {
+        "expected_base_z_mm": 16.0,
+        "expected_pixels": 41171,
+        "expected_top_z_mm": 16.601000000000003,
+        "extra_pixels_outside_tolerance": 0,
+        "mask": "ivory.png",
+        "mask_sha256": "23256ce630eb36548388d7857ba9201c90e5cc65273e734db8a542f076deee74",
+        "missing_pixels_outside_tolerance": 0,
+        "out_of_xy_envelope_triangles": 0,
+        "out_of_z_envelope_triangles": 0,
+        "projected_area_tolerance_mm2": 8.234200000000001,
+        "projected_pixels": 48010,
+        "projected_triangle_area_mm2": 1646.8399999999192,
+        "raw_iou": 0.857550510310352,
+        "resolution_px": 475,
+        "tolerance_pixels": 1,
+        "top_triangle_count": 5684
+      }
+    },
+    "status": "passed",
+    "unassigned_triangle_count": 0,
+    "unexpected_used_colors": []
+  },
+  "mechanical": {
+    "bare_clearance_mm": 0.4,
+    "bottom_thickness_mm": 2.0,
+    "cavity_diameter_mm": 95.4,
+    "compression_fraction": 0.0,
+    "compression_is_assumption": false,
+    "foam_liner_status": "none",
+    "foam_local_compression_fraction": null,
+    "friction_rib_angle_deg": 1.44140325819075,
+    "friction_rib_bare_interference_mm": -0.20000000000000284,
+    "friction_rib_count": 12,
+    "friction_rib_fit_warning": "configured ribs leave nominal bare-plastic clearance; print a fit coupon and tune protrusion/profile before relying on retention",
+    "friction_rib_height_mm": 8.0,
+    "friction_rib_profile": "light_tapered",
+    "friction_rib_protrusion_mm": 0.1,
+    "friction_rib_retention_status": "guide_only_clearance",
+    "friction_rib_start_mm": 1.0,
+    "friction_rib_tip_angle_deg": 0.7927717920049127,
+    "friction_rib_tip_diameter_mm": 95.2,
+    "friction_rib_tip_width_mm": 0.6586110984278112,
+    "friction_rib_wall_overlap_mm": 0.6,
+    "friction_rib_width_mm": 1.2,
+    "friction_ribs_enabled": true,
+    "friction_ribs_explicit": false,
+    "liner_thickness_mm": null,
+    "measured_diameter_mm": 95.0,
+    "nozzle_mm": 0.2,
+    "radial_compression_mm": 0.0,
+    "retention_strategy": "bare_wall_plus_neutral_ribs",
+    "side_height_mm": 14.0,
+    "total_height_mm": 16.0,
+    "wall_thickness_mm": 2.4
+  },
+  "native_3mf": {
+    "bytes": 579625,
+    "command": [
+      "<external>/python3.11",
+      "<external>/three_mf_adapter.py",
+      "openscad",
+      "out/model/helios-44-2-rehouse-imagegen-v3-95mm.scad",
+      "<external>/helios-44-2-rehouse-imagegen-v3-95mm-native.3mf",
+      "--openscad",
+      "<external>/OpenSCAD",
+      "--timeout",
+      "1800",
+      "--require-single-volume"
+    ],
+    "manifest": "<external>/helios-44-2-rehouse-imagegen-v3-95mm-native.3mf.manifest.json",
+    "model": {
+      "absolute_volume_mm3": 27358.20297604497,
+      "boundary_edges": 0,
+      "bounds": {
+        "max_mm": [
+          50.1,
+          50.1,
+          16.601
+        ],
+        "min_mm": [
+          -50.1,
+          -50.1,
+          0.0
+        ],
+        "size_mm": [
+          100.2,
+          100.2,
+          16.601
+        ]
+      },
+      "build_items": 1,
+      "component_references": 0,
+      "duplicate_triangles": 0,
+      "inconsistent_orientation_edges": 0,
+      "mesh_components": 1,
+      "mesh_parts": 1,
+      "nonmanifold_edges": 0,
+      "objects": 1,
+      "parts": 1,
+      "transformed_build_items": 0,
+      "transformed_components": 0,
+      "triangles": 65468,
+      "unreferenced_vertices": 0,
+      "vertices": 32736,
+      "volume_components": 1,
+      "zero_area_triangles": 0,
+      "zero_volume_components": 0
+    },
+    "output": "<external>/helios-44-2-rehouse-imagegen-v3-95mm-native.3mf",
+    "sha256": "e1fda045d4df0c85b81d1edf46f1bab3e2f1ee86523d74bcac39f60ad1d9213c"
+  },
+  "native_bounds_audit": {
+    "expected": {
+      "max_mm": [
+        50.1,
+        50.1,
+        16.601000000000003
+      ],
+      "min_mm": [
+        -50.1,
+        -50.1,
+        0.0
+      ],
+      "size_mm": [
+        100.2,
+        100.2,
+        16.601000000000003
+      ]
+    },
+    "observed": {
+      "max_mm": [
+        50.1,
+        50.1,
+        16.601
+      ],
+      "min_mm": [
+        -50.1,
+        -50.1,
+        0.0
+      ],
+      "size_mm": [
+        100.2,
+        100.2,
+        16.601
+      ]
+    },
+    "scope": "final_native_world_bounds_vs_current_geometry_report",
+    "status": "passed",
+    "tolerance_mm": 0.005
+  },
+  "notes": [
+    "Artwork, mask, and relief projection gates are executed by the public build path.",
+    "Native 3MF is unsliced; a printer-profiled 3MF requires the explicit Bambu stage.",
+    "A valid package does not prove physical fit; print and measure a same-material coupon."
+  ],
+  "openscad": "<OpenSCAD.app>/Contents/MacOS/OpenSCAD",
+  "projection": {
+    "colors": {
+      "gray": {
+        "extra_outside_tolerance": 0,
+        "missing_outside_tolerance": 0,
+        "raw_iou": 0.64144213
+      },
+      "ivory": {
+        "extra_outside_tolerance": 0,
+        "missing_outside_tolerance": 0,
+        "raw_iou": 0.85141451
+      }
+    },
+    "diff_dir": "out/model/projection-diff",
+    "report": "out/model/projection-report.json",
+    "status": "passed"
+  },
+  "retention_status": "guide_only_clearance",
+  "retention_warning": "configured ribs leave nominal bare-plastic clearance; print a fit coupon and tune protrusion/profile before relying on retention",
+  "runner": "scripts/build_3mf.py",
+  "schema_version": 1,
+  "source_binding_audit": {
+    "approved_candidate_sha256": "f6eb8046c61e1359783c1a869722bc8da3a4d76acdbf1782a6bde2121ea48e1e",
+    "current_source_sha256": "f6eb8046c61e1359783c1a869722bc8da3a4d76acdbf1782a6bde2121ea48e1e",
+    "process_report": "out/process-report.json",
+    "process_report_sha256": "fe617e6db90a6d80ff7295c70be45d4e953020902313655100d6eb3ccdfc6418",
+    "process_source_sha256": "f6eb8046c61e1359783c1a869722bc8da3a4d76acdbf1782a6bde2121ea48e1e",
+    "scope": "post_build_and_prepublication_approved_source_binding",
+    "status": "passed"
+  },
+  "status": "passed"
+}

@@ -64,18 +64,38 @@ SHA-256），重复执行不改动未变化文件。检测到用户改动时不�
 `--allow-global`，否则只检查／预览。`bin/lens-cap-skills` 和
 `scripts/sync_skills.py` 是同一入口的便携别名。
 
+如果宿主目录还留有早期原型 `lens-cap-front-image`，先做只读迁移预览，再用
+显式 `--apply --force` 把它**移动**到可恢复的 `.lens-cap-legacy/` 隔离目录：
+
+```sh
+python3 scripts/install_skills.py migrate --environment codex --allow-global --json
+python3 scripts/install_skills.py migrate --environment codex --allow-global \
+  --apply --force --json
+python3 scripts/install_skills.py sync --environment codex --allow-global \
+  --apply --json
+```
+
+旧版也可能占用当前的 `lens-cap-production` 名称；这属于有歧义的冲突，只有
+确认它确实是旧文件时才额外加 `--include-canonical`。迁移不会删除内容，回执会
+记录原路径和备份路径；不想动全局目录时，优先使用项目内 `--dest .agents/skills`。
+
 如果宿主只会扫描静态 metadata，或你想先独立检查一条自然语言请求是否命中本路由，
 可运行同一份 manifest 驱动的无依赖 resolver：
 
 ```sh
 python3 scripts/resolve_skill_route.py \
   "为适马 28–70mm F2.8 设计圆形镜头盖正面并输出 3MF"
+# 只有已建立镜头盖上下文时，才允许省略“镜头盖／正面”：
+python3 scripts/resolve_skill_route.py "试试康泰时28F2" \
+  --lens-cap-context
 ```
 
 它只判断 `lens-cap-imagegen → lens-cap-production` 的顺序和排他性，不生成图或 CAD；
 明确的镜头盖／正面名词短语无需额外动作词，紧凑的品牌+型号写法（如 `适马2870`）也
 可命中；若镜头身份来自附图／目录而不在文字中，可加 `--named-lens`。这给旧版 Codex/Claude
-宿主一个明确的适配入口，但不能替代宿主最终加载 Skill。
+宿主一个明确的适配入口，但不能替代宿主最终加载 Skill。干净任务里的
+“试试某镜头”默认不命中；只有调用方确认当前已经是镜头盖任务时才传
+`--lens-cap-context`，避免把普通镜头测试误路由为镜头盖设计。
 
 > **分发边界（Alpha）**：只用 `pip install` 安装 CLI wheel 不会带上两个
 > companion Skills、`bin/lens-cap-3mf` 或 `tools/3mf_adapter`。要走完整的
@@ -96,12 +116,21 @@ Codex 通常在任务启动时缓存 Skill 目录；完成同步后请新建任�
 ```sh
 lens-cap init jobs/my-lens/job.toml \
   --source jobs/my-lens/art/master.png \
-  --measured-diameter 95 \
+  --measured-diameter 85 \
+  --adapter-nominal-ring 80 \
+  --adapter-radial-wall 2.5 \
   --foam-thickness 1.5 \
-  --job-slug my-lens-cap
+  --job-slug mamiya-sekor-c-80-f1-9-cap \
+  --lens-identity "Mamiya-Sekor C 80mm F1.9" \
+  --display-text 80 F1.9 "MAMIYA-SEKOR C" 645 "REHOUSED MEDIUM FORMAT"
 # 编辑 job.toml 的圆心、半径和 palette；然后：
 lens-cap build jobs/my-lens/job.toml --force
 ```
+
+`--adapter-nominal-ring` 与 `--adapter-radial-wall` 是可选的来源分解，必须成对
+提供；CLI 会校验 `80 + 2 × 2.5 = 85 mm`（容差 0.05 mm）并写入
+`[metadata]`。真正驱动卡合几何、且唯一必需的机械尺寸仍是实测
+`--measured-diameter`；已经直接量到实际卡合外径时，无需再回答适配环分解。
 
 `lenscap` 是同一 CLI 的兼容别名。先查看本机可选外部工具（不会生成或上传任何文件）：
 
@@ -111,7 +140,12 @@ lens-cap doctor --json
 
 如果目标是直接得到可交给切片器的 3MF，不要停在 `build` 的 handoff：使用仓库
 提供的一键桥接器。它会重新调用公开 CLI、检查同画布浮雕、导出一体原生 3MF，
-并用无第三方依赖的校验器读取包；`OpenSCAD` 是生成一体 3MF 的唯一外部依赖。
+并用无第三方依赖的校验器读取包；凸条开启时还会直接在最终 3MF 网格的起点、内部
+截面和终点核对每个预期角位置，并要求连续的全高轴向接触列与足宽端面；同时要求
+所有必需色都有非空三角面分配、且没有当前 palette 之外
+的已用颜色。`OpenSCAD` 是生成一体 3MF 的唯一外部依赖。
+用户明确要求 3MF 时，只有目标 `.3mf` 已存在且该验证通过才算完成；PNG、SCAD、
+STL、handoff JSON、命令说明或预检通过都不是 3MF 交付成功。
 
 ```sh
 ./bin/lens-cap-3mf jobs/my-lens/job.toml --force --json
@@ -121,6 +155,52 @@ lens-cap doctor --json
   --process-profile /path/to/process.json \
   --filament-profile /path/to/filament.json --json
 ```
+
+`lens-cap-3mf` 是发布级端点，默认会在生成任何派生物前验证当前任务的
+`design-brief.json`：必须明确标记 `generation.approved=true`，锁定当前
+`source_art` 的 SHA-256，包含焦段／光圈顺序、来源锚点和许可记录。桥接器会先看
+任务 `[metadata].design_brief`，再查找任务目录向上的最近 `design-brief.json`；也可用
+`--brief PATH` 显式指定。缺失、未批准或与当前任务不一致的 brief 返回 `FAILED` 并退出非零，不能把
+裸 TOML/PNG 误报为完成的 3MF。已有的私有 `process`／`model` 实验仍可直接运行核心 CLI。
+
+从刚保存的图稿和任务配置开始，可用 provider-neutral 的交接脚手架自动写入候选哈希、
+机械参数和透明图的圆形建议；它不会调用图像服务，也不会替用户批准：
+
+```sh
+lens-cap handoff-init jobs/my-lens/job.toml \
+  --brand Mamiya --model "Mamiya-Sekor C 80mm F1.9" \
+  --focal-length 80 --maximum-aperture F1.9 \
+  --provider "OpenAI built-in image_gen" \
+  --anchor-source https://www.suaudeau.eu/memo/Manuels/Mamiya_M645_Service_Manual.pdf
+# 审阅来源后让 anchor.evidence_state 以 sourced／verified 等正向状态开头；
+# 补齐全部 REPLACE、三项 provenance 许可字段和 notes；不适用时写明原因（例如
+# “not applicable — no third-party mark rendered”），再核对完整文字闭集与圆形构图，
+# 最后才把 generation.approved 改为 true。
+lens-cap handoff-check jobs/my-lens/job.toml --json
+./bin/lens-cap-3mf jobs/my-lens/job.toml --force --json
+```
+
+`handoff-init` 默认拒绝覆盖已有 brief；`--force` 只应在确认目标路径后使用。
+`init` 的 `--lens-identity` 与 `--display-text` 必须成对提供；后者的前两项必须与
+`handoff-init` 的焦段／光圈一致，后续型号、系统等二级文字也会原样进入
+`display_text`／`allowed_text`，严格门禁要求三者保持完整、有序且完全相同。
+门禁还要求 job 的规范化身份文字包含 brief 的品牌、型号、焦段和 F 值，不能靠同时
+修改两处自由文本把任务悄悄换成另一颗镜头。
+可变光圈变焦可直接传 `--maximum-aperture F3.5-5.6`，也可用首端锚点配合
+`--maximum-aperture-display F3.5-5.6`；en dash 会被规范化，但完整范围必须始终
+保留在 `display_text[1]`。当前 brief schema 暂不支持 T-stop，会显式拒绝而非
+静默当成 F 值。
+`handoff-init --provider` 是必填的实际来源记录；命令输出的 `next` 会列出仍需
+人工核实的证据状态、许可、文字闭集、圆形构图和批准项。
+脚手架还会把当前 `[circle]`、完整 palette（含角色、RGB、浮雕高度等）以及
+grid、safe border、prefilter、cleanup、assembly mode 冻结到 `job_binding`；
+审批后任一 job 值漂移都会失败。不透明图稿应先人工确定 TOML 圆形；
+若在脚手架生成后才修改这些字段，先用相同参数重新执行
+`handoff-init --force` 刷新快照，再填写人工审核字段。
+每个 anchor 都必须有可复核的 http(s) 来源或显式 `archive:` 标识，以及完整的
+摘要、上下文、母题和识别线索；裸 `x` 不能通过。`handoff-check` 与桥接器使用同一严格校验。brief 是一次图稿的
+语义、来源与人工批准快照；多尺寸任务中的实际直径、泡棉、凸条和打印参数以各自的
+`job.toml` 为机械权威，brief 中的机械摘要不能替代任务配置。
 
 Windows 使用 `py -3 scripts/build_3mf.py jobs/my-lens/job.toml --force --json`
 或 `bin/lens-cap-3mf.cmd`；其余参数相同。
@@ -140,31 +220,48 @@ lint；它需要先有一次成功的 `process`（`build` 会自动完成）。�
 会由所有阶段命令直接报告。
 
 要在没有当前对话历史的情况下复演“新用户”链路，可运行仓库自带的
-干净环境测试。默认它会复制 Helios-44-2 REHOUSE 测试图稿和 95／82／77 mm
-三份示例配置到临时目录；用 `--fixture` 也可切换到独立的 Mamiya-Sekor C
-80mm F1.9 REHOUSE 样本。脚本重新调用公开 CLI，检查焦段／光圈语义、遮罩投影，
-并在本机有 OpenSCAD 时输出原生 3MF；检测到兼容的 Bambu Studio 配置时还会
-对 95 mm 版本做一次切片。默认不要求桌面程序：
+干净环境测试。默认 fixture 是本轮实际 ImageGen 生成并人工批准的
+Helios-44-2 REHOUSE v3，只包含一个 95 mm 任务，并把它送入 canonical bridge。
+v2 保留为 77／82／95 mm 的旧版多直径矩阵；Mamiya-Sekor C 80mm F1.9 fixture
+负责跨品牌、适配壁和泡棉组合。脚本重新调用公开 CLI，检查焦段／光圈语义和遮罩
+投影；只有本机有兼容 OpenSCAD 时才会真正输出并验证原生 3MF：
 
 ```sh
-python3 scripts/smoke_rehouse.py --bambu never --json
-# 换一个品牌/重制样本，验证没有跨任务文字泄漏：
 python3 scripts/smoke_rehouse.py \
-  --fixture examples/fixtures/mamiya-sekor-c-80-f1-9-rehouse \
-  --bambu never --json
-# 新鲜 ImageGen 的 Helios-44-2 REHOUSE 样本（含 77／82／95 mm 三种卡合包络）
+  --fixture examples/fixtures/helios-44-2-rehouse-imagegen-v3 \
+  --bridge-job jobs/95mm/job.toml --bambu never --json
+# 旧版 77／82／95 mm 多直径矩阵：
 python3 scripts/smoke_rehouse.py \
   --fixture examples/fixtures/helios-44-2-rehouse-imagegen-v2 \
   --bambu never --json
-# 完整主机验证（需要 OpenSCAD；若有 A1 mini 配置也会切片）
-python3 scripts/smoke_rehouse.py --bambu auto --require-external --keep-workdir --json
+# 跨品牌、适配壁与泡棉矩阵：
+python3 scripts/smoke_rehouse.py \
+  --fixture examples/fixtures/mamiya-sekor-c-80-f1-9-rehouse \
+  --bambu never --json
+# 完整主机验证（严格要求 OpenSCAD、Bambu Studio 及三份本机配置）
+python3 scripts/smoke_rehouse.py \
+  --fixture examples/fixtures/helios-44-2-rehouse-imagegen-v3 \
+  --bridge-job jobs/95mm/job.toml --bambu auto \
+  --require-external --keep-workdir \
+  --machine-profile /path/to/machine.json \
+  --process-profile /path/to/process.json \
+  --filament-profile /path/to/filament.json --json
 ```
+
+在缺少 OpenSCAD 的便携主机上，烟测仍可退出 0 供 CI 收集诊断，但顶层
+`status` 必须是 `unverifiable`；`deterministic_preflight_status=passed` 只说明批准
+数据包、确定性图像处理和投影预检通过，`native_3mf_complete=false` 则明确表示没有
+完成实际 3MF。加 `--require-external` 才会把这个边界变成硬失败。
 
 若还要验收“真人自然语言 → 一次性询问并持久化卡合参数 → 3MF”的交互边界，
 可运行仓库附带的结构化复盘剧本。它不依赖某个 Codex 对话缓存，会先检查专用
 Skill 的顺序和三项 intake，再在隔离临时目录调用同一生产 runner：
 
 ```sh
+python3 scripts/rehearse_user_agent.py \
+  examples/rehearsals/helios-44-2-imagegen-v3-95mm-clean-room.json \
+  --bambu never --json
+# 旧版 Helios 多直径交互剧本
 python3 scripts/rehearse_user_agent.py \
   examples/rehearsals/helios-44-2-rehouse-clean-room.json \
   --bambu never --json
@@ -174,14 +271,17 @@ python3 scripts/rehearse_user_agent.py \
   --bambu never --json
 ```
 
-想一次跑完路由、两个跨品牌 fixture 和两份交互剧本，可在仓库根目录执行
-`make smoke-all`（或 `make acceptance`）。这个便携门禁不要求桌面切片器；有
-OpenSCAD/Bambu 时，再按上面的 `--require-external` 命令做主机级验证。
+想一次跑完路由、三个 fixture 和三份交互剧本，可在仓库根目录执行
+`make smoke-all`（或 `make acceptance`）。这个便携门禁允许外部工具缺失时明确
+报告 `unverifiable`；要声称 3MF 已完成，仍须使用上面的 `--require-external`
+命令并确认产物存在且通过验证。
 
 剧本可复制后替换为其他镜头；`fixture.primary_job` 必须与回答的实际卡合外径、
 泡棉厚度和凸条配置一致。需要保留本次输出时再加
-`--artifact-dir PATH --force-artifacts`。它验证交互和文件链路，不把图像供应商的
-像素级复现或实体卡合测量冒充为通过。
+`--artifact-dir PATH --force-artifacts`。剧本不会重新调用 ImageGen；它把 fixture
+中记录的候选图稿、提示词和人工批准当作生成服务边界，只复演批准数据包之后的
+确定性生产链。因此它既不声称像素级复现，也不把交互 `passed` 或实体卡合测量
+冒充成已生成 3MF。
 
 烟测还会拒绝 `generation.approved` 未确认、缺少有来源的品牌文化／REHOUSE
 锚点，或指向 fixture 外部的提示词／图稿路径；这让“已审批图稿 → 3MF”边界
@@ -206,7 +306,10 @@ OpenSCAD/Bambu 时，再按上面的 `--require-external` 命令做主机级验�
 python3 tools/3mf_adapter/three_mf_adapter.py verify path/to/model.3mf
 python3 tools/3mf_adapter/three_mf_adapter.py verify path/to/sliced.3mf --require-slice
 ```
-它检查 ZIP CRC、Core XML 关系、所有模型部件的网格索引／边界和可选的非空 G-code；
+它检查 ZIP CRC、Core XML 关系、所有模型部件的网格索引／边界；对切片包还会核对
+唯一且有序的 G-code 块、配置／切片元数据、单调 Z 层、逐层挤出，以及与模型包围盒
+尺寸相容、具有合理范围与多样性的非退化 XY 挤出路径；它不会把只塞入几行假 G-code 的 ZIP 当成切片成功，
+但这也不是对工具路径覆盖整个模型边界的几何证明；
 它不能替代 Bambu 预览或实体卡合试配。
 
 输出目录包含：
@@ -272,6 +375,11 @@ base／relief STL）；`fit_coupon` 只用于先打印试配环。不要把一�
    `--no-friction-ribs` 或 `fit.friction_ribs_enabled = false`，需要显式开启时可用
    `--friction-ribs`）。
 
+如果用户同时知道转接环标称直径和单侧径向壁厚，可以额外记录
+`--adapter-nominal-ring` 与 `--adapter-radial-wall`；两项必须同时出现，并满足
+`标称直径 + 2 × 单侧壁厚 = measured_diameter_mm`（容差 0.05 mm）。它们用于审计
+尺寸来源，不增加第四个必答问题；实测卡合外径仍是唯一必需的机械值。
+
 成品正面／浮雕直径从实测卡合外径派生，除非明确写入 `face_diameter_mm` 覆盖。贴泡棉且未提供压缩率时模型暂按 20% 并标为假设；不贴泡棉时默认压缩率为 0。内壁凸条有两个中性预设：`light_tapered`（默认，12 条窄而浅的渐缩凸条，径向侵入 0.10 mm）用于兼容性和轻微增摩，`wide_tapered`（6 条宽楔形、8° 基部角／4.4° 端部角、接近全侧壁高度）用于接近参考图中粗壮凸起的视觉与机械轮廓。两者都不是品牌元素；可用 `--friction-rib-profile wide_tapered` 或在 `[fit]` 写入 `friction_rib_profile` 选择，显式填写的数量、侵入量、宽度和高度优先于预设。带泡棉时凸条仍可能局部增加压缩，必须先打印试配环，不能把文件检查当成实物配合证明。
 以 95 mm 卡合外径、1.5 mm 泡棉、20% 临时压缩的参考测试为例，`wide_tapered` **显式覆盖**为约 0.55 mm 径向侵入、6.8 mm 宽度和 12.5 mm 高度（该预设本身默认侵入量为 0.30 mm），局部线性压缩估算约 56.7%；这只是试配起点，不能替代同材料、同喷嘴的 coupon 实测。不贴泡棉时，报告还会给出带符号的裸壁名义干涉量（正值为过盈、负值为余隙）。
 旧版未声明凸条的配置在重建时会继承这一新默认；若要复现旧的光滑内壁，请显式写入 `friction_ribs_enabled = false`，并重新跑 process/model，不能继续使用旧模型文件冒充当前配置。
@@ -287,6 +395,11 @@ base／relief STL）；`fit_coupon` 只用于先打印试配环。不要把一�
 避免换机器后核心配置哈希漂移；原始 TOML 仍保留本机执行路径，适配器报告会记录
 工具版本和输出哈希。
 
+原生 3MF 发布还会删除 OpenSCAD 的易变创建时间，把随机 UUID 替换为内容派生的
+UUIDv5，并以固定元数据和顺序重写 ZIP 项。因此同一 OpenSCAD／Python／zlib
+工具链的重复输出可逐字节比较；跨版本时以源配置哈希、网格语义、包围盒、投影、
+材质和凸条门禁为准，不承诺不同 OpenSCAD 三角化或压缩库产生相同字节。
+
 要做逐字节发布比较，优先使用无损 PNG/PPM 图稿并用
 `bootstrap.py --locked` 固定依赖；JPEG 的 Pillow/libjpeg 解码版本差异可能改变
 像素，源图锁只能发现替换，不能消除不同解码器的差异。
@@ -299,7 +412,9 @@ base／relief STL）；`fit_coupon` 只用于先打印试配环。不要把一�
 
 可将 [`examples/job-manifest.template.json`](examples/job-manifest.template.json)
 复制到任务目录，填写允许文字、旧任务禁用词、图稿哈希、品牌／电影典故来源和
-许可证；它与 TOML 分工，前者锁定语义与来源，后者锁定像素处理和几何参数。
+许可证；它与 TOML 分工，前者是特定获批图稿的语义／来源快照，后者才是每个
+尺寸变体的像素处理和机械几何权威。一个 brief 可服务多个尺寸任务，因此不要用
+brief 中的机械摘要覆盖各 `job.toml` 的实测直径、泡棉或凸条参数。
 当前 `validate` 主要审计确定性文件；缺少 manifest 的身份／授权字段时，核心
 仍可用于私人试验，但公开发布必须把语义来源状态标为 `UNVERIFIABLE`，不能把
 核心 `PASS` 当成品牌或电影履历已核验。

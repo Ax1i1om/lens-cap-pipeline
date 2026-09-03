@@ -4,8 +4,9 @@
 The normal ``scripts/smoke.py`` intentionally stays tiny and portable.  This
 runner is the heavier release rehearsal: it copies only an approved named-lens
 fixture into a temporary checkout, invokes the public CLI as a new user would,
-audits relief projections, exports native OpenSCAD 3MF packages, and (when the
-local installation is available) asks Bambu Studio for one sliced snapshot.
+audits relief projections, and sends every publishable native/Bambu package
+through the same canonical release bridge. When the local installation is
+available it also asks Bambu Studio for one multipart profiled snapshot.
 No generated output is written back to the source fixture unless the caller
 explicitly supplies ``--artifact-dir``.
 
@@ -35,11 +36,17 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+from lens_cap_pipeline.brief import (  # noqa: E402
+    BriefError,
+    canonical_aperture_display,
+    validate_design_brief,
+)
 from lens_cap_pipeline.config import PipelineConfig, load_config  # noqa: E402
 
 ADAPTER = ROOT / "tools" / "3mf_adapter" / "three_mf_adapter.py"
 PROJECTION = ROOT / "scripts" / "audit_stl_projection.py"
-DEFAULT_FIXTURE = ROOT / "examples" / "fixtures" / "helios-44-2-rehouse"
+BRIDGE = ROOT / "scripts" / "build_3mf.py"
+DEFAULT_FIXTURE = ROOT / "examples" / "fixtures" / "helios-44-2-rehouse-imagegen-v3"
 DEFAULT_SIZES = (95, 82, 77)  # fallback for the original Helios fixture
 
 
@@ -208,6 +215,35 @@ def _find_bambu_profiles() -> dict[str, Path] | None:
     return None
 
 
+def _explicit_bambu_profiles(
+    machine: Path | None,
+    process: Path | None,
+    filament: Path | None,
+) -> dict[str, Path] | None:
+    """Resolve an all-or-nothing profile trio supplied by a portable caller."""
+
+    raw = {"machine": machine, "process": process, "filament": filament}
+    provided = {name: value for name, value in raw.items() if value is not None}
+    if not provided:
+        return None
+    if len(provided) != len(raw):
+        missing = ", ".join(sorted(set(raw) - set(provided)))
+        raise SmokeError(
+            "explicit Bambu profiles are all-or-nothing; missing: " + missing
+        )
+    resolved = {
+        name: value.expanduser().resolve()
+        for name, value in raw.items()
+        if value is not None
+    }
+    missing_files = [str(path) for path in resolved.values() if not path.is_file()]
+    if missing_files:
+        raise SmokeError(
+            "explicit Bambu profile does not exist: " + ", ".join(missing_files)
+        )
+    return resolved
+
+
 def _copy_fixture(source: Path, destination: Path) -> list[Path]:
     """Copy only source inputs, never old generated outputs or artifacts."""
 
@@ -266,7 +302,7 @@ def _validate_brief(fixture: Path) -> dict[str, Any]:
         or len(display) < 2
         or not all(isinstance(token, str) and token.strip() for token in display)
         or not isinstance(allowed, list)
-        or set(display) != set(allowed)
+        or display != allowed
     ):
         raise SmokeError("display_text and allowed_text must be the same closed set")
     generation = brief.get("generation")
@@ -317,12 +353,26 @@ def _validate_brief(fixture: Path) -> dict[str, Any]:
     )
     if displayed_focal != focal_display_canonical:
         raise SmokeError("the first display_text token must be the focal length")
-    aperture_token = "".join(aperture.upper().split()).replace("/", "")
-    if not aperture_token.startswith("F"):
-        aperture_token = "F" + aperture_token
-    displayed_aperture = "".join(display[1].strip().upper().split()).replace("/", "")
-    if displayed_aperture != aperture_token:
-        raise SmokeError("the second display_text token must be the maximum aperture")
+    try:
+        aperture_anchor = canonical_aperture_display(
+            aperture, field="lens_identity.maximum_aperture"
+        )
+        aperture_display_value = identity.get("maximum_aperture_display")
+        aperture_display = canonical_aperture_display(
+            aperture if aperture_display_value is None else aperture_display_value,
+            field="lens_identity.maximum_aperture_display",
+        )
+        displayed_aperture = canonical_aperture_display(
+            display[1], field="display_text[1]"
+        )
+    except BriefError as exc:
+        raise SmokeError(str(exc)) from exc
+    if aperture_display.split("-", 1)[0] != aperture_anchor.split("-", 1)[0]:
+        raise SmokeError("maximum_aperture_display must start at maximum_aperture")
+    if displayed_aperture != aperture_display:
+        raise SmokeError(
+            "the second display_text token must be the complete maximum aperture display"
+        )
     prompt_value = generation.get("prompt")
     if not isinstance(prompt_value, str) or not prompt_value.strip():
         raise SmokeError("generation.prompt must point to the committed prompt record")
@@ -371,6 +421,11 @@ def _build_job(
     export_openscad: bool,
 ) -> tuple[PipelineConfig, dict[str, Any]]:
     config = load_config(job_path)
+    # Validate every size variant against the same release-grade semantic
+    # handoff.  The selected ``--bridge-job`` exercises this gate again through
+    # the public endpoint, while this direct call prevents non-selected matrix
+    # jobs from passing on the smoke runner's looser fixture checks alone.
+    design_brief = validate_design_brief(config)
     command = [
         sys.executable,
         "-m",
@@ -447,6 +502,7 @@ def _build_job(
     return config, {
         "status": "passed",
         "build_status": payload.get("status"),
+        "design_brief": design_brief,
         "job": str(job_path),
         "measured_diameter_mm": expected,
         "adapter_envelope": measurement_note,
@@ -516,139 +572,311 @@ def _projection_audit(config: PipelineConfig) -> dict[str, Any]:
     }
 
 
-def _adapter_verify(path: Path, *, require_slice: bool = False) -> dict[str, Any]:
+def _adapter_verify(
+    path: Path,
+    *,
+    require_slice: bool = False,
+    require_closed: bool = False,
+    require_single_volume: bool = False,
+) -> dict[str, Any]:
     command = [sys.executable, str(ADAPTER), "verify", str(path)]
     if require_slice:
         command.append("--require-slice")
+    if require_closed:
+        command.append("--require-closed")
+    if require_single_volume:
+        command.append("--require-single-volume")
     run = _run(command, timeout=120)
     if run["returncode"] != 0:
         raise SmokeError(f"3MF verification failed for {path}: {run['stderr'][-1000:]}")
     return _json_from_output(run["stdout"])
 
 
-def _native_3mf(config: PipelineConfig, output_dir: Path, openscad: str | None) -> dict[str, Any]:
-    if not openscad:
-        return {"status": "unverifiable", "reason": "OpenSCAD executable not found"}
-    scad = config.output_dir / "model" / f"{config.job_slug}.scad"
-    output = output_dir / f"{config.job_slug}-native.3mf"
-    command = [
-        sys.executable,
-        str(ADAPTER),
-        "openscad",
-        str(scad),
-        str(output),
-        "--openscad",
-        openscad,
-        "--timeout",
-        "1200",
-    ]
-    run = _run(command, timeout=1500)
-    if run["returncode"] != 0 or not output.is_file():
-        raise SmokeError(f"native OpenSCAD 3MF export failed for {config.job_slug}: {run['stderr'][-1600:]}")
-    verified = _adapter_verify(output)
-    manifest = output.with_suffix(output.suffix + ".manifest.json")
+def _required_passed_audit(payload: Mapping[str, Any], field: str) -> dict[str, Any]:
+    audit = payload.get(field)
+    if not isinstance(audit, Mapping) or audit.get("status") != "passed":
+        raise SmokeError(f"canonical bridge did not report a passing {field} gate")
+    return dict(audit)
+
+
+def _profile_manifest_audit(manifest_path: Path) -> dict[str, Any]:
+    """Require reproducible profile inputs and their effective-project audit.
+
+    ``build_3mf.py`` is the only producer used by this runner.  The adapter
+    sidecar is nevertheless the authoritative location for the complete
+    profile inheritance chain and the comparison against settings embedded in
+    the Bambu project, so retain both in the smoke report.
+    """
+
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise SmokeError(f"cannot read canonical Bambu manifest: {manifest_path}") from exc
+    if not isinstance(manifest, Mapping):
+        raise SmokeError("canonical Bambu manifest must contain an object")
+    if manifest.get("adapter") != "bambu-studio-3mf" or manifest.get("multipart") is not True:
+        raise SmokeError("canonical Bambu manifest is not a multipart Bambu project")
+    profiles = manifest.get("profiles")
+    resolution = manifest.get("profile_resolution")
+    expected = {"machine", "process", "filament"}
+    if not isinstance(profiles, Mapping) or set(profiles) != expected:
+        raise SmokeError("canonical Bambu manifest lacks the complete profile input set")
+    if not isinstance(resolution, Mapping) or set(resolution) != expected:
+        raise SmokeError("canonical Bambu manifest lacks the complete profile inheritance audit")
+    for label in sorted(expected):
+        entry = profiles[label]
+        resolved = resolution[label]
+        if not isinstance(entry, Mapping) or not isinstance(resolved, Mapping):
+            raise SmokeError(f"canonical Bambu {label} profile evidence is malformed")
+        digest = entry.get("sha256")
+        post_digest = entry.get("post_run_sha256")
+        if (
+            not isinstance(digest, str)
+            or re.fullmatch(r"[0-9a-f]{64}", digest.casefold()) is None
+            or post_digest != digest
+        ):
+            raise SmokeError(f"canonical Bambu {label} profile hash/TOCTOU audit failed")
+        chain = resolved.get("chain")
+        if not isinstance(chain, list) or not chain:
+            raise SmokeError(f"canonical Bambu {label} profile inheritance chain is empty")
+        if any(
+            not isinstance(item, Mapping)
+            or not isinstance(item.get("sha256"), str)
+            or re.fullmatch(r"[0-9a-f]{64}", str(item["sha256"]).casefold()) is None
+            for item in chain
+        ):
+            raise SmokeError(f"canonical Bambu {label} profile inheritance hashes are malformed")
+    effective = manifest.get("effective_profile_audit")
+    if not isinstance(effective, Mapping) or effective.get("status") != "passed":
+        raise SmokeError("canonical Bambu effective profile audit did not pass")
+    checked = effective.get("checked")
+    if not isinstance(checked, Mapping) or not expected.issubset(checked):
+        raise SmokeError("canonical Bambu effective profile audit is incomplete")
     return {
         "status": "passed",
-        "mode": "openscad-native",
-        "path": str(output),
-        "manifest": str(manifest),
-        "sha256": verified.get("sha256"),
-        "bytes": verified.get("bytes"),
-        "has_embedded_gcode": verified.get("has_embedded_gcode"),
+        "inputs": {key: dict(profiles[key]) for key in sorted(expected)},
+        "resolution": {key: dict(resolution[key]) for key in sorted(expected)},
+        "effective": dict(effective),
     }
 
 
-def _bambu_run(
-    configs: list[PipelineConfig],
+def _canonical_bridge(
+    config: PipelineConfig,
     output_dir: Path,
     *,
-    bambu_mode: str,
-    bambu: str | None,
     openscad: str | None,
-    profiles: dict[str, Path] | None,
     require_external: bool,
+    bambu_mode: str = "never",
+    bambu: str | None = None,
+    profiles: Mapping[str, Path] | None = None,
 ) -> dict[str, Any]:
-    if bambu_mode == "never":
-        return {"status": "not_requested", "mode": "never"}
-    if not bambu:
-        result = {"status": "unverifiable", "mode": bambu_mode, "reason": "Bambu Studio executable not found"}
-        if require_external:
-            raise SmokeError(result["reason"])
-        return result
-    if bambu_mode == "slice" or (bambu_mode == "auto" and profiles):
-        if not profiles:
-            result = {"status": "unverifiable", "mode": "slice", "reason": "A1 mini profiles not found"}
-            if require_external:
-                raise SmokeError(result["reason"])
-            return result
-        # Slice the largest scenario once.  This keeps the rehearsal bounded
-        # while retaining the most demanding common front diameter, regardless
-        # of how a fixture names or orders its job directories.
-        selected = max(
-            configs,
-            key=lambda config: float(config.measured_diameter_mm or config.face_diameter_mm),
-        )
-        mode = "slice"
-    else:
-        selected = max(
-            configs,
-            key=lambda config: float(config.measured_diameter_mm or config.face_diameter_mm),
-        )
-        mode = "export"
-    assembly = selected.output_dir / "model" / "mesh" / f"{selected.job_slug}-assembly.stl"
-    if not assembly.is_file():
-        result = {
-            "status": "unverifiable",
-            "mode": mode,
-            "reason": "assembly STL is unavailable; run OpenSCAD export first",
-        }
-        if require_external:
-            raise SmokeError(result["reason"])
-        return result
-    output = output_dir / f"{selected.job_slug}-bambu-{mode}.3mf"
+    """Run and audit the sole publishable native/Bambu release endpoint."""
+
+    if bambu_mode not in {"never", "export", "slice"}:
+        raise SmokeError(f"unsupported canonical Bambu mode: {bambu_mode!r}")
+
+    native_output = output_dir / f"{config.job_slug}-native.3mf"
+    release_report = output_dir / f"{config.job_slug}-3mf-release.json"
+    bambu_output = output_dir / f"{config.job_slug}-bambu-{bambu_mode}.3mf"
     command = [
         sys.executable,
-        str(ADAPTER),
-        "bambu",
-        str(assembly),
-        str(output),
-        "--mode",
-        mode,
+        str(BRIDGE),
+        str(config.config_path),
+        "--force",
         "--bambu",
-        bambu,
-        "--timeout",
-        "1200",
+        bambu_mode,
+        "--native-output",
+        str(native_output),
+        "--report",
+        str(release_report),
+        "--json",
     ]
     if openscad:
         command.extend(("--openscad", openscad))
-    if mode == "slice":
-        command.extend(
-            (
-                "--machine-profile",
-                str(profiles["machine"]),
-                "--process-profile",
-                str(profiles["process"]),
-                "--filament-profile",
-                str(profiles["filament"]),
-            )
+    if bambu_mode != "never":
+        command.extend(("--slice-output", str(bambu_output)))
+        if bambu:
+            command.extend(("--bambu-path", bambu))
+        if profiles:
+            profile_flags = {
+                "machine": "--machine-profile",
+                "process": "--process-profile",
+                "filament": "--filament-profile",
+            }
+            for label, flag in profile_flags.items():
+                value = profiles.get(label)
+                if value is not None:
+                    command.extend((flag, str(value)))
+    run = _run(command, timeout=2100)
+    try:
+        payload = _json_from_output(run["stdout"])
+    except SmokeError:
+        payload = {
+            "status": "failed",
+            "reason": (run["stderr"] or run["stdout"])[-1200:],
+        }
+    if run["returncode"] != 0:
+        status = payload.get("status")
+        reason = str(payload.get("reason", ""))
+        if status == "unverifiable" and not require_external:
+            return {
+                "status": "unverifiable",
+                "runner": "scripts/build_3mf.py",
+                "mode": bambu_mode,
+                "failure_class": payload.get("failure_class"),
+                "reason": reason,
+                "returncode": run["returncode"],
+            }
+        if status == "failed" and not require_external:
+            return {
+                "status": "failed",
+                "runner": "scripts/build_3mf.py",
+                "mode": bambu_mode,
+                "failure_class": payload.get("failure_class"),
+                "reason": reason,
+                "returncode": run["returncode"],
+            }
+        raise SmokeError(
+            "canonical lens-cap-3mf bridge failed for "
+            f"{config.job_slug} (rc={run['returncode']})\n"
+            f"stdout:\n{run['stdout'][-1600:]}\nstderr:\n{run['stderr'][-1600:]}"
         )
-    run = _run(command, timeout=1800)
-    if run["returncode"] != 0 or not output.is_file():
-        raise SmokeError(f"Bambu {mode} failed: {run['stderr'][-1600:]}")
-    verified = _adapter_verify(output, require_slice=mode == "slice")
-    manifest = output.with_suffix(output.suffix + ".manifest.json")
-    return {
-        "status": "passed",
-        "mode": mode,
-        "job": selected.job_slug,
-        "path": str(output),
-        "manifest": str(manifest),
-        "sha256": verified.get("sha256"),
-        "bytes": verified.get("bytes"),
-        "has_embedded_gcode": verified.get("has_embedded_gcode"),
-        "profiles": {key: str(value) for key, value in (profiles or {}).items()} if mode == "slice" else None,
-        "stderr_tail": run["stderr"][-600:],
+    if payload.get("status") != "passed":
+        raise SmokeError(
+            f"canonical lens-cap-3mf bridge returned {payload.get('status')!r} "
+            f"for {config.job_slug}"
+        )
+    if not native_output.is_file() or native_output.stat().st_size <= 0:
+        raise SmokeError("canonical bridge reported PASS but its native 3MF is missing")
+    verified = _adapter_verify(
+        native_output,
+        require_closed=True,
+        require_single_volume=True,
+    )
+    if not release_report.is_file():
+        raise SmokeError("canonical bridge did not retain its 3MF release report")
+    try:
+        retained_payload = json.loads(release_report.read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise SmokeError("canonical bridge retained an unreadable release report") from exc
+    if retained_payload != payload:
+        raise SmokeError("canonical bridge stdout and retained release report disagree")
+    design_brief = payload.get("design_brief")
+    if not isinstance(design_brief, Mapping) or design_brief.get("status") != "passed":
+        raise SmokeError("canonical bridge did not report a passing design-brief gate")
+    native = payload.get("native_3mf")
+    if not isinstance(native, Mapping):
+        raise SmokeError("canonical bridge did not report its native 3MF")
+    if native.get("sha256") != verified.get("sha256") or native.get("bytes") != verified.get("bytes"):
+        raise SmokeError("canonical native 3MF does not match its audited release evidence")
+    release_audits = {
+        field: _required_passed_audit(payload, field)
+        for field in (
+            "source_binding_audit",
+            "projection",
+            "native_bounds_audit",
+            "material_assignment_audit",
+        )
     }
+    rib_audit = payload.get("friction_rib_mesh_audit")
+    if not isinstance(rib_audit, Mapping) or rib_audit.get("status") not in {
+        "passed",
+        "not_required",
+    }:
+        raise SmokeError("canonical bridge did not pass its friction-rib mesh gate")
+    result: dict[str, Any] = {
+        "status": "passed",
+        "runner": "scripts/build_3mf.py",
+        "mode": bambu_mode,
+        "job": str(config.config_path),
+        "native_3mf": {
+            "status": "passed",
+            "mode": "canonical-one-piece",
+            "path": str(native_output),
+            "manifest": f"{native_output}.manifest.json",
+            "sha256": verified.get("sha256"),
+            "bytes": verified.get("bytes"),
+            "model": verified.get("model"),
+            "has_embedded_gcode": verified.get("has_embedded_gcode"),
+        },
+        "bambu_3mf": {"status": "not_requested", "mode": "never"},
+        "release_report": str(release_report),
+        "design_brief": dict(design_brief),
+        "release_audits": release_audits,
+        "friction_rib_mesh_audit": dict(rib_audit),
+        "retention_status": payload.get("retention_status"),
+        "retention_warning": payload.get("retention_warning"),
+        "returncode": run["returncode"],
+    }
+    if bambu_mode != "never":
+        bambu_payload = payload.get("bambu_3mf")
+        if not isinstance(bambu_payload, Mapping) or bambu_payload.get("mode") != bambu_mode:
+            raise SmokeError("canonical bridge did not report the requested Bambu stage")
+        if not bambu_output.is_file() or bambu_output.stat().st_size <= 0:
+            raise SmokeError("canonical bridge reported PASS but its Bambu 3MF is missing")
+        bambu_verified = _adapter_verify(
+            bambu_output,
+            require_slice=bambu_mode == "slice",
+        )
+        if (
+            bambu_payload.get("sha256") != bambu_verified.get("sha256")
+            or bambu_payload.get("bytes") != bambu_verified.get("bytes")
+        ):
+            raise SmokeError("canonical Bambu 3MF does not match its audited release evidence")
+        multipart = bambu_payload.get("multipart_audit")
+        mesh = bambu_payload.get("mesh_audit")
+        if not isinstance(multipart, Mapping) or multipart.get("status") != "passed":
+            raise SmokeError("canonical Bambu multipart audit did not pass")
+        if not isinstance(mesh, Mapping) or mesh.get("status") != "passed":
+            raise SmokeError("canonical Bambu mesh audit did not pass")
+        manifest_path = Path(f"{bambu_output}.manifest.json")
+        profile_audit = _profile_manifest_audit(manifest_path)
+        if profiles is None or set(profiles) != {"machine", "process", "filament"}:
+            raise SmokeError("canonical Bambu run lacks the requested profile trio")
+        profile_inputs = bambu_payload.get("profile_inputs")
+        if not isinstance(profile_inputs, Mapping) or set(profile_inputs) != {
+            "machine",
+            "process",
+            "filament",
+        }:
+            raise SmokeError("canonical Bambu release lacks complete profile inputs")
+        for label, evidence in profile_audit["inputs"].items():
+            release_entry = profile_inputs.get(label)
+            if not isinstance(release_entry, Mapping) or release_entry.get("sha256") != evidence.get("sha256"):
+                raise SmokeError(
+                    f"canonical Bambu {label} profile evidence disagrees between release and manifest"
+                )
+            profile_path = Path(profiles[label]).expanduser().resolve()
+            if not profile_path.is_file() or evidence.get("sha256") != _sha256(profile_path):
+                raise SmokeError(
+                    f"canonical Bambu {label} profile evidence does not bind the requested file"
+                )
+        result["bambu_3mf"] = {
+            "status": "passed",
+            "mode": bambu_mode,
+            "path": str(bambu_output),
+            "manifest": str(manifest_path),
+            "sha256": bambu_verified.get("sha256"),
+            "bytes": bambu_verified.get("bytes"),
+            "has_embedded_gcode": bambu_verified.get("has_embedded_gcode"),
+            "multipart_audit": dict(multipart),
+            "mesh_audit": dict(mesh),
+            "profile_audit": profile_audit,
+        }
+    return result
+
+
+def _aggregate_release_status(statuses: Iterable[str]) -> str:
+    """Fold canonical transaction statuses without hiding a requested stage."""
+
+    values = list(statuses)
+    if not values:
+        return "failed"
+    if any(value == "failed" for value in values):
+        return "failed"
+    if any(value != "passed" for value in values):
+        return "unverifiable"
+    return "passed"
 
 
 def _copy_artifacts(source_dir: Path, destination: Path, *, force: bool = False) -> list[str]:
@@ -666,6 +894,16 @@ def _copy_artifacts(source_dir: Path, destination: Path, *, force: bool = False)
                 raise SmokeError(f"refusing to overwrite artifact manifest: {manifest_target}")
             shutil.copy2(manifest, manifest_target)
         copied.append(str(target))
+    # The canonical bridge writes a semantic release report in addition to the
+    # adapter's package sidecar.  Preserve it when present so a retained 3MF
+    # carries evidence that the approved brief and same-canvas gates actually
+    # ran, rather than only proving that the ZIP is structurally readable.
+    for path in sorted(source_dir.glob("*-3mf-release.json")):
+        target = destination / path.name
+        if target.exists() and not force:
+            raise SmokeError(f"refusing to overwrite artifact release report: {target}")
+        shutil.copy2(path, target)
+        copied.append(str(target))
     if not copied:
         raise SmokeError(f"no 3MF outputs were produced under {source_dir}")
     return copied
@@ -681,10 +919,21 @@ def _parser() -> argparse.ArgumentParser:
         help="optional Bambu stage (auto slices once when profiles are found)",
     )
     parser.add_argument("--require-external", action="store_true", help="fail if OpenSCAD/Bambu stages are unavailable")
+    parser.add_argument("--machine-profile", type=Path, help="explicit Bambu machine profile JSON")
+    parser.add_argument("--process-profile", type=Path, help="explicit Bambu process profile JSON")
+    parser.add_argument("--filament-profile", type=Path, help="explicit Bambu filament profile JSON")
     parser.add_argument("--keep-workdir", action="store_true", help="retain the isolated generated checkout")
     parser.add_argument("--workdir", type=Path, help="explicit isolated output directory (implies --keep-workdir)")
     parser.add_argument("--artifact-dir", type=Path, help="copy generated 3MFs and sidecars here")
     parser.add_argument("--force-artifacts", action="store_true", help="allow replacing files in --artifact-dir")
+    parser.add_argument(
+        "--bridge-job",
+        type=Path,
+        help=(
+            "fixture-relative jobs/.../job.toml that receives the optional Bambu "
+            "stage; every job always uses the canonical native 3MF bridge"
+        ),
+    )
     parser.add_argument("--json", action="store_true", help="print the complete report as JSON")
     return parser
 
@@ -725,11 +974,16 @@ def main(argv: list[str] | None = None) -> int:
             "BambuStudio",
             "/Applications/BambuStudio.app/Contents/MacOS/BambuStudio",
         )
-        profiles = _find_bambu_profiles()
+        profiles = _explicit_bambu_profiles(
+            args.machine_profile,
+            args.process_profile,
+            args.filament_profile,
+        ) or _find_bambu_profiles()
         if args.require_external and not openscad:
             raise SmokeError("OpenSCAD executable not found; --require-external needs native 3MF export")
         jobs: list[PipelineConfig] = []
         job_reports: list[dict[str, Any]] = []
+        jobs_by_relative: dict[str, tuple[PipelineConfig, dict[str, Any]]] = {}
         for relative_job in job_relatives:
             job_path = clean_fixture / relative_job
             config, report = _build_job(
@@ -738,26 +992,132 @@ def main(argv: list[str] | None = None) -> int:
                 export_openscad=bool(openscad),
             )
             report["projection"] = _projection_audit(config)
-            report["native_3mf"] = _native_3mf(config, generated_artifacts, openscad)
-            if args.require_external and report["native_3mf"]["status"] != "passed":
-                raise SmokeError(
-                    f"native 3MF export is unavailable for {config.measured_diameter_mm or config.face_diameter_mm:g} mm"
-                )
             jobs.append(config)
             job_reports.append(report)
-        bambu_report = _bambu_run(
-            jobs,
-            generated_artifacts,
-            bambu_mode=args.bambu,
-            bambu=bambu,
-            openscad=openscad,
-            profiles=profiles,
-            require_external=args.require_external,
+            jobs_by_relative[relative_job.as_posix()] = (config, report)
+        if not jobs:
+            raise SmokeError("fixture did not yield any jobs")
+
+        # ``--bridge-job`` remains accepted, but now selects which matrix job
+        # receives the optional Bambu transaction. Every job, selected or not,
+        # goes through the canonical bridge for its native one-piece package.
+        selected_config: PipelineConfig
+        if args.bridge_job is not None:
+            raw_bridge_job = args.bridge_job
+            if raw_bridge_job.is_absolute() or ".." in raw_bridge_job.parts:
+                raise SmokeError("--bridge-job must be a fixture-relative jobs/.../job.toml path")
+            bridge_key = raw_bridge_job.as_posix().lstrip("./")
+            selected = jobs_by_relative.get(bridge_key)
+            if selected is None:
+                choices = ", ".join(sorted(jobs_by_relative))
+                raise SmokeError(f"--bridge-job {bridge_key!r} is not a fixture job; choose one of: {choices}")
+            selected_config = selected[0]
+        else:
+            selected_config = max(
+                jobs,
+                key=lambda config: float(
+                    config.measured_diameter_mm or config.face_diameter_mm
+                ),
+            )
+
+        if args.bambu in {"export", "slice"}:
+            selected_bambu_mode = args.bambu
+        elif args.bambu == "auto" and (
+            (bambu is not None and profiles is not None) or args.require_external
+        ):
+            selected_bambu_mode = "slice"
+        else:
+            selected_bambu_mode = "never"
+
+        canonical_reports: list[dict[str, Any]] = []
+        selected_canonical: dict[str, Any] | None = None
+        bambu_report: dict[str, Any] = {
+            "status": "not_requested",
+            "mode": args.bambu,
+        }
+        if args.bambu == "auto" and selected_bambu_mode == "never":
+            bambu_report["reason"] = (
+                "optional Bambu auto-stage skipped because the executable/profile trio "
+                "was not completely available"
+            )
+        for config, report in zip(jobs, job_reports, strict=True):
+            bridge_mode = (
+                selected_bambu_mode if config is selected_config else "never"
+            )
+            canonical = _canonical_bridge(
+                config,
+                generated_artifacts,
+                openscad=openscad,
+                require_external=args.require_external,
+                bambu_mode=bridge_mode,
+                bambu=bambu,
+                profiles=profiles,
+            )
+            canonical_reports.append(canonical)
+            if config is selected_config:
+                selected_canonical = canonical
+            report["canonical_bridge"] = canonical
+            if canonical.get("status") == "passed":
+                report["native_3mf"] = canonical["native_3mf"]
+            else:
+                report["native_3mf"] = {
+                    "status": canonical.get("status", "failed"),
+                    "mode": "canonical-one-piece",
+                    "reason": canonical.get("reason", "canonical bridge did not pass"),
+                }
+            if config is selected_config and selected_bambu_mode != "never":
+                if canonical.get("status") == "passed":
+                    bambu_report = canonical["bambu_3mf"]
+                else:
+                    bambu_report = {
+                        "status": canonical.get("status", "failed"),
+                        "mode": selected_bambu_mode,
+                        "job": config.job_slug,
+                        "reason": canonical.get("reason", "canonical bridge did not pass"),
+                    }
+
+        native_3mf_complete = bool(job_reports) and all(
+            item.get("native_3mf", {}).get("status") == "passed" for item in job_reports
         )
-        copied = _copy_artifacts(generated_artifacts, args.artifact_dir.expanduser().resolve(), force=args.force_artifacts) if args.artifact_dir else []
+        overall_status = _aggregate_release_status(
+            report.get("status", "failed") for report in canonical_reports
+        )
+        if args.bambu in {"export", "slice"}:
+            overall_status = _aggregate_release_status(
+                (overall_status, str(bambu_report.get("status", "failed")))
+            )
+        copied = (
+            _copy_artifacts(
+                generated_artifacts,
+                args.artifact_dir.expanduser().resolve(),
+                force=args.force_artifacts,
+            )
+            if args.artifact_dir and overall_status == "passed"
+            else []
+        )
+        bridge_report = {
+            "status": overall_status,
+            "runner": "scripts/build_3mf.py",
+            "all_jobs_canonical": True,
+            "job_count": len(canonical_reports),
+            "selected_bambu_job": selected_config.job_slug,
+            "jobs": canonical_reports,
+        }
+        if (
+            overall_status == "passed"
+            and isinstance(selected_canonical, Mapping)
+            and isinstance(selected_canonical.get("design_brief"), Mapping)
+        ):
+            # Preserve the v1 consumer contract while exposing the complete
+            # per-job bridge list above.
+            bridge_report["design_brief"] = dict(
+                selected_canonical["design_brief"]
+            )
         report = {
             "schema_version": 1,
-            "status": "passed",
+            "status": overall_status,
+            "deterministic_preflight_status": "passed",
+            "native_3mf_complete": native_3mf_complete,
             "runner": "scripts/smoke_rehouse.py",
             "fixture": str(fixture),
             "clean_fixture": str(clean_fixture),
@@ -770,6 +1130,7 @@ def main(argv: list[str] | None = None) -> int:
             "brief": brief_report,
             "jobs": job_reports,
             "bambu": bambu_report,
+            "canonical_bridge": bridge_report,
             "copied_artifacts": copied,
             "fit_status": "unverifiable_until_coupon_measurement",
             "notes": [
@@ -778,7 +1139,7 @@ def main(argv: list[str] | None = None) -> int:
             ],
         }
         print(json.dumps(report, ensure_ascii=False, indent=2) if args.json else _human_summary(report))
-        return 0
+        return 1 if overall_status == "failed" else 0
     except (OSError, ValueError, KeyError, json.JSONDecodeError, SmokeError) as exc:
         print(f"lens-cap smoke-rehouse: error: {exc}", file=sys.stderr)
         return 1
@@ -789,11 +1150,13 @@ def main(argv: list[str] | None = None) -> int:
 
 def _human_summary(report: dict[str, Any]) -> str:
     lines = [
-        "status: passed",
+        f"status: {report['status']}",
+        f"deterministic preflight: {report.get('deterministic_preflight_status', 'unknown')}",
         f"clean fixture: {report['clean_fixture']}",
         "jobs: " + ", ".join(f"{item['measured_diameter_mm']:.0f} mm" for item in report["jobs"]),
         "native 3MF: " + ", ".join(item["native_3mf"]["status"] for item in report["jobs"]),
         f"Bambu: {report['bambu']['status']} ({report['bambu'].get('mode')})",
+        f"canonical bridge: {report.get('canonical_bridge', {}).get('status', 'not_requested')}",
         "fit: UNVERIFIABLE until a physical coupon is measured",
     ]
     if report.get("copied_artifacts"):

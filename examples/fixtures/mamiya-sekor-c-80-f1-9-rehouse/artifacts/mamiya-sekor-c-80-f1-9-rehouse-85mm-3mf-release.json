@@ -1,0 +1,546 @@
+{
+  "bambu_3mf": null,
+  "build": {
+    "command": [
+      "<external>/python3.11",
+      "-m",
+      "lens_cap_pipeline.cli",
+      "build",
+      "<external>/job.toml",
+      "--force",
+      "--external",
+      "--export-openscad",
+      "--json",
+      "--openscad",
+      "<external>/OpenSCAD"
+    ],
+    "returncode": 0,
+    "status": "passed",
+    "stderr_tail": ""
+  },
+  "design_brief": {
+    "anchor_count": 3,
+    "candidate_path": "<external>/master.png",
+    "candidate_sha256": "3cd44afcc61eaa8793c3a4dfbb92ff7bbf657026ad53be39601bba533c3004ab",
+    "culture_anchor_count": 1,
+    "display_text": [
+      "80",
+      "F1.9",
+      "MAMIYA-SEKOR C",
+      "645",
+      "REHOUSED MEDIUM FORMAT"
+    ],
+    "identity": {
+      "brand": "Mamiya",
+      "focal_length_display": "80",
+      "focal_length_mm": 80.0,
+      "maximum_aperture": "F1.9",
+      "maximum_aperture_display": "F1.9",
+      "model": "Mamiya-Sekor C 80mm F1.9"
+    },
+    "job_identity_binding_checked": true,
+    "path": "<external>/design-brief.json",
+    "physical_fit_checked": [
+      "bare_clearance_mm",
+      "bottom_thickness_mm",
+      "compression_fraction",
+      "compression_is_assumption",
+      "foam_liner_status",
+      "friction_rib_count",
+      "friction_rib_height_mm",
+      "friction_rib_profile",
+      "friction_rib_profile_derived",
+      "friction_rib_protrusion_mm",
+      "friction_rib_start_mm",
+      "friction_rib_width_mm",
+      "friction_ribs_enabled",
+      "friction_ribs_explicit",
+      "liner_thickness_mm",
+      "nozzle_mm",
+      "retention_strategy",
+      "side_height_mm",
+      "wall_thickness_mm"
+    ],
+    "sha256": "e5acadc44f7f10bcbc7dea46b40a994299c8c751d2d8275c03ba0e45a736358d",
+    "status": "passed"
+  },
+  "fit_status": "unverifiable_until_coupon_measurement",
+  "friction_rib_mesh_audit": {
+    "angular_tolerance_deg": 1.0,
+    "axial_continuity_sample_hits": [
+      {
+        "continuous_columns": 15,
+        "maximum_surface_intersections": 4,
+        "minimum_inside_interval_mm": 8.0,
+        "position": 0
+      },
+      {
+        "continuous_columns": 15,
+        "maximum_surface_intersections": 4,
+        "minimum_inside_interval_mm": 8.0,
+        "position": 1
+      },
+      {
+        "continuous_columns": 15,
+        "maximum_surface_intersections": 4,
+        "minimum_inside_interval_mm": 7.999999999999998,
+        "position": 2
+      },
+      {
+        "continuous_columns": 15,
+        "maximum_surface_intersections": 4,
+        "minimum_inside_interval_mm": 7.999999999999998,
+        "position": 3
+      },
+      {
+        "continuous_columns": 15,
+        "maximum_surface_intersections": 4,
+        "minimum_inside_interval_mm": 8.0,
+        "position": 4
+      },
+      {
+        "continuous_columns": 15,
+        "maximum_surface_intersections": 4,
+        "minimum_inside_interval_mm": 8.0,
+        "position": 5
+      },
+      {
+        "continuous_columns": 15,
+        "maximum_surface_intersections": 4,
+        "minimum_inside_interval_mm": 8.0,
+        "position": 6
+      },
+      {
+        "continuous_columns": 15,
+        "maximum_surface_intersections": 4,
+        "minimum_inside_interval_mm": 8.0,
+        "position": 7
+      },
+      {
+        "continuous_columns": 15,
+        "maximum_surface_intersections": 4,
+        "minimum_inside_interval_mm": 8.0,
+        "position": 8
+      },
+      {
+        "continuous_columns": 15,
+        "maximum_surface_intersections": 4,
+        "minimum_inside_interval_mm": 8.0,
+        "position": 9
+      },
+      {
+        "continuous_columns": 15,
+        "maximum_surface_intersections": 4,
+        "minimum_inside_interval_mm": 8.0,
+        "position": 10
+      },
+      {
+        "continuous_columns": 15,
+        "maximum_surface_intersections": 4,
+        "minimum_inside_interval_mm": 8.0,
+        "position": 11
+      }
+    ],
+    "axial_continuity_samples_per_rib": 15,
+    "axial_span_mm": [
+      1.0,
+      9.0
+    ],
+    "cross_section_sample_hits": [
+      {
+        "end": 15,
+        "interior": [
+          15,
+          15,
+          15
+        ],
+        "position": 0,
+        "start": 15
+      },
+      {
+        "end": 15,
+        "interior": [
+          15,
+          15,
+          15
+        ],
+        "position": 1,
+        "start": 15
+      },
+      {
+        "end": 15,
+        "interior": [
+          15,
+          15,
+          15
+        ],
+        "position": 2,
+        "start": 15
+      },
+      {
+        "end": 15,
+        "interior": [
+          15,
+          15,
+          15
+        ],
+        "position": 3,
+        "start": 15
+      },
+      {
+        "end": 15,
+        "interior": [
+          15,
+          15,
+          15
+        ],
+        "position": 4,
+        "start": 15
+      },
+      {
+        "end": 15,
+        "interior": [
+          15,
+          15,
+          15
+        ],
+        "position": 5,
+        "start": 15
+      },
+      {
+        "end": 15,
+        "interior": [
+          15,
+          15,
+          15
+        ],
+        "position": 6,
+        "start": 15
+      },
+      {
+        "end": 15,
+        "interior": [
+          15,
+          15,
+          15
+        ],
+        "position": 7,
+        "start": 15
+      },
+      {
+        "end": 15,
+        "interior": [
+          15,
+          15,
+          15
+        ],
+        "position": 8,
+        "start": 15
+      },
+      {
+        "end": 15,
+        "interior": [
+          15,
+          15,
+          15
+        ],
+        "position": 9,
+        "start": 15
+      },
+      {
+        "end": 15,
+        "interior": [
+          15,
+          15,
+          15
+        ],
+        "position": 10,
+        "start": 15
+      },
+      {
+        "end": 15,
+        "interior": [
+          15,
+          15,
+          15
+        ],
+        "position": 11,
+        "start": 15
+      }
+    ],
+    "cross_section_samples_per_end": 15,
+    "cross_section_samples_per_interior_slice": 15,
+    "declared_tip_width_mm": 0.6584834441432778,
+    "detected_end_positions": 12,
+    "detected_start_positions": 12,
+    "expected_rib_count": 12,
+    "integrated_vertical_edge_hits": 24,
+    "integrated_vertical_edge_positions": 12,
+    "interior_cross_section_z_mm": [
+      3.008,
+      5.024,
+      7.056
+    ],
+    "main_component_vertices": [
+      15014
+    ],
+    "mesh_component_counts": [
+      1
+    ],
+    "minimum_accepted_cross_section_width_mm": 0.59263509972895,
+    "minimum_full_height_tip_face_width_mm": 0.658482,
+    "minimum_observed_tip_width_mm": 0.658482,
+    "minimum_observed_wall_attachment_width_mm": 0.736946,
+    "nozzle_mm": 0.2,
+    "radial_tolerance_mm": 0.03,
+    "referenced_vertices": 15014,
+    "scope": "referenced_connected_full_width_tip_faces_full_height_axial_contact_columns_and_start_interior_end_wall_cross_sections_physical_fit_requires_coupon",
+    "status": "passed",
+    "tip_radius_mm": 43.6,
+    "tip_vertex_hits": 48,
+    "unused_vertices": 0
+  },
+  "job": "job.toml",
+  "job_sha256": "21e83b161d58f2d9966fe01a9dceca6212a3336998a47ac6e91f7a8ca0405e44",
+  "material_assignment_audit": {
+    "colors": {
+      "black": {
+        "active_in_process_mask": true,
+        "displaycolor": "#121212FF",
+        "expected_mask_footprint_mm2": 2852.321302074549,
+        "minimum_projected_area_ratio": 0.2,
+        "projected_triangle_area_mm2": 10564.00448154706,
+        "required": true,
+        "role": "base",
+        "triangle_count": 9918
+      },
+      "gray": {
+        "active_in_process_mask": true,
+        "displaycolor": "#707070FF",
+        "expected_mask_footprint_mm2": 1211.9574970484061,
+        "minimum_projected_area_ratio": 0.2,
+        "projected_triangle_area_mm2": 1211.957384250321,
+        "required": true,
+        "role": "relief",
+        "triangle_count": 8525
+      },
+      "ivory": {
+        "active_in_process_mask": true,
+        "displaycolor": "#F0E6D7FF",
+        "expected_mask_footprint_mm2": 1578.11840107944,
+        "minimum_projected_area_ratio": 0.2,
+        "projected_triangle_area_mm2": 1578.118338401133,
+        "required": true,
+        "role": "relief",
+        "triangle_count": 11581
+      }
+    },
+    "scope": "final_3mf_triangle_material_assignments_and_named_relief_masks",
+    "spatial_mask_binding": {
+      "gray": {
+        "expected_base_z_mm": 16.0,
+        "expected_pixels": 24864,
+        "expected_top_z_mm": 16.401,
+        "extra_pixels_outside_tolerance": 0,
+        "mask": "gray.png",
+        "mask_sha256": "cba90583214faf6736e9be1b2de9d3df2ccc2a3eccd46c518edda9fd927104ff",
+        "missing_pixels_outside_tolerance": 0,
+        "out_of_xy_envelope_triangles": 0,
+        "out_of_z_envelope_triangles": 0,
+        "projected_area_tolerance_mm2": 6.059787485242031,
+        "projected_pixels": 30900,
+        "projected_triangle_area_mm2": 1211.957384250321,
+        "raw_iou": 0.8046601941747573,
+        "resolution_px": 385,
+        "tolerance_pixels": 1,
+        "top_triangle_count": 3116
+      },
+      "ivory": {
+        "expected_base_z_mm": 16.0,
+        "expected_pixels": 32376,
+        "expected_top_z_mm": 16.601000000000003,
+        "extra_pixels_outside_tolerance": 0,
+        "mask": "ivory.png",
+        "mask_sha256": "7d944c6195e0af25b2dfb9af23e81439e38214f0b6cf0b683cafd2125d52ad79",
+        "missing_pixels_outside_tolerance": 0,
+        "out_of_xy_envelope_triangles": 0,
+        "out_of_z_envelope_triangles": 0,
+        "projected_area_tolerance_mm2": 7.8905920053972,
+        "projected_pixels": 36906,
+        "projected_triangle_area_mm2": 1578.118338401133,
+        "raw_iou": 0.8772557307754837,
+        "resolution_px": 385,
+        "tolerance_pixels": 1,
+        "top_triangle_count": 3216
+      }
+    },
+    "status": "passed",
+    "unassigned_triangle_count": 0,
+    "unexpected_used_colors": []
+  },
+  "mechanical": {
+    "bare_clearance_mm": 0.4,
+    "bottom_thickness_mm": 2.0,
+    "cavity_diameter_mm": 87.4,
+    "compression_fraction": 0.2,
+    "compression_is_assumption": true,
+    "foam_liner_status": "foam",
+    "foam_local_compression_fraction": 0.26666666666666666,
+    "friction_rib_angle_deg": 1.5733394831967684,
+    "friction_rib_bare_interference_mm": null,
+    "friction_rib_count": 12,
+    "friction_rib_fit_warning": "rib/foam contact is a provisional stack-up; print a same-material fit coupon",
+    "friction_rib_height_mm": 8.0,
+    "friction_rib_profile": "light_tapered",
+    "friction_rib_protrusion_mm": 0.1,
+    "friction_rib_retention_status": "foam_contact_unverified",
+    "friction_rib_start_mm": 1.0,
+    "friction_rib_tip_angle_deg": 0.8653367157582227,
+    "friction_rib_tip_diameter_mm": 87.2,
+    "friction_rib_tip_width_mm": 0.6584834441432778,
+    "friction_rib_wall_overlap_mm": 0.6,
+    "friction_rib_width_mm": 1.2,
+    "friction_ribs_enabled": true,
+    "friction_ribs_explicit": false,
+    "liner_thickness_mm": 1.5,
+    "measured_diameter_mm": 85.0,
+    "nozzle_mm": 0.2,
+    "radial_compression_mm": 0.30000000000000004,
+    "retention_strategy": "continuous_foam",
+    "side_height_mm": 14.0,
+    "total_height_mm": 16.0,
+    "wall_thickness_mm": 2.4
+  },
+  "native_3mf": {
+    "bytes": 282251,
+    "command": [
+      "<external>/python3.11",
+      "<external>/three_mf_adapter.py",
+      "openscad",
+      "out/model/mamiya-sekor-c-80-f1-9-rehouse-85mm.scad",
+      "<external>/mamiya-sekor-c-80-f1-9-rehouse-85mm-native.3mf",
+      "--openscad",
+      "<external>/OpenSCAD",
+      "--timeout",
+      "1800",
+      "--require-single-volume"
+    ],
+    "manifest": "<external>/mamiya-sekor-c-80-f1-9-rehouse-85mm-native.3mf.manifest.json",
+    "model": {
+      "absolute_volume_mm3": 24268.998594456447,
+      "boundary_edges": 0,
+      "bounds": {
+        "max_mm": [
+          46.1,
+          46.1,
+          16.601
+        ],
+        "min_mm": [
+          -46.1,
+          -46.1,
+          0.0
+        ],
+        "size_mm": [
+          92.2,
+          92.2,
+          16.601
+        ]
+      },
+      "build_items": 1,
+      "component_references": 0,
+      "duplicate_triangles": 0,
+      "inconsistent_orientation_edges": 0,
+      "mesh_components": 1,
+      "mesh_parts": 1,
+      "nonmanifold_edges": 0,
+      "objects": 1,
+      "parts": 1,
+      "transformed_build_items": 0,
+      "transformed_components": 0,
+      "triangles": 30024,
+      "unreferenced_vertices": 0,
+      "vertices": 15014,
+      "volume_components": 1,
+      "zero_area_triangles": 0,
+      "zero_volume_components": 0
+    },
+    "output": "<external>/mamiya-sekor-c-80-f1-9-rehouse-85mm-native.3mf",
+    "sha256": "cb688aa8c29c417441ed5df2a91ccd237a839f6ca85399abda0098ef7fa016d0"
+  },
+  "native_bounds_audit": {
+    "expected": {
+      "max_mm": [
+        46.1,
+        46.1,
+        16.601000000000003
+      ],
+      "min_mm": [
+        -46.1,
+        -46.1,
+        0.0
+      ],
+      "size_mm": [
+        92.2,
+        92.2,
+        16.601000000000003
+      ]
+    },
+    "observed": {
+      "max_mm": [
+        46.1,
+        46.1,
+        16.601
+      ],
+      "min_mm": [
+        -46.1,
+        -46.1,
+        0.0
+      ],
+      "size_mm": [
+        92.2,
+        92.2,
+        16.601
+      ]
+    },
+    "scope": "final_native_world_bounds_vs_current_geometry_report",
+    "status": "passed",
+    "tolerance_mm": 0.005
+  },
+  "notes": [
+    "Artwork, mask, and relief projection gates are executed by the public build path.",
+    "Native 3MF is unsliced; a printer-profiled 3MF requires the explicit Bambu stage.",
+    "A valid package does not prove physical fit; print and measure a same-material coupon."
+  ],
+  "openscad": "<OpenSCAD.app>/Contents/MacOS/OpenSCAD",
+  "projection": {
+    "colors": {
+      "gray": {
+        "extra_outside_tolerance": 0,
+        "missing_outside_tolerance": 0,
+        "raw_iou": 0.76911656
+      },
+      "ivory": {
+        "extra_outside_tolerance": 0,
+        "missing_outside_tolerance": 0,
+        "raw_iou": 0.87654321
+      }
+    },
+    "diff_dir": "out/model/projection-diff",
+    "report": "out/model/projection-report.json",
+    "status": "passed"
+  },
+  "retention_status": "foam_contact_unverified",
+  "retention_warning": "rib/foam contact is a provisional stack-up; print a same-material fit coupon",
+  "runner": "scripts/build_3mf.py",
+  "schema_version": 1,
+  "source_binding_audit": {
+    "approved_candidate_sha256": "3cd44afcc61eaa8793c3a4dfbb92ff7bbf657026ad53be39601bba533c3004ab",
+    "current_source_sha256": "3cd44afcc61eaa8793c3a4dfbb92ff7bbf657026ad53be39601bba533c3004ab",
+    "process_report": "out/process-report.json",
+    "process_report_sha256": "2b9123187bfbb30fbaebb29f844f590541bec3742b81d8613341f10863ed781e",
+    "process_source_sha256": "3cd44afcc61eaa8793c3a4dfbb92ff7bbf657026ad53be39601bba533c3004ab",
+    "scope": "post_build_and_prepublication_approved_source_binding",
+    "status": "passed"
+  },
+  "status": "passed"
+}

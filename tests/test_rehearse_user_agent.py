@@ -11,6 +11,7 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 SCENARIO = ROOT / "examples/rehearsals/helios-44-2-rehouse-clean-room.json"
 MAMIYA_SCENARIO = ROOT / "examples/rehearsals/mamiya-sekor-c-80-f1-9-rehouse-clean-room.json"
+IMAGEGEN_V3_SCENARIO = ROOT / "examples/rehearsals/helios-44-2-imagegen-v3-95mm-clean-room.json"
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
@@ -23,6 +24,10 @@ def _scenario() -> dict[str, object]:
 
 def _mamiya_scenario() -> dict[str, object]:
     return json.loads(MAMIYA_SCENARIO.read_text(encoding="utf-8"))
+
+
+def _imagegen_v3_scenario() -> dict[str, object]:
+    return json.loads(IMAGEGEN_V3_SCENARIO.read_text(encoding="utf-8"))
 
 
 def test_clean_room_interaction_validates_without_running_cad() -> None:
@@ -41,6 +46,14 @@ def test_second_lens_rehearsal_validates_foam_and_adapter_wall() -> None:
     assert report["fixture"]["lens_identity"]["model"] == "Mamiya-Sekor C 80mm F1.9"
     assert report["interaction"]["intake"]["mating_outside_diameter_mm"] == 85.0
     assert report["interaction"]["intake"]["liner_thickness_mm"] == 1.5
+
+
+def test_current_imagegen_fixture_has_a_clean_95mm_interaction() -> None:
+    report = rehearsal.validate_interaction(_imagegen_v3_scenario())
+    assert report["status"] == "passed"
+    assert report["interaction"]["intake"]["mating_outside_diameter_mm"] == 95.0
+    assert report["interaction"]["intake"]["adapter_radial_wall_mm"] == 0.0
+    assert report["persisted_job"]["friction_ribs_enabled"] is True
 
 
 def test_clean_room_rejects_generic_parallel_design_skill() -> None:
@@ -155,6 +168,36 @@ def test_clean_room_matches_optional_zoom_focal_display(tmp_path: Path) -> None:
         rehearsal._contains_focal_display("Sigma 28-70mm F2.8", "28–70mm zoom")
 
 
+def test_clean_room_requires_complete_variable_aperture_display(tmp_path: Path) -> None:
+    fixture = tmp_path / "variable-aperture-fixture"
+    rehearsal.smoke._copy_fixture(
+        ROOT / "examples/fixtures/helios-44-2-rehouse", fixture
+    )
+    brief_path = fixture / "design-brief.json"
+    brief = json.loads(brief_path.read_text(encoding="utf-8"))
+    brief["lens_identity"]["maximum_aperture"] = "F3.5"
+    brief["lens_identity"]["maximum_aperture_display"] = "F3.5–5.6"
+    brief_path.write_text(json.dumps(brief, ensure_ascii=False), encoding="utf-8")
+
+    scenario = _scenario()
+    scenario["fixture"] = {
+        "path": str(fixture),
+        "primary_job": "jobs/77mm/job.toml",
+    }
+    turns = [dict(turn) for turn in scenario["conversation"]["turns"]]
+    turns[0]["text"] = turns[0]["text"].replace("F2", "F3.5–5.6")
+    conversation = dict(scenario["conversation"])
+    conversation["turns"] = turns
+    scenario["conversation"] = conversation
+    report = rehearsal.validate_interaction(scenario, scenario_base=tmp_path)
+    assert report["interaction"]["maximum_aperture_display"] == "F3.5-5.6"
+
+    turns[0]["text"] = turns[0]["text"].replace("F3.5–5.6", "F3.5")
+    scenario["conversation"]["turns"] = turns
+    with pytest.raises(rehearsal.RehearsalError, match="complete maximum aperture"):
+        rehearsal.validate_interaction(scenario, scenario_base=tmp_path)
+
+
 def test_clean_room_rejects_same_specs_with_wrong_lens_identity() -> None:
     scenario = _scenario()
     turns = [dict(turn) for turn in scenario["conversation"]["turns"]]
@@ -255,9 +298,13 @@ def test_run_rehearsal_uses_stable_job_suffix_for_isolated_copy(monkeypatch: pyt
         stdout = json.dumps(
             {
                 "status": "passed",
-                "runner": "scripts/smoke_rehouse.py",
-                "jobs": [{"job": "/tmp/isolated/fixture/jobs/77mm/job.toml"}],
-                "copied_artifacts": [],
+                    "runner": "scripts/smoke_rehouse.py",
+                    "jobs": [{"job": "/tmp/isolated/fixture/jobs/77mm/job.toml"}],
+                    "canonical_bridge": {
+                        "status": "passed",
+                        "design_brief": {"status": "passed"},
+                    },
+                    "copied_artifacts": [],
                 "fit_status": "unverifiable_until_coupon_measurement",
             }
         )
@@ -267,6 +314,89 @@ def test_run_rehearsal_uses_stable_job_suffix_for_isolated_copy(monkeypatch: pyt
     report = rehearsal.run_rehearsal(SCENARIO, bambu="never")
     assert report["status"] == "passed"
     assert report["production"]["status"] == "passed"
+
+
+def test_run_rehearsal_forwards_explicit_bambu_profile_trio(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class Completed:
+        returncode = 0
+        stdout = json.dumps(
+            {
+                "status": "passed",
+                "runner": "scripts/smoke_rehouse.py",
+                "jobs": [{"job": "/tmp/isolated/fixture/jobs/77mm/job.toml"}],
+                "canonical_bridge": {
+                    "status": "passed",
+                    "design_brief": {"status": "passed"},
+                },
+                "copied_artifacts": [],
+                "fit_status": "unverifiable_until_coupon_measurement",
+            }
+        )
+        stderr = ""
+
+    profiles = [tmp_path / f"{name}.json" for name in ("machine", "process", "filament")]
+    for path in profiles:
+        path.write_text("{}", encoding="utf-8")
+    seen: list[str] = []
+
+    def fake_run(command, **_kwargs):
+        seen.extend(str(item) for item in command)
+        return Completed()
+
+    monkeypatch.setattr(rehearsal.subprocess, "run", fake_run)
+    report = rehearsal.run_rehearsal(
+        SCENARIO,
+        bambu="export",
+        machine_profile=profiles[0],
+        process_profile=profiles[1],
+        filament_profile=profiles[2],
+    )
+    assert report["status"] == "passed"
+    for flag, path in zip(
+        ("--machine-profile", "--process-profile", "--filament-profile"),
+        profiles,
+        strict=True,
+    ):
+        assert seen[seen.index(flag) + 1] == str(path.resolve())
+
+
+def test_run_rehearsal_propagates_missing_openscad_as_unverifiable(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class Completed:
+        returncode = 0
+        stdout = json.dumps(
+            {
+                "status": "unverifiable",
+                "deterministic_preflight_status": "passed",
+                "runner": "scripts/smoke_rehouse.py",
+                "jobs": [
+                    {
+                        "job": "/tmp/isolated/fixture/jobs/77mm/job.toml",
+                        "native_3mf": {
+                            "status": "unverifiable",
+                            "reason": "OpenSCAD executable not found",
+                        },
+                    }
+                ],
+                "canonical_bridge": {
+                    "status": "unverifiable",
+                    "reason": "OpenSCAD is required",
+                },
+                "copied_artifacts": [],
+                "fit_status": "unverifiable_until_coupon_measurement",
+            }
+        )
+        stderr = ""
+
+    monkeypatch.setattr(rehearsal.subprocess, "run", lambda *args, **kwargs: Completed())
+    report = rehearsal.run_rehearsal(SCENARIO, bambu="never")
+    assert report["interaction_status"] == "passed"
+    assert report["provider_generation_status"] == "recorded_fixture_not_replayed"
+    assert report["status"] == "unverifiable"
 
 
 def test_external_scenario_file_is_allowed_with_absolute_fixture(tmp_path: Path) -> None:

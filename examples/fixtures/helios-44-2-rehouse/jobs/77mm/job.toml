@@ -2,14 +2,14 @@ schema_version = 1
 job_slug = "helios-44-2-rehouse-77mm"
 source_art = "../../art/master.png"
 output_dir = "out"
-grid_size = 1000
+grid_size = 385
 measured_diameter_mm = 77.0
 nozzle_mm = 0.2
 safe_border_mm = 0.25
 assembly_mode = "auto"
 
 [metadata]
-lens_identity = "Helios-44-2 58mm F2, rehoused/step-up adapter test"
+lens_identity = "Helios-44-2 58mm F2, rehoused cinema test"
 display_text = ["58", "F2", "HELIOS 44-2", "REHOUSED CINEMA", "M42"]
 design_brief = "../../design-brief.json"
 art_master_approval = "agent-reviewed smoke-test master"

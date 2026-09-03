@@ -27,18 +27,21 @@ jobs:
       - name: Check local bootstrap entry point
         run: python scripts/bootstrap.py --help
       - name: Check companion Skill manifest
-        run: python scripts/install_skills.py check --json
+        run: python scripts/install_skills.py check --dest .agents/skills --json
       - name: Run tests
         run: python -m pytest
       - name: Run portable smoke test
         run: python scripts/smoke.py
       - name: Run clean-room rehousing smoke test
-        run: python scripts/smoke_rehouse.py --bambu never --json
+        run: >-
+          python scripts/smoke_rehouse.py
+          --fixture examples/fixtures/helios-44-2-rehouse-imagegen-v3
+          --bambu never --bridge-job jobs/95mm/job.toml --json
       - name: Check manifest-driven route shim
         run: >-
           python scripts/resolve_skill_route.py
           "为适马 28–70mm F2.8 设计圆形镜头盖正面并输出 3MF"
-      - name: Run fresh ImageGen rehousing smoke test
+      - name: Run legacy multi-diameter ImageGen rehousing smoke test
         run: >-
           python scripts/smoke_rehouse.py
           --fixture examples/fixtures/helios-44-2-rehouse-imagegen-v2
@@ -50,6 +53,7 @@ jobs:
           --bambu never --json
       - name: Replay clean-room user-agent transcripts
         run: |
+          python scripts/rehearse_user_agent.py examples/rehearsals/helios-44-2-imagegen-v3-95mm-clean-room.json --bambu never --json
           python scripts/rehearse_user_agent.py examples/rehearsals/helios-44-2-rehouse-clean-room.json --bambu never --json
           python scripts/rehearse_user_agent.py examples/rehearsals/mamiya-sekor-c-80-f1-9-rehouse-clean-room.json --bambu never --json
       - name: Verify bundled 3MF Core fixtures

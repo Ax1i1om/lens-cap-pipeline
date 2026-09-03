@@ -1,0 +1,10 @@
+Use case: stylized-concept.
+Asset type: circular lens-cap front artwork for deterministic relief and a one-piece printable 3MF.
+Primary request: a premium, extremely clean circular medallion for a rehoused vintage Soviet Helios-44-2 58mm F2 lens. Make the focal length and aperture the dominant graphic architecture: the huge numerals “58” are the first visual read and “F2” is the second. Use a balanced, centered screen-print / linocut / technical-engraving language inspired by Soviet optical drafting, a qualified Biotar-derived swirly-bokeh folklore cue, and modern cinema REHOUSE craft. This is qualified visual inspiration, not a literal film still or endorsement.
+Scene/backdrop: flat circular field, no perspective, no product photograph.
+Subject: typographic optical medallion, abstract orbital arcs, stepped contour bands, small registration marks, restrained technical grid.
+Style/medium: minimalist black, charcoal, gray, and warm ivory; crisp solid fills and vector-like edges; high-end print design; broad shapes and clean lines suitable for a 0.2 mm nozzle relief.
+Composition/framing: perfect 1:1 circle, generous safe margin, focal number centered and oversized, aperture directly below or paired as a secondary block, supporting text around the perimeter at smaller scale.
+Text (verbatim, spell exactly and do not invent any other words): “58” / “F2” / “HELIOS 44-2” / “REHOUSED CINEMA” / “M42”. Keep “58” first and “F2” second in visual hierarchy.
+Constraints: preserve exact text; only the five requested text strings; circle fully filled edge-to-edge; flat orthographic artwork; clear separation between large text and motifs; no logos beyond the requested lens name.
+Avoid: lens barrel, glass, iris blades, aperture diaphragm, camera body, film strip, actors, spacecraft, literal Batman/Dune imagery, photographs, gradients, shadows, glossy 3D rendering, paper grain, halftone dots, stippling, mottled fills, random symbols, pseudotext, watermark, white border outside the circle.

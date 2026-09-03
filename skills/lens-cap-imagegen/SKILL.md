@@ -1,18 +1,20 @@
 ---
 name: lens-cap-imagegen
 description: >
-  PRIMARY and exclusive design router for requests to design, generate, revise,
-  or concept a camera lens-cap graphic. Use this skill before and instead of
-  generic graphic-design, logo, poster, product-visual, UI, CAD, or 3D-design
-  skills whenever lens-cap intent is present; do not invoke those design skills
-  in parallel unless the user explicitly requests a separate unrelated
-  deliverable. It researches a named lens and creates circular artwork with
-  focal length and maximum aperture (F-stop/F-number) dominant, a documented brand-culture anchor,
-  and clearly qualified lore. A named camera lens plus a requested circular
-  front graphic, badge, relief, circular image/artwork, or lens-cover artwork is
-  the same route even when “lens cap” is omitted; optical design, repair, and an
-  unrelated product photograph are not. Wording such as “circular image for a
-  lens” or “lens cover” still requires a named camera lens and a design surface.
+  PRIMARY, exclusive design route whenever the user explicitly requests a
+  lens cap/front cap/cap-owned face, even if lens identity is still missing;
+  collect the identity during intake. Also route the controlled forms
+  “circular image for a named lens,” “circular lens badge,” and “circular
+  lens-front artwork” only with credible lens identity. Research the lens and create
+  circular artwork with focal length and maximum aperture dominant, a sourced
+  brand-culture anchor, and qualified lore. Do not invoke generic graphic,
+  logo, poster, product-visual, UI, CAD, or 3D-design skills in parallel unless
+  the user asks for a separate deliverable. Bare cover/badge/printable/image/
+  format words do not establish cap ownership; exclude optical design/tests,
+  repair, articles, reviews, posters, metadata, product photos, and requests
+  merely to inspect format support or explain export. Do not select for a
+  negated cap object or for meta work on the Skill, generator, docs, task,
+  tests, status, triggers, or supported formats.
 metadata:
   short-description: Research-led circular lens-cap artwork
   routing: primary-exclusive-for-lens-cap-intent
@@ -26,50 +28,48 @@ metadata:
     - "generate a lens cap"
     - "lens cap artwork"
     - "camera lens-cap artwork"
-    - "lens medallion"
-    - "lens artwork"
-    - "lens front graphic"
-    - "lens relief"
-    - "lens front badge"
-    - "lens badge"
-    - "circular lens badge"
-    - "lens front medallion"
-    - "circular lens graphic"
-    - "circular lens relief"
-    - "circular front pattern"
-    - "circular lens front"
-    - "circular lens image"
-    - "circular lens artwork"
-    - "lens cover artwork"
+    - "lens-cap medallion"
+    - "lens-cap front graphic"
+    - "lens-cap relief"
+    - "lens-cap front badge"
+    - "circular lens-cap badge"
+    - "circular lens-cap graphic"
+    - "circular lens-cap relief"
+    - "circular lens-cap front artwork"
+    - "circular lens-front artwork"
+    - "circular lens front artwork"
+    - "circular image for a named lens"
     - "design circular image for a lens"
+    - "circular lens badge"
+    - "front-cap artwork"
+    - "front face of a lens cap"
+    - "cap for a named lens"
+    - "design a cap for a named lens"
     - "设计镜头盖"
+    - "为指定镜头设计镜头帽"
+    - "镜头帽"
+    - "镜头闷盖"
     - "生成镜头盖图案"
     - "生成镜头盖"
     - "镜头盖图稿"
     - "制作镜头盖"
     - "镜头盖设计"
-    - "镜头图稿"
-    - "镜头图案"
-    - "镜头正面"
-    - "镜头浮雕"
-    - "圆形镜头图案"
-    - "圆形镜头浮雕"
-    - "圆形正面图案"
-    - "圆形正面浮雕"
-    - "镜头圆形图像"
-    - "圆形镜头图像"
-    - "镜头圆形艺术图"
-    - "圆形镜头艺术图"
-    - "设计镜头圆形图像"
-    - "设计镜头圆形艺术图"
-    - "镜头徽章"
+    - "镜头盖正面图稿"
+    - "镜头盖正面图案"
+    - "镜头盖正面图像"
+    - "镜头盖浮雕"
+    - "镜头盖徽章"
+    - "圆形镜头盖图案"
+    - "圆形镜头盖浮雕"
+    - "圆形镜头盖徽章"
+    - "圆形镜头正面图稿"
+    - "圆形镜头正面图案"
+    - "圆形镜头正面图像"
+    - "为指定镜头设计圆形图像"
     - "圆形镜头徽章"
-    - "镜头正面徽章"
-    - "镜头正面图案"
-    - "圆形镜头正面"
-    - "镜头闷盖"
-    - "镜头帽图稿"
-    - "镜头罩图稿"
+    - "镜头前盖图稿"
+    - "前盖正面图稿"
+    - "实体盖正面"
 ---
 
 # Lens-cap image generation
@@ -88,15 +88,28 @@ artwork phase here and then hand the approved master to
 creative design Skill. An explicit user request for a separate, unrelated
 deliverable is the only exception.
 
-A named camera lens plus a request for its circular front graphic, medallion,
-relief, fitted cap, circular image/artwork, lens-cover artwork, or 3MF counts as
-the same lens-cap intent even when the literal phrase “lens cap” is omitted.
-Natural variants such as “design a circular image for this lens” are included;
-the named lens and a cap/front-surface deliverable remain required. Do not apply
-this semantic shortcut to optical design, lens repair, or a general product
-photograph without a cap/front-surface deliverable.
+An explicit `lens cap`, `lens-cap`, `front cap`, `镜头盖`, `镜头帽`, or `镜头闷盖`
+is enough to claim the exclusive route even when the identity is absent; ask
+one focused brand/model question during intake. When the cap object is omitted,
+the controlled natural forms “circular image for the named lens,” “circular
+lens badge,” and “circular lens-front artwork” require credible lens identity.
+Bare words such as `cover`, `badge`, `printable`, or `3MF`
+do not establish the object. Do not route an
+article cover, lens-review badge, poster photographed through the lens, photo
+metadata export, optical design/test (including chromatic aberration,
+distortion, or bokeh), lens repair, or a general product photograph. A request
+to inspect format support or explain an STL/3MF export is documentation, not a
+production deliverable.
+The cap mention must be affirmative. Phrases such as `anything but a lens
+cap`, `other than a lens cap`, or `除镜头盖外` do not claim this route. Showing,
+auditing, fixing, or testing the Skill/generator/docs/task, asking whether the
+task is done, and asking which formats are supported are meta requests rather
+than artwork requests. A quoted cap request inside a prompt/route test,
+interaction simulation/replay, or explicit read-only/no-file audit is test
+data and must not invoke this Skill. Sticky context cannot convert a newly requested
+hood/遮光罩, barrel, focusing ring, mount, photo, or metadata file into a cap.
 
-This is the creative companion to lens-cap-production. It turns a named lens
+This is the creative companion to lens-cap-production. It turns the identified lens
 into an approved raster artwork and an evidence brief. It is provider-neutral:
 the host may use a built-in image tool, another image service, or a human
 designer. The approved raster plus its hash is the deterministic boundary;
@@ -107,8 +120,9 @@ freezes the exact content handed to production.
 
 ## Scope and intake
 
-Use this skill when the user names a camera lens and asks for a lens-cap,
-medallion, badge, poster, or a related circular graphic. Extract:
+Use this skill when the user asks for a lens-cap, cap-owned medallion/badge,
+circular cap-front graphic, or a controlled natural ownership form from the
+routing rule above. If identity is absent, ask for it before research. Extract:
 
 - brand, canonical model, focal length, maximum aperture, mount/revision when
   it matters, and the exact display text. Keep `focal_length_mm` as the
@@ -142,6 +156,11 @@ Ask this grouped intake at most once per job. Persist the answers in the
 handoff/job TOML; when the production Skill receives a complete, current TOML,
 it must consume those values and ask only for a missing, stale, or ambiguous
 field rather than repeating the intake.
+When the user derives the mating diameter from an adapter, optionally record
+`adapter_nominal_ring_mm` and radial `adapter_radial_wall_mm` as audit metadata;
+the job must satisfy `nominal + 2 * wall = measured diameter`. Do not add a
+fourth mandatory question when the user has already supplied a confident
+actual mating diameter.
 For any fitted, printable, assembled, or 3MF request, this is the first
 production gate: concept art may be generated before it, but do not invoke
 `lens-cap-production`, a geometry/build/export command, or the
@@ -197,7 +216,11 @@ wedge or gothic vertical grid for a qualified night-vigilante nickname.
 The default composition is a complete circular medallion on a square canvas:
 
 1. Focal length is the largest first read.
-2. Maximum aperture (the lens F-stop/F-number) is the second large read.
+2. Maximum aperture (the lens F-stop/F-number) is the second large read. For a
+   variable-aperture zoom, keep the first endpoint as `maximum_aperture`, store
+   the complete normalized range (for example `F3.5-5.6`) as
+   `maximum_aperture_display`, and preserve the full range in `display_text[1]`.
+   T-stop notation is not supported by this brief schema.
 3. Brand/model and verified coating or series marks are restrained secondary
    text, quoted exactly.
 4. Use broad flat black, charcoal, gray, and ivory shapes with bold contours
@@ -244,6 +267,45 @@ fields, and a TOML with the reviewed circle and palette. Never invent approval,
 hashes, or circle coordinates to make a provider-specific result look
 reproducible.
 
+For a new job, use the repository's provider-neutral handoff scaffold after
+the candidate is saved:
+
+    lens-cap init JOB.toml --source art/master.png --measured-diameter 95 \
+      --lens-identity "Helios / Zenit Helios-44-2 58mm F2" \
+      --display-text 58 F2 "HELIOS 44-2" "REHOUSED CINEMA" M42
+    # review the job circle, palette/relief heights, and process settings first
+    lens-cap handoff-init JOB.toml --brand "Helios / Zenit" \
+      --model "Helios-44-2" --focal-length 58 --maximum-aperture F2 \
+      --provider "OpenAI built-in image_gen" \
+      --anchor-source https://www.zenitcamera.com/mans/zenit-e/zenit-e-eng.html
+    # review the source; use a positive sourced/verified evidence_state; replace
+    # every REPLACE; explain any semantic N/A permission; then approve
+    lens-cap handoff-check JOB.toml --json
+
+`handoff-init` computes the candidate hash and an alpha-circle suggestion but
+does not call an image provider or approve a result. `--provider` is required.
+The scaffold copies the complete ordered `metadata.display_text` set, including
+secondary lines, and refuses identity, focal-length, or aperture disagreement.
+It also binds the reviewed circle, full palette, grid, safe border, prefilter,
+cleanup, and assembly mode. Its `next` list names the evidence-state, licence,
+closed-text, artwork-process, and human-approval reviews still required. `handoff-check` must pass
+before the production Skill or `bin/lens-cap-3mf` is invoked; for opaque art,
+copy the reviewed circle center/radius into the TOML rather than allowing an
+automatic recenter.
+
+An anchor `evidence_state` must begin with a positive `verified`, `sourced`,
+`documented`, `attested`, or `archived` status; negated phrases do not qualify.
+Use a reasoned provenance sentence such as `not applicable — no third-party
+mark rendered` when permission truly does not apply, never bare `NONE`/`N/A`.
+
+If the requested deliverable is an actual 3MF, an approved image or prompt is
+not completion. Once the raster is saved, the grouped physical intake is
+persisted, and `handoff-check` passes, continue immediately and sequentially
+through `lens-cap-production` to the canonical 3MF bridge. Completion requires
+an existing verified `.3mf` path; if the provider result cannot be saved or an
+external dependency is unavailable, report that stage as `UNVERIFIABLE`
+instead of claiming the end-to-end request is done.
+
 Save a provider-neutral design brief beside the job. It should include:
 
 - lens identity and display text;
@@ -252,7 +314,8 @@ Save a provider-neutral design brief beside the job. It should include:
 - brand-culture anchor and visual motif;
 - provider/mode, model/version when known, prompt, reference hashes, candidate
   path/hash, and human approval;
-- physical-fit fields only when supplied by the user;
+- a physical-fit snapshot with unknown measurements left null and default/user
+  decisions identified; never invent a mating measurement;
 - copyright, trademark, and artwork licence/provenance.
 
 The code and first-party templates in the repository are Apache-2.0. Generated

@@ -8,6 +8,22 @@ ROOT = Path(__file__).resolve().parents[1]
 SKILL_DIRS = ("lens-cap-imagegen", "lens-cap-production")
 
 
+def _frontmatter_triggers(path: Path) -> set[str]:
+    document = path.read_text(encoding="utf-8")
+    _, frontmatter, _ = document.split("---\n", 2)
+    in_triggers = False
+    triggers: set[str] = set()
+    for line in frontmatter.splitlines():
+        stripped = line.strip()
+        if stripped == "triggers:":
+            in_triggers = True
+            continue
+        if not in_triggers or not stripped.startswith("- "):
+            continue
+        triggers.add(stripped[2:].strip().strip('"').casefold())
+    return triggers
+
+
 def test_lens_cap_skills_declare_primary_triggers_and_exclusion_rule() -> None:
     for directory in SKILL_DIRS:
         english = (ROOT / "skills" / directory / "SKILL.md").read_text(encoding="utf-8")
@@ -47,17 +63,13 @@ def test_cross_context_trigger_and_intake_contract_is_present() -> None:
         "lens cap design",
         "lens-cap artwork",
         "lens cap artwork",
-        "lens medallion",
-        "lens front graphic",
-        "lens badge",
-        "circular lens badge",
-        "lens front medallion",
-        "lens artwork",
-        "circular lens graphic",
-        "circular lens image",
-        "circular lens artwork",
-        "lens cover artwork",
-        "design circular image for a lens",
+        "lens-cap medallion",
+        "lens-cap front graphic",
+        "lens-cap front badge",
+        "circular lens-cap badge",
+        "circular lens-front artwork",
+        "front face of a lens cap",
+        "cap for a named lens",
     ):
         assert phrase in imagegen
     for phrase in (
@@ -66,15 +78,13 @@ def test_cross_context_trigger_and_intake_contract_is_present() -> None:
         "lens cap STL",
         "lens cap 3MF",
         "lens cap production",
-        "lens front relief",
-        "lens badge model",
-        "circular lens badge model",
-        "lens front 3mf",
-        "circular lens relief",
-        "circular lens image",
-        "lens cover model",
-        "printable model for a lens",
-        "printable lens model",
+        "lens-cap front relief",
+        "lens-cap badge model",
+        "circular lens-cap badge model",
+        "lens-cap front 3mf",
+        "circular lens-cap relief",
+        "front-cap model",
+        "make a cap for a named lens",
     ):
         assert phrase.lower() in production.lower()
     for document in (imagegen, production):
@@ -91,6 +101,48 @@ def test_cross_context_trigger_and_intake_contract_is_present() -> None:
     assert "最大光圈（F 值）／F值／F-stop／F-number 是第二层级" in production_zh
     assert "默认开启" in production_zh and "摩擦凸条" in production_zh
     assert "不要并行调用任何其他设计 Skill" in production_zh
+
+
+def test_pure_artwork_triggers_do_not_overlap_production_metadata() -> None:
+    """Static host metadata must not race imagegen for an image-only request."""
+
+    imagegen_paths = (
+        ROOT / "skills/lens-cap-imagegen/SKILL.md",
+        ROOT / "skills/lens-cap-imagegen/SKILL.zh-CN.md",
+    )
+    production_paths = (
+        ROOT / "skills/lens-cap-production/SKILL.md",
+        ROOT / "skills/lens-cap-production/SKILL.zh-CN.md",
+    )
+    imagegen_triggers = set().union(*(_frontmatter_triggers(path) for path in imagegen_paths))
+    production_triggers = set().union(
+        *(_frontmatter_triggers(path) for path in production_paths)
+    )
+    cap_owned_artwork = {
+        "circular lens-front artwork",
+        "circular lens front artwork",
+        "圆形镜头正面图稿",
+    }
+    broad_non_cap_aliases = {
+        "lens badge",
+        "circular lens image",
+        "circular lens artwork",
+        "lens cover artwork",
+        "镜头徽章",
+        "圆形镜头图像",
+        "镜头罩图稿",
+    }
+    assert cap_owned_artwork <= imagegen_triggers
+    assert cap_owned_artwork.isdisjoint(production_triggers)
+    assert broad_non_cap_aliases.isdisjoint(imagegen_triggers | production_triggers)
+
+    production_agent = (
+        ROOT / "skills/lens-cap-production/agents/openai.yaml"
+    ).read_text(encoding="utf-8")
+    flattened = " ".join(production_agent.split()).casefold()
+    assert "explicit circular lens-front artwork only to $lens-cap-imagegen" in flattened
+    assert "format owned by metadata/photos" in flattened
+    assert "circular image or artwork" not in flattened
 
 
 def test_skill_manifest_declares_portable_sync_entrypoint() -> None:
@@ -134,44 +186,85 @@ def test_manifest_named_lens_surface_semantic_route_is_scoped() -> None:
 
     data = json.loads((ROOT / "skills/manifest.json").read_text(encoding="utf-8"))
     semantic = data["routing_policy"]["lens_cap_intent"]["semantic_match"]
-    assert semantic["requires_named_lens"] is True
+    assert semantic["requires_named_lens"] is False
+    assert semantic["requires_named_lens_when_cap_object_is_omitted"] is True
+    assert semantic["explicit_cap_object_starts_identity_intake"] is True
+    assert semantic["bare_production_format_requires_lens_cap_context"] is True
     assert {
-        "front graphic",
-        "front surface",
-        "relief",
-        "lens badge",
-        "circular lens badge",
-        "3mf",
-        "circular image",
-        "circular artwork",
-        "lens cover",
-        "printable model",
+        "lens cap",
+        "front cap",
+        "physical cap",
+        "cap artwork",
+        "cap badge",
+        "cap relief",
+        "cap model",
+        "lens cap 3mf",
+        "circular lens-front artwork",
+        "cap for a named lens",
         "镜头盖",
-        "正面图案",
-        "正面浮雕",
-        "浮雕",
-        "圆形图像",
-        "圆形艺术图",
+        "镜头帽",
         "镜头闷盖",
         "镜头帽",
-        "可打印模型",
-        "镜头徽章",
-        "圆形镜头徽章",
-        "圆形镜头正面",
+        "镜头前盖",
+        "前盖正面",
+        "实体盖",
+        "镜头盖图稿",
+        "镜头盖模型",
+        "圆形镜头正面图稿",
     } <= set(semantic["surface_terms"])
-    assert "circular" not in semantic["surface_terms"]
-    assert "圆形" not in semantic["surface_terms"]
-    assert "image" not in semantic["surface_terms"]
-    assert "artwork" not in semantic["surface_terms"]
-    assert "model" not in semantic["surface_terms"]
+    assert {
+        "cover",
+        "badge",
+        "printable",
+        "lens cover",
+        "镜头罩",
+    }.isdisjoint(semantic["surface_terms"])
+    assert {
+        "cover article",
+        "lens review",
+        "warranty card",
+        "printable poster",
+        "metadata",
+        "lens pouch",
+        "封面文章",
+        "镜头评测",
+        "保修卡",
+        "可打印海报",
+        "元数据",
+        "镜头包",
+        "lens body",
+        "lens barrel",
+        "focusing ring",
+        "focus gear",
+        "lens mount",
+        "cage",
+        "plate",
+        "label",
+        "grip",
+    } <= set(semantic["non_cap_deliverable_terms"])
     assert {"design", "generate", "设计", "生成"} <= set(semantic["verbs"])
     assert "optical design" in semantic["exclude_without_surface_intent"]
     assert "optical" in semantic["exclude_without_surface_intent"]
     assert "product photo" in semantic["exclude_without_surface_intent"]
     assert "产品照片" in semantic["exclude_without_surface_intent"]
-    assert "circular front pattern" in semantic["explicit_cap_surface_terms"]
-    assert "circular lens image" in semantic["explicit_cap_surface_terms"]
-    assert "镜头闷盖" in semantic["explicit_cap_surface_terms"]
+    assert {
+        "chromatic aberration",
+        "distortion",
+        "bokeh",
+        "色差",
+        "畸变",
+        "焦外",
+    } <= set(semantic["exclude_without_surface_intent"])
+    assert {
+        "inspect a file format",
+        "explain a file export",
+        "format support question",
+        "检查文件格式支持",
+        "解释文件导出",
+    } <= set(semantic["non_production_action_terms"])
+    assert "circular lens-front artwork" in semantic["explicit_cap_surface_terms"]
+    assert "front face of a lens cap" in semantic["explicit_cap_surface_terms"]
+    assert "前盖正面" in semantic["explicit_cap_surface_terms"]
 
 
 def test_named_lens_surface_route_positive_and_negative_matrix() -> None:
@@ -184,35 +277,38 @@ def test_named_lens_surface_route_positive_and_negative_matrix() -> None:
     surfaces = tuple(str(item).lower() for item in semantic["surface_terms"])
     verbs = tuple(str(item).lower() for item in semantic["verbs"])
     exclusions = tuple(str(item).lower() for item in semantic["exclude_without_surface_intent"])
+    non_cap = tuple(str(item).lower() for item in semantic["non_cap_deliverable_terms"])
     explicit_cap = tuple(
         str(item).lower() for item in semantic["explicit_cap_surface_terms"]
     )
 
     def matches(prompt: str, *, named_lens: bool = True) -> bool:
         text = prompt.casefold()
-        if not named_lens or not any(verb in text for verb in verbs):
+        has_explicit_cap = any(term in text for term in explicit_cap)
+        if not named_lens and not has_explicit_cap:
+            return False
+        if not any(verb in text for verb in verbs) and not has_explicit_cap:
+            return False
+        if any(term in text for term in non_cap):
             return False
         has_surface = any(term.casefold() in text for term in surfaces)
         if not has_surface:
             return False
         # An optical-design/repair exclusion wins unless the user also states
         # an explicit cap/relief surface deliverable.
-        has_explicit_cap = any(term in text for term in explicit_cap)
         if any(term in text for term in exclusions) and not has_explicit_cap:
             return False
         return True
 
-    assert matches("Design a circular front pattern for Zeiss Planar 50mm F1.4 and export a 3MF")
-    assert matches("用康泰时 50mm F1.4 设计圆形正面图案")
-    assert matches("Sigma 28-70mm F2.8 做镜头浮雕")
-    assert matches("Design a circular image for the Sigma 28-70mm F2.8 lens")
-    assert matches("Design a circular artwork for Zeiss Planar 50mm F1.4")
-    assert matches("为适马 28-70mm F2.8 设计圆形图像")
-    assert matches("为蔡司 Planar 50mm F1.4 设计圆形艺术图")
-    assert matches("为康泰时 50mm F1.4 设计镜头闷盖图稿")
-    assert matches("Make a printable model for the Sigma 28-70mm F2.8 lens")
-    assert matches("为适马 28-70mm F2.8 生成可打印模型")
-    assert matches("为康泰时 50mm F1.4 制作镜头帽模型")
+    assert matches("Design lens-cap front artwork for Zeiss Planar 50mm F1.4")
+    assert matches("用康泰时 50mm F1.4 设计镜头盖正面图案")
+    assert matches("Sigma 28-70mm F2.8 做镜头盖浮雕")
+    assert matches("Design circular lens-front artwork for the Sigma 28-70mm F2.8")
+    assert matches("Make a printable lens cap for the Sigma 28-70mm F2.8")
+    assert matches("为适马 28-70mm F2.8 生成可打印镜头盖")
+    assert matches("Design a lens cap", named_lens=False)
+    assert matches("设计镜头帽", named_lens=False)
+    assert not matches("Design a circular image", named_lens=False)
     assert not matches("Design an optical diagram for a Zeiss Planar 50mm F1.4")
     assert not matches("Design an optical relief map for a Zeiss Planar 50mm F1.4")
     assert not matches("Design an optical circular image for a Zeiss Planar 50mm F1.4")
@@ -220,6 +316,9 @@ def test_named_lens_surface_route_positive_and_negative_matrix() -> None:
     assert not matches("为 Zeiss 50mm F1.4 设计圆形图像产品照片")
     assert not matches("为 Zeiss 50mm F1.4 设计圆形艺术图产品海报")
     assert not matches("为圆形镜片产品照片设计一张海报")
+    assert not matches("Design an award badge for a Zeiss Planar 50mm F1.4 lens")
+    assert not matches("Export 3MF metadata for a Zeiss Planar 50mm F1.4 lens photo")
+    assert not matches("Make a printable poster with a Zeiss Planar 50mm F1.4 lens")
     assert not matches("设计圆形图像", named_lens=False)
     assert not matches("Repair a Zeiss 50mm F1.4 lens")
 

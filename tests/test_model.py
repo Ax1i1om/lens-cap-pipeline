@@ -5,6 +5,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
+from PIL import Image, ImageDraw
 from test_pipeline import _job
 
 from lens_cap_pipeline.config import ConfigError, friction_rib_profile_defaults, load_config
@@ -319,6 +320,9 @@ foam_liner_status = "foam"
 liner_thickness_mm = 1.5
 """
     config_path.write_text(text, encoding="utf-8")
+    source = Image.open(tmp_path / "master.png").convert("RGB")
+    ImageDraw.Draw(source).rectangle((10, 10, 18, 18), fill=(190, 31, 35))
+    source.save(tmp_path / "master.png")
     config = load_config(config_path)
     process_report = process(config)
     model = generate_model(config, process_report)

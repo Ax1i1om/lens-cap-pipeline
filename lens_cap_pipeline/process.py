@@ -17,6 +17,7 @@ from __future__ import annotations
 import hashlib
 import io
 import json
+import math
 import os
 import platform
 import sys
@@ -462,6 +463,128 @@ def _cleanup_islands(
     }
 
 
+def _minimum_relief_feature_audit(
+    labels: np.ndarray,
+    inside: np.ndarray,
+    palettes: tuple[PaletteSpec, ...],
+    *,
+    face_diameter_mm: float,
+    grid_size: int,
+    nozzle_mm: float,
+    allowed_area_px: int,
+    allowed_dimension_px: int,
+) -> dict[str, Any]:
+    """Reject meaningful positive strokes or negative channels below nozzle width.
+
+    This is a conservative two-dimensional manufacturability gate, not a
+    promise that a particular slicer will reproduce every boundary pixel. A
+    square opening is intentionally deterministic across supported Pillow
+    versions. Tiny corner losses no larger than the already-declared cleanup
+    limits are reported but tolerated; a long sub-nozzle stroke is not.  The
+    base colour is audited as negative artwork as well, so a hairline groove
+    cut through a broad relief field cannot evade the positive-only checks.
+    """
+
+    pixel_pitch_mm = float(face_diameter_mm) / int(grid_size)
+    feature_width_px = float(nozzle_mm) / pixel_pitch_mm
+    kernel_px = max(1, int(math.ceil(feature_width_px - 1e-12)))
+    colors: dict[str, Any] = {}
+    violation_count = 0
+    # Ignore only the rasterized outer-circle fringe when examining the base
+    # colour.  That fringe is a mechanical safe boundary rather than artwork;
+    # internal base-colour channels remain in ``interior`` and are audited.
+    interior = inside.copy()
+    for _ in range(kernel_px):
+        padded = np.pad(interior, 1, constant_values=False)
+        interior = (
+            padded[1:-1, 1:-1]
+            & padded[:-2, 1:-1]
+            & padded[2:, 1:-1]
+            & padded[1:-1, :-2]
+            & padded[1:-1, 2:]
+        )
+
+    for palette in palettes:
+        mask = inside & (labels == palette.index)
+        pixels = int(np.count_nonzero(mask))
+        if pixels == 0 or kernel_px == 1:
+            colors[palette.name] = {
+                "role": palette.role,
+                "pixels": pixels,
+                "unsupported_pixels": 0,
+                "unsupported_components": 0,
+                "violating_components": 0,
+                "aggregate_cleanup_budget_exceeded": False,
+                "largest_violation_area_px": 0,
+                "largest_violation_dimension_px": 0,
+                "status": "not_present" if pixels == 0 else "passed",
+            }
+            continue
+        # Mark the union of every all-positive k×k block using an integral
+        # image plus a rectangle difference array. Unlike an odd-only Pillow
+        # min filter, this handles thresholds between one and two pixels: a
+        # one-pixel hairline fails while a two-pixel stroke can survive.
+        numeric = mask.astype(np.int32)
+        integral = np.pad(numeric, ((1, 0), (1, 0))).cumsum(0).cumsum(1)
+        block_sums = (
+            integral[kernel_px:, kernel_px:]
+            - integral[:-kernel_px, kernel_px:]
+            - integral[kernel_px:, :-kernel_px]
+            + integral[:-kernel_px, :-kernel_px]
+        )
+        valid_y, valid_x = np.nonzero(block_sums == kernel_px * kernel_px)
+        difference = np.zeros((mask.shape[0] + 1, mask.shape[1] + 1), dtype=np.int32)
+        np.add.at(difference, (valid_y, valid_x), 1)
+        np.add.at(difference, (valid_y + kernel_px, valid_x), -1)
+        np.add.at(difference, (valid_y, valid_x + kernel_px), -1)
+        np.add.at(
+            difference,
+            (valid_y + kernel_px, valid_x + kernel_px),
+            1,
+        )
+        opened_mask = (difference.cumsum(0).cumsum(1)[:-1, :-1] > 0) & mask
+        unsupported = mask & ~opened_mask
+        if palette.role == "base":
+            unsupported &= interior
+        unsupported_components = _components(unsupported)
+        violating: list[tuple[int, int]] = []
+        for component in unsupported_components:
+            ys = [cell[0] for cell in component]
+            xs = [cell[1] for cell in component]
+            dimension = max(max(ys) - min(ys) + 1, max(xs) - min(xs) + 1)
+            if len(component) > allowed_area_px or dimension > allowed_dimension_px:
+                violating.append((len(component), dimension))
+        unsupported_pixels = int(np.count_nonzero(unsupported))
+        aggregate_budget_exceeded = bool(
+            unsupported_pixels > allowed_area_px
+            or len(unsupported_components) > allowed_dimension_px
+        )
+        violation_count += len(violating) + int(aggregate_budget_exceeded)
+        colors[palette.name] = {
+            "role": palette.role,
+            "pixels": pixels,
+            "unsupported_pixels": unsupported_pixels,
+            "unsupported_components": len(unsupported_components),
+            "violating_components": len(violating),
+            "aggregate_cleanup_budget_exceeded": aggregate_budget_exceeded,
+            "largest_violation_area_px": max((item[0] for item in violating), default=0),
+            "largest_violation_dimension_px": max((item[1] for item in violating), default=0),
+            "status": "failed" if violating or aggregate_budget_exceeded else "passed",
+        }
+    return {
+        "status": "failed" if violation_count else "passed",
+        "minimum_feature_mm": float(nozzle_mm),
+        "pixel_pitch_mm": pixel_pitch_mm,
+        "minimum_feature_px": feature_width_px,
+        "support_kernel_px": kernel_px,
+        "allowed_cleanup_area_px": int(allowed_area_px),
+        "allowed_cleanup_dimension_px": int(allowed_dimension_px),
+        "violating_components": violation_count,
+        "colors": colors,
+        "scope": "conservative_2d_positive_stroke_and_negative_channel_nozzle_width_opening_not_a_physical_fit_proof",
+    }
+
+
 def _merged_rectangles(mask: np.ndarray) -> list[tuple[int, int, int, int]]:
     active: dict[tuple[int, int], int] = {}
     output: list[tuple[int, int, int, int]] = []
@@ -577,6 +700,16 @@ def process(config: PipelineConfig, *, force: bool = False) -> dict[str, Any]:
     labels[safe_border] = base_index
     cleanup["safe_border_corrections"] = safe_relief_before
     after_counts = {p.name: int(np.count_nonzero((labels == p.index) & inside)) for p in config.palette}
+    minimum_feature_audit = _minimum_relief_feature_audit(
+        labels,
+        inside,
+        config.palette,
+        face_diameter_mm=config.face_diameter_mm,
+        grid_size=config.grid_size,
+        nozzle_mm=config.nozzle_mm,
+        allowed_area_px=config.cleanup.max_area_px,
+        allowed_dimension_px=config.cleanup.max_dimension_px,
+    )
 
     palette_array = np.asarray([p.rgb for p in config.palette], dtype=np.uint8)
     rgba = np.zeros((config.grid_size, config.grid_size, 4), dtype=np.uint8)
@@ -670,6 +803,7 @@ def process(config: PipelineConfig, *, force: bool = False) -> dict[str, Any]:
         "required_palette_outputs": bool(
             all(item["status"] == "passed" for item in required_outputs.values() if item["required"])
         ),
+        "minimum_relief_feature_width": minimum_feature_audit["status"] == "passed",
     }
     status = "passed" if all(checks.values()) else "failed"
     config_copy_path = config.output_dir / "config.normalized.json"
@@ -736,6 +870,7 @@ def process(config: PipelineConfig, *, force: bool = False) -> dict[str, Any]:
             "after_pixel_counts": after_counts,
             "only_declared_components": True,
         },
+        "minimum_relief_feature_audit": minimum_feature_audit,
         "palette": {
             p.name: {**p.public(), "hex": _hex(p.rgb)} for p in config.palette
         },

@@ -1,0 +1,545 @@
+{
+  "bambu_3mf": null,
+  "build": {
+    "command": [
+      "<external>/python3.11",
+      "-m",
+      "lens_cap_pipeline.cli",
+      "build",
+      "<external>/job.toml",
+      "--force",
+      "--external",
+      "--export-openscad",
+      "--json",
+      "--openscad",
+      "<external>/OpenSCAD"
+    ],
+    "returncode": 0,
+    "status": "passed",
+    "stderr_tail": ""
+  },
+  "design_brief": {
+    "anchor_count": 4,
+    "candidate_path": "<external>/master.png",
+    "candidate_sha256": "4bf579d6ca36ffbd562cfec669f0a826e469d637f38f6e1c298ce8b3b2283758",
+    "culture_anchor_count": 1,
+    "display_text": [
+      "58",
+      "F2",
+      "HELIOS 44-2",
+      "REHOUSED CINEMA",
+      "M42"
+    ],
+    "identity": {
+      "brand": "Helios / Zenit",
+      "focal_length_display": "58",
+      "focal_length_mm": 58.0,
+      "maximum_aperture": "F2",
+      "maximum_aperture_display": "F2",
+      "model": "Helios-44-2"
+    },
+    "job_identity_binding_checked": true,
+    "path": "<external>/design-brief.json",
+    "physical_fit_checked": [
+      "bare_clearance_mm",
+      "bottom_thickness_mm",
+      "compression_fraction",
+      "compression_is_assumption",
+      "foam_liner_status",
+      "friction_rib_count",
+      "friction_rib_height_mm",
+      "friction_rib_profile",
+      "friction_rib_profile_derived",
+      "friction_rib_protrusion_mm",
+      "friction_rib_start_mm",
+      "friction_rib_width_mm",
+      "friction_ribs_enabled",
+      "friction_ribs_explicit",
+      "nozzle_mm",
+      "retention_strategy",
+      "side_height_mm",
+      "wall_thickness_mm"
+    ],
+    "sha256": "01c367cbba1484ebb287d32f54941e33c3f051dcc389fd6ab873a7f4abf8f26a",
+    "status": "passed"
+  },
+  "fit_status": "unverifiable_until_coupon_measurement",
+  "friction_rib_mesh_audit": {
+    "angular_tolerance_deg": 1.0,
+    "axial_continuity_sample_hits": [
+      {
+        "continuous_columns": 15,
+        "maximum_surface_intersections": 4,
+        "minimum_inside_interval_mm": 7.999999999999998,
+        "position": 0
+      },
+      {
+        "continuous_columns": 15,
+        "maximum_surface_intersections": 4,
+        "minimum_inside_interval_mm": 8.0,
+        "position": 1
+      },
+      {
+        "continuous_columns": 15,
+        "maximum_surface_intersections": 4,
+        "minimum_inside_interval_mm": 7.999999999999998,
+        "position": 2
+      },
+      {
+        "continuous_columns": 15,
+        "maximum_surface_intersections": 4,
+        "minimum_inside_interval_mm": 8.0,
+        "position": 3
+      },
+      {
+        "continuous_columns": 15,
+        "maximum_surface_intersections": 4,
+        "minimum_inside_interval_mm": 8.0,
+        "position": 4
+      },
+      {
+        "continuous_columns": 15,
+        "maximum_surface_intersections": 4,
+        "minimum_inside_interval_mm": 7.999999999999998,
+        "position": 5
+      },
+      {
+        "continuous_columns": 15,
+        "maximum_surface_intersections": 4,
+        "minimum_inside_interval_mm": 8.0,
+        "position": 6
+      },
+      {
+        "continuous_columns": 15,
+        "maximum_surface_intersections": 4,
+        "minimum_inside_interval_mm": 7.999999999999998,
+        "position": 7
+      },
+      {
+        "continuous_columns": 15,
+        "maximum_surface_intersections": 4,
+        "minimum_inside_interval_mm": 7.999999999999998,
+        "position": 8
+      },
+      {
+        "continuous_columns": 15,
+        "maximum_surface_intersections": 4,
+        "minimum_inside_interval_mm": 8.0,
+        "position": 9
+      },
+      {
+        "continuous_columns": 15,
+        "maximum_surface_intersections": 4,
+        "minimum_inside_interval_mm": 8.0,
+        "position": 10
+      },
+      {
+        "continuous_columns": 15,
+        "maximum_surface_intersections": 4,
+        "minimum_inside_interval_mm": 7.999999999999998,
+        "position": 11
+      }
+    ],
+    "axial_continuity_samples_per_rib": 15,
+    "axial_span_mm": [
+      1.0,
+      9.0
+    ],
+    "cross_section_sample_hits": [
+      {
+        "end": 15,
+        "interior": [
+          15,
+          15,
+          15
+        ],
+        "position": 0,
+        "start": 15
+      },
+      {
+        "end": 15,
+        "interior": [
+          15,
+          15,
+          15
+        ],
+        "position": 1,
+        "start": 15
+      },
+      {
+        "end": 15,
+        "interior": [
+          15,
+          15,
+          15
+        ],
+        "position": 2,
+        "start": 15
+      },
+      {
+        "end": 15,
+        "interior": [
+          15,
+          15,
+          15
+        ],
+        "position": 3,
+        "start": 15
+      },
+      {
+        "end": 15,
+        "interior": [
+          15,
+          15,
+          15
+        ],
+        "position": 4,
+        "start": 15
+      },
+      {
+        "end": 15,
+        "interior": [
+          15,
+          15,
+          15
+        ],
+        "position": 5,
+        "start": 15
+      },
+      {
+        "end": 15,
+        "interior": [
+          15,
+          15,
+          15
+        ],
+        "position": 6,
+        "start": 15
+      },
+      {
+        "end": 15,
+        "interior": [
+          15,
+          15,
+          15
+        ],
+        "position": 7,
+        "start": 15
+      },
+      {
+        "end": 15,
+        "interior": [
+          15,
+          15,
+          15
+        ],
+        "position": 8,
+        "start": 15
+      },
+      {
+        "end": 15,
+        "interior": [
+          15,
+          15,
+          15
+        ],
+        "position": 9,
+        "start": 15
+      },
+      {
+        "end": 15,
+        "interior": [
+          15,
+          15,
+          15
+        ],
+        "position": 10,
+        "start": 15
+      },
+      {
+        "end": 15,
+        "interior": [
+          15,
+          15,
+          15
+        ],
+        "position": 11,
+        "start": 15
+      }
+    ],
+    "cross_section_samples_per_end": 15,
+    "cross_section_samples_per_interior_slice": 15,
+    "declared_tip_width_mm": 0.6582865960224924,
+    "detected_end_positions": 12,
+    "detected_start_positions": 12,
+    "expected_rib_count": 12,
+    "integrated_vertical_edge_hits": 24,
+    "integrated_vertical_edge_positions": 12,
+    "interior_cross_section_z_mm": [
+      3.008,
+      5.024,
+      7.056
+    ],
+    "main_component_vertices": [
+      27885
+    ],
+    "mesh_component_counts": [
+      1
+    ],
+    "minimum_accepted_cross_section_width_mm": 0.5924579364202431,
+    "minimum_full_height_tip_face_width_mm": 0.658286,
+    "minimum_observed_tip_width_mm": 0.658286,
+    "minimum_observed_wall_attachment_width_mm": 0.737246,
+    "nozzle_mm": 0.2,
+    "radial_tolerance_mm": 0.03,
+    "referenced_vertices": 27885,
+    "scope": "referenced_connected_full_width_tip_faces_full_height_axial_contact_columns_and_start_interior_end_wall_cross_sections_physical_fit_requires_coupon",
+    "status": "passed",
+    "tip_radius_mm": 38.6,
+    "tip_vertex_hits": 48,
+    "unused_vertices": 0
+  },
+  "job": "job.toml",
+  "job_sha256": "176b177327003737895c099af43df126594d296514db5c2401c46760bb652f22",
+  "material_assignment_audit": {
+    "colors": {
+      "black": {
+        "active_in_process_mask": true,
+        "displaycolor": "#111211FF",
+        "expected_mask_footprint_mm2": 2779.8800000000006,
+        "minimum_projected_area_ratio": 0.2,
+        "projected_triangle_area_mm2": 8764.993347909594,
+        "required": true,
+        "role": "base",
+        "triangle_count": 16617
+      },
+      "gray": {
+        "active_in_process_mask": true,
+        "displaycolor": "#747471FF",
+        "expected_mask_footprint_mm2": 1021.8000000000002,
+        "minimum_projected_area_ratio": 0.2,
+        "projected_triangle_area_mm2": 1021.7999995199152,
+        "required": true,
+        "role": "relief",
+        "triangle_count": 22368
+      },
+      "ivory": {
+        "active_in_process_mask": true,
+        "displaycolor": "#F2E7D3FF",
+        "expected_mask_footprint_mm2": 827.9600000000002,
+        "minimum_projected_area_ratio": 0.2,
+        "projected_triangle_area_mm2": 827.9600231899742,
+        "required": true,
+        "role": "relief",
+        "triangle_count": 16781
+      }
+    },
+    "scope": "final_3mf_triangle_material_assignments_and_named_relief_masks",
+    "spatial_mask_binding": {
+      "gray": {
+        "expected_base_z_mm": 16.0,
+        "expected_pixels": 25545,
+        "expected_top_z_mm": 16.401,
+        "extra_pixels_outside_tolerance": 0,
+        "mask": "gray.png",
+        "mask_sha256": "784cf88252561c6a763def26e7897263657274f27cdf0f3df2d08a251a419c20",
+        "missing_pixels_outside_tolerance": 0,
+        "out_of_xy_envelope_triangles": 0,
+        "out_of_z_envelope_triangles": 0,
+        "projected_area_tolerance_mm2": 5.109000000000001,
+        "projected_pixels": 35542,
+        "projected_triangle_area_mm2": 1021.7999995199152,
+        "raw_iou": 0.7187271397220191,
+        "resolution_px": 385,
+        "tolerance_pixels": 1,
+        "top_triangle_count": 7086
+      },
+      "ivory": {
+        "expected_base_z_mm": 16.0,
+        "expected_pixels": 20699,
+        "expected_top_z_mm": 16.601000000000003,
+        "extra_pixels_outside_tolerance": 0,
+        "mask": "ivory.png",
+        "mask_sha256": "6a010491a630e3928c388ea626857015dce77d42f7072d0ffdc24fa0499de2d3",
+        "missing_pixels_outside_tolerance": 0,
+        "out_of_xy_envelope_triangles": 0,
+        "out_of_z_envelope_triangles": 0,
+        "projected_area_tolerance_mm2": 4.139800000000001,
+        "projected_pixels": 26235,
+        "projected_triangle_area_mm2": 827.9600231899742,
+        "raw_iou": 0.7889841814370117,
+        "resolution_px": 385,
+        "tolerance_pixels": 1,
+        "top_triangle_count": 4568
+      }
+    },
+    "status": "passed",
+    "unassigned_triangle_count": 0,
+    "unexpected_used_colors": []
+  },
+  "mechanical": {
+    "bare_clearance_mm": 0.4,
+    "bottom_thickness_mm": 2.0,
+    "cavity_diameter_mm": 77.4,
+    "compression_fraction": 0.0,
+    "compression_is_assumption": false,
+    "foam_liner_status": "none",
+    "foam_local_compression_fraction": null,
+    "friction_rib_angle_deg": 1.7766133182351107,
+    "friction_rib_bare_interference_mm": -0.20000000000000284,
+    "friction_rib_count": 12,
+    "friction_rib_fit_warning": "configured ribs leave nominal bare-plastic clearance; print a fit coupon and tune protrusion/profile before relying on retention",
+    "friction_rib_height_mm": 8.0,
+    "friction_rib_profile": "light_tapered",
+    "friction_rib_protrusion_mm": 0.1,
+    "friction_rib_retention_status": "guide_only_clearance",
+    "friction_rib_start_mm": 1.0,
+    "friction_rib_tip_angle_deg": 0.9771373250293109,
+    "friction_rib_tip_diameter_mm": 77.2,
+    "friction_rib_tip_width_mm": 0.6582865960224924,
+    "friction_rib_wall_overlap_mm": 0.6,
+    "friction_rib_width_mm": 1.2,
+    "friction_ribs_enabled": true,
+    "friction_ribs_explicit": false,
+    "liner_thickness_mm": null,
+    "measured_diameter_mm": 77.0,
+    "nozzle_mm": 0.2,
+    "radial_compression_mm": 0.0,
+    "retention_strategy": "bare_wall_plus_neutral_ribs",
+    "side_height_mm": 14.0,
+    "total_height_mm": 16.0,
+    "wall_thickness_mm": 2.4
+  },
+  "native_3mf": {
+    "bytes": 494350,
+    "command": [
+      "<external>/python3.11",
+      "<external>/three_mf_adapter.py",
+      "openscad",
+      "out/model/helios-44-2-rehouse-imagegen-v2-77mm.scad",
+      "<external>/helios-44-2-rehouse-imagegen-v2-77mm-native.3mf",
+      "--openscad",
+      "<external>/OpenSCAD",
+      "--timeout",
+      "1800",
+      "--require-single-volume"
+    ],
+    "manifest": "<external>/helios-44-2-rehouse-imagegen-v2-77mm-native.3mf.manifest.json",
+    "model": {
+      "absolute_volume_mm3": 19948.27697687239,
+      "boundary_edges": 0,
+      "bounds": {
+        "max_mm": [
+          41.1,
+          41.1,
+          16.601
+        ],
+        "min_mm": [
+          -41.1,
+          -41.1,
+          0.0
+        ],
+        "size_mm": [
+          82.2,
+          82.2,
+          16.601
+        ]
+      },
+      "build_items": 1,
+      "component_references": 0,
+      "duplicate_triangles": 0,
+      "inconsistent_orientation_edges": 0,
+      "mesh_components": 1,
+      "mesh_parts": 1,
+      "nonmanifold_edges": 0,
+      "objects": 1,
+      "parts": 1,
+      "transformed_build_items": 0,
+      "transformed_components": 0,
+      "triangles": 55766,
+      "unreferenced_vertices": 0,
+      "vertices": 27885,
+      "volume_components": 1,
+      "zero_area_triangles": 0,
+      "zero_volume_components": 0
+    },
+    "output": "<external>/helios-44-2-rehouse-imagegen-v2-77mm-native.3mf",
+    "sha256": "8ab88faf117240c89c0cd511b35fdb3e5263cab49529580cbea06ddd512f5d13"
+  },
+  "native_bounds_audit": {
+    "expected": {
+      "max_mm": [
+        41.1,
+        41.1,
+        16.601000000000003
+      ],
+      "min_mm": [
+        -41.1,
+        -41.1,
+        0.0
+      ],
+      "size_mm": [
+        82.2,
+        82.2,
+        16.601000000000003
+      ]
+    },
+    "observed": {
+      "max_mm": [
+        41.1,
+        41.1,
+        16.601
+      ],
+      "min_mm": [
+        -41.1,
+        -41.1,
+        0.0
+      ],
+      "size_mm": [
+        82.2,
+        82.2,
+        16.601
+      ]
+    },
+    "scope": "final_native_world_bounds_vs_current_geometry_report",
+    "status": "passed",
+    "tolerance_mm": 0.005
+  },
+  "notes": [
+    "Artwork, mask, and relief projection gates are executed by the public build path.",
+    "Native 3MF is unsliced; a printer-profiled 3MF requires the explicit Bambu stage.",
+    "A valid package does not prove physical fit; print and measure a same-material coupon."
+  ],
+  "openscad": "<OpenSCAD.app>/Contents/MacOS/OpenSCAD",
+  "projection": {
+    "colors": {
+      "gray": {
+        "extra_outside_tolerance": 0,
+        "missing_outside_tolerance": 0,
+        "raw_iou": 0.71304955
+      },
+      "ivory": {
+        "extra_outside_tolerance": 0,
+        "missing_outside_tolerance": 0,
+        "raw_iou": 0.79166985
+      }
+    },
+    "diff_dir": "out/model/projection-diff",
+    "report": "out/model/projection-report.json",
+    "status": "passed"
+  },
+  "retention_status": "guide_only_clearance",
+  "retention_warning": "configured ribs leave nominal bare-plastic clearance; print a fit coupon and tune protrusion/profile before relying on retention",
+  "runner": "scripts/build_3mf.py",
+  "schema_version": 1,
+  "source_binding_audit": {
+    "approved_candidate_sha256": "4bf579d6ca36ffbd562cfec669f0a826e469d637f38f6e1c298ce8b3b2283758",
+    "current_source_sha256": "4bf579d6ca36ffbd562cfec669f0a826e469d637f38f6e1c298ce8b3b2283758",
+    "process_report": "out/process-report.json",
+    "process_report_sha256": "876bbf39e94ea9a40815730e119f82d9395fe06d9ac74092f8986709d4dbe52b",
+    "process_source_sha256": "4bf579d6ca36ffbd562cfec669f0a826e469d637f38f6e1c298ce8b3b2283758",
+    "scope": "post_build_and_prepublication_approved_source_binding",
+    "status": "passed"
+  },
+  "status": "passed"
+}

@@ -4,12 +4,20 @@ interface:
   brand_color: "#222222"
   default_prompt: >-
     Use $lens-cap-imagegen as the only design-oriented Skill whenever the user
-    asks to design, generate, revise, or concept a camera lens-cap. A named
-    camera lens plus a circular front graphic, badge, relief, circular image or
-    artwork, or lens-cover artwork is the same intent even when “lens cap” is
-    omitted; optical design, repair, and unrelated product photos are excluded.
-    Natural wording such as “design a circular image for this lens” is included,
-    but a named lens and a cap/front surface are still required. Do not
+    asks to design, generate, revise, or concept a camera lens-cap. An explicit
+    lens cap/front cap/镜头盖/镜头帽/镜头闷盖 claims this route even when lens
+    identity is missing; ask for brand/model during intake. When the cap noun
+    is omitted, require credible identity for the controlled circular-image,
+    circular-lens-badge, or circular-lens-front-artwork forms. A lens near a
+    bare cover, badge, printable poster, image, 3MF metadata, article, review,
+    product photo, optical design/testing, or repair request is not lens-cap
+    intent. Inspecting format support or explaining an STL/3MF export is not a
+    production request. Negated cap phrases and requests to show/audit/fix/test
+    the Skill, generator, docs, task, or formats are meta work. A quoted cap
+    request in a prompt/route test, replay, or read-only/no-file audit is test
+    data, not a deliverable; sticky context
+    cannot turn a hood, barrel, ring, mount, photo, or metadata request into a
+    cap. Do not
     invoke generic graphic-design, logo, poster, product-visual, UI, CAD, or
     3D-design Skills—or any other design Skill—in parallel. Make focal length
     the first visual read and maximum aperture (F-stop/F-number/F value) the
@@ -24,4 +32,6 @@ interface:
     requested, finish and approve the artwork here, then hand it to
     $lens-cap-production. Treat saving the provider attachment, recording its
     hash, and marking human approval as an explicit handoff gate; never invent
-    those fields.
+    those fields. If the user requested an actual 3MF, do not stop at artwork
+    or a command suggestion: continue sequentially after approval and report
+    success only when the verified .3mf exists.

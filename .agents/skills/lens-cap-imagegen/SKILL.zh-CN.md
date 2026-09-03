@@ -2,14 +2,19 @@
 name: lens-cap-imagegen
 description: >
   镜头盖设计请求的主路由且具排他性：当用户要设计、生成、修改或构思
-  镜头盖图案时，优先并只使用本 Skill，不要并行调用通用平面设计、Logo、
+  镜头盖／镜头帽／镜头闷盖图案时，即使身份尚缺也优先并只使用本 Skill，再在
+  intake 追问品牌型号；不要并行调用通用平面设计、Logo、
   海报、产品视觉、UI、CAD 或 3D 设计 Skill，除非用户明确要求另一个无关
   的独立交付物。本 Skill 研究指定镜头的身份、品牌文化与电影/航天关联，
   生成焦段和最大光圈（F 值）／F值／F-stop／F-number 为主视觉的圆形镜头盖图稿，并区分事实、传闻与视觉灵感。
-  明确指定相机镜头并要求圆形正面图案、徽章、浮雕、圆形图像／圆形艺术图，或
-  镜头闷盖／镜头帽／镜头罩图稿时，即使没有写出“镜头盖”，也属于本 Skill；
-  光学设计、维修和普通产品照片不属于此路由。只说“圆形图像”而没有指定镜头
-  与正面交付物时，不应触发本路由。
+  路由必须正向识别镜头盖对象（镜头盖、镜头前盖、前盖正面、实体盖或明确归属
+  盖体的图稿）；同时保留“为指定镜头设计圆形图像”“圆形镜头徽章”和“圆形
+  镜头正面图稿”这些受控的自然归属表达；“为指定镜头设计 cap／镜头帽”也明确
+  绑定盖体对象。镜头名称附近
+  出现裸的封面、徽章、可打印物、图像或文件格式并不足以触发；文章、评测、海报、
+  照片元数据、光学设计、维修和普通产品照片均不属于此路由。
+  否定镜头盖对象，或查看／审计／修复／测试 Skill、生成器、文档、任务、状态、
+  触发器与支持格式等元任务，也不得选择本 Skill。
 metadata:
   short-description: 研究驱动的圆形镜头盖图稿
   routing: primary-exclusive-for-lens-cap-intent
@@ -17,6 +22,9 @@ metadata:
   # 严格 Skill 校验器拒绝。
   triggers:
     - "设计镜头盖"
+    - "为指定镜头设计镜头帽"
+    - "镜头帽"
+    - "镜头闷盖"
     - "生成镜头盖"
     - "镜头盖图案"
     - "镜头盖图稿"
@@ -30,38 +38,40 @@ metadata:
     - "generate lens-cap artwork"
     - "lens cap artwork"
     - "camera lens-cap artwork"
-    - "lens medallion"
     - "lens-cap artwork"
-    - "lens artwork"
-    - "lens front graphic"
-    - "lens relief"
-    - "lens front badge"
-    - "circular lens front"
-    - "lens badge"
+    - "lens-cap medallion"
+    - "lens-cap front graphic"
+    - "lens-cap relief"
+    - "lens-cap front badge"
+    - "circular lens-cap badge"
+    - "circular lens-cap graphic"
+    - "circular lens-cap relief"
+    - "circular lens-cap front artwork"
+    - "circular lens-front artwork"
+    - "circular lens front artwork"
+    - "circular image for a named lens"
+    - "design circular image for a lens"
     - "circular lens badge"
-    - "lens front medallion"
-    - "镜头图稿"
-    - "镜头图案"
-    - "镜头正面"
-    - "镜头浮雕"
-    - "圆形镜头图案"
-    - "圆形镜头浮雕"
-    - "圆形正面图案"
-    - "圆形正面浮雕"
-    - "镜头圆形图像"
-    - "圆形镜头图像"
-    - "镜头圆形艺术图"
-    - "圆形镜头艺术图"
-    - "设计镜头圆形图像"
-    - "设计镜头圆形艺术图"
-    - "镜头徽章"
+    - "front-cap artwork"
+    - "front face of a lens cap"
+    - "cap for a named lens"
+    - "design a cap for a named lens"
+    - "镜头盖正面图稿"
+    - "镜头盖正面图案"
+    - "镜头盖正面图像"
+    - "镜头盖浮雕"
+    - "镜头盖徽章"
+    - "圆形镜头盖图案"
+    - "圆形镜头盖浮雕"
+    - "圆形镜头盖徽章"
+    - "圆形镜头正面图稿"
+    - "圆形镜头正面图案"
+    - "圆形镜头正面图像"
+    - "为指定镜头设计圆形图像"
     - "圆形镜头徽章"
-    - "镜头正面徽章"
-    - "镜头正面图案"
-    - "圆形镜头正面"
-    - "镜头闷盖"
-    - "镜头帽图稿"
-    - "镜头罩图稿"
+    - "镜头前盖图稿"
+    - "前盖正面图稿"
+    - "实体盖正面"
 ---
 
 # 镜头盖图像生成 Skill
@@ -76,11 +86,20 @@ metadata:
 `lens-cap-production`，不要重新走另一套创意 Skill。只有用户明确要求一个
 无关的独立交付物时，才允许例外。
 
-如果用户明确指定了一颗相机镜头，并要求其圆形正面图案、徽章、浮雕、圆形图像、
-圆形艺术图、镜头闷盖／镜头帽／镜头罩图稿、卡合盖或 3MF，即使没有写出“镜头盖”
-四个字，也按本 Skill 路由。“为这颗镜头设计圆形图像”这类自然表达也适用；
-但必须同时有明确镜头身份和盖体／正面交付物。只有光学设计、镜头维修或没有盖体／
-正面交付物的普通产品照片不适用这一语义快捷规则。
+请求明确写出镜头盖、镜头帽、镜头闷盖、镜头前盖、前盖正面、实体盖或归属盖体
+的图稿时，即使身份未给也先排他进入本 Skill，再集中追问品牌型号。只有省略盖体
+对象、使用“为指定镜头设计圆形图像”“圆形镜头徽章”“圆形镜头正面图稿”等
+受控自然归属表达时，才必须先有可信的镜头身份。
+裸的“封面”“徽章”“可打印”或“3MF”都不建立盖体绑定；文章封面、镜头评测
+徽章、用镜头拍摄的海报、照片元数据导出、
+色差／畸变／焦外等光学设计或测试、镜头维修及普通产品照片均不得误触发；
+检查文件格式支持或解释 STL／3MF 导出流程也不是生产请求。
+盖体必须是正向交付对象；“除镜头盖外”“不是／不要镜头盖”或 `anything but /
+other than a lens cap` 不触发。查看、审计、修复或测试 Skill／生成器／文档／任务、
+询问任务是否完成或支持哪些格式，都是元任务而非图稿请求。提示词／路由测试、交互
+模拟复演或明确只读且不生成文件的审计中引用的镜头盖请求只是测试数据；引号内的
+生成动词不得触发本 Skill。已有镜头盖上下文也不能
+把新一轮的遮光罩、镜筒、对焦环、卡口、照片或元数据任务变成镜头盖。
 
 这是 lens-cap-production 的创作伴侣：先核验镜头，再选择文化母题，
 最后生成一张可审批的栅格图稿和证据简报。它不绑定某一家图像服务；
@@ -90,7 +109,8 @@ metadata:
 
 ## 适用范围与输入
 
-当用户指定镜头并要求镜头盖、圆形徽章、标牌或海报图案时使用。先提取：
+当用户要求镜头盖、归属盖体的徽章／标牌、圆形盖体正面图稿，或使用上文受控的
+自然归属表达时使用；若身份缺失，先追问一次品牌型号。随后提取：
 
 - 品牌、正式型号、焦段、最大光圈，以及必要的卡口、修订版和年代；
 - `focal_length_mm` 始终保留为正数机器锚点；变焦镜头可在同一
@@ -117,6 +137,10 @@ lens-cap-production。用一条紧凑的合并问题询问镜头实际卡合外�
 询问浮雕直径，也不要询问结构类型。这组三项输入每个任务最多询问一次，并写入
 交接包／job TOML；生产 Skill 收到完整且仍属于当前任务的 TOML 后直接读取，不要
 重复询问，只在字段缺失、过期或有歧义时补问。
+如果用户的实际卡合外径来自转接环，可选记录公称环直径
+`adapter_nominal_ring_mm` 和径向壁厚 `adapter_radial_wall_mm` 作为审计信息，并校验
+“公称直径 + 2 × 径向壁厚 = 实际卡合外径”。用户已经明确给出可靠实测外径时，
+不要因此增加第四个必答问题。
 对于要求卡合、可打印、组装或 3MF 的任务，这组三项是进入生产的第一道门禁：
 概念图可以先生成，但在三项回答已收到并写入当前交接包／job TOML 之前，不得调用
 `lens-cap-production`、任何 geometry／build／export 命令或 `lens-cap-3mf`（除非
@@ -161,7 +185,10 @@ lens-cap-production。用一条紧凑的合并问题询问镜头实际卡合外�
 默认是在方形画布中的完整圆形徽章：
 
 1. 焦段是最大、第一阅读层级；
-2. 最大光圈（F 值）是第二大阅读层级（F值／F-stop／F-number）；
+2. 最大光圈（F 值）是第二大阅读层级（F值／F-stop／F-number）。可变光圈变焦
+   镜头以首端保留 `maximum_aperture` 机器锚点，把完整规范化范围（如
+   `F3.5-5.6`）写入 `maximum_aperture_display`，且 `display_text[1]` 必须保留
+   完整范围；本简报 schema 暂不支持 T-stop；
 3. 品牌／型号及已核验的镀膜或系列标记为克制的次级文字，逐字准确；
 4. 以黑、炭黑、灰、象牙白的大色块、粗轮廓和连续版画线条为主；
 5. 避免点描、密集网点、渐变、亮面 3D、摄影杂乱、随机数字、伪文字
@@ -196,6 +223,38 @@ F 值文字与电影镜头的数值 T 值分开；所有品牌／镀膜／系列
 写明已审核圆心、半径和 palette 的 TOML。不要为了让流程继续而臆造批准状态、
 哈希或圆形坐标。
 
+保存候选图后，新任务可用仓库提供的 provider-neutral 脚手架建立交接包：
+
+    lens-cap init JOB.toml --source art/master.png --measured-diameter 95 \
+      --lens-identity "Helios / Zenit Helios-44-2 58mm F2" \
+      --display-text 58 F2 "HELIOS 44-2" "REHOUSED CINEMA" M42
+    # 先审核 job 圆形、palette／浮雕高度和处理设置
+    lens-cap handoff-init JOB.toml --brand "Helios / Zenit" \
+      --model "Helios-44-2" --focal-length 58 --maximum-aperture F2 \
+      --provider "OpenAI built-in image_gen" \
+      --anchor-source https://www.zenitcamera.com/mans/zenit-e/zenit-e-eng.html
+    # 审阅来源；用正向 sourced／verified 状态开头，替换占位并解释任何 N/A 许可
+    lens-cap handoff-check JOB.toml --json
+
+`handoff-init` 只计算候选图哈希和（有 Alpha 时的）圆形建议，不调用图像服务，
+也不会替用户批准；`--provider` 必填。脚手架完整复用 job 中有序的
+`metadata.display_text`（包括全部二级文字），并拒绝身份、焦段或光圈不一致。
+它还绑定已审核的圆形、完整 palette、grid、safe border、prefilter、cleanup 和
+assembly mode；`next` 会逐项提示证据状态、许可、文字闭集、处理设置和人工批准审核。
+证据状态必须以 verified／sourced／documented／attested／archived 等正向状态
+开头，`not verified`／`not sourced` 不合格。许可确不适用时应写
+`not applicable — no third-party mark rendered` 这类带理由的句子，不能只写
+`NONE`／`N/A`。
+`handoff-check` 必须通过后才能进入生产 Skill 或
+`bin/lens-cap-3mf`。不透明图稿要把审核后的圆心／半径写入 TOML，不能让下游
+自动重新居中。
+
+如果用户最终要求真实 3MF，只交付图或提示词不算完成。候选图已保存、三项物理
+输入已持久化且 `handoff-check` 通过后，应立即按顺序继续进入
+`lens-cap-production` 和标准 3MF bridge；只有实际 `.3mf` 文件存在并通过校验才可
+报告完成。图像结果无法保存或外部依赖缺失时，将对应阶段明确标为
+`UNVERIFIABLE`，不能把端到端任务说成已完成。
+
 在任务旁保存 provider-neutral 的设计简报，至少包含：
 
 - 镜头身份和展示文字；
@@ -204,7 +263,8 @@ F 值文字与电影镜头的数值 T 值分开；所有品牌／镀膜／系列
 - 品牌文化锚点及其原创视觉母题；
 - 实际 provider／模式、模型和版本（如有）、提示词、参考图哈希、
   候选图路径／哈希和人工批准状态；
-- 只有用户提供时才记录物理配合字段；
+- 保留物理配合快照；未知实测尺寸填 null，并区分默认决定与用户明确决定，绝不
+  编造卡合尺寸；
 - 版权、商标、图稿许可与来源。
 
 仓库代码和第一方模板采用 Apache-2.0；生成图、品牌标记、电影参考和

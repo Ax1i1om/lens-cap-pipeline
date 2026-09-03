@@ -1,10 +1,12 @@
 {
   "schema_version": 1,
+  "binding_mode": "shared_artwork_variants",
   "job_slug": "helios-44-2-rehouse",
   "lens_identity": {
     "brand": "Helios / Zenit",
     "model": "Helios-44-2",
     "focal_length_mm": 58,
+    "focal_length_display": "58",
     "maximum_aperture": "F2",
     "mount_or_revision": "M42 original; rehoused cinema variant may use PL",
     "era": "Soviet-era still lens, later cinema rehousings"
@@ -54,17 +56,18 @@
     },
     {
       "claim_kind": "manufacturer_culture",
-      "subject_scope": "IronGlass rehousing practice",
-      "evidence_state": "sourced industry description",
+      "subject_scope": "Zenit / Helios Soviet lens system",
+      "identity_binding": {"brand": "Helios / Zenit", "scope": "brand"},
+      "evidence_state": "sourced period manual",
       "source_role": "context",
-      "source": "https://www.vintagelensesforvideo.com/helios44cine/",
-      "summary": "The rehousing maker describes a cinema-oriented Helios-44-2 conversion; the housing is the modern mechanical layer around vintage optics.",
+      "source": "https://www.zenitcamera.com/mans/zenit-e/zenit-e-eng.html",
+      "summary": "The period Zenit manual places the Helios-44-2 within a practical interchangeable-camera system.",
       "render_role": "visual_metaphor",
-      "anchor_context": "Rehousing as modular mechanical renewal.",
-      "motif_commitment": "symbolic",
-      "anchor_visual_motif": "bold registration blocks and clean segmented rings",
-      "recognition_cue": "modular blocks remain recognizable as a mechanical system",
-      "qualifier": "vendor description, not a claim about a specific production"
+      "anchor_context": "Manufacturer-system culture becomes measured modular optical engineering.",
+      "motif_commitment": "structural",
+      "anchor_visual_motif": "bold calibration blocks and clean segmented rings",
+      "recognition_cue": "the modular system grid remains recognizable without lore words",
+      "qualifier": "period manual supports system identity, not a specific production"
     }
   ],
   "approved_references": [
@@ -88,17 +91,45 @@
     "measured_diameter_mm": null,
     "face_target_mm": null,
     "foam_liner_status": "none",
+    "liner_material": null,
     "liner_thickness_mm": null,
     "compression_fraction": 0.0,
+    "compression_is_assumption": false,
+    "wall_thickness_mm": 2.4,
+    "bottom_thickness_mm": 2.0,
+    "side_height_mm": 14.0,
+    "bare_clearance_mm": 0.4,
     "friction_ribs_enabled": true,
     "friction_ribs_explicit": false,
     "friction_rib_profile": "light_tapered",
+    "friction_rib_profile_derived": false,
+    "friction_rib_profile_reference_cavity_mm": null,
     "friction_rib_count": 12,
     "friction_rib_protrusion_mm": 0.1,
     "friction_rib_width_mm": 1.2,
     "friction_rib_height_mm": 8.0,
     "friction_rib_start_mm": 1.0,
-    "nozzle_mm": 0.2
+    "retention_strategy": "bare_wall_plus_neutral_ribs",
+    "nozzle_mm": 0.2,
+    "adapter_nominal_ring_mm": null,
+    "adapter_radial_wall_mm": null,
+    "adapter_derived_mating_diameter_mm": null
+  },
+  "job_binding": {
+    "metadata_lens_identity": "Helios-44-2 58mm F2, rehoused cinema test",
+    "circle": {"center_px": [626.5, 626.5], "radius_px": 626.5, "allow_outside": false},
+    "palette": {
+      "black": {"index": 0, "rgb": [17, 18, 17], "role": "base", "height_mm": 0.0, "required": true},
+      "gray": {"index": 1, "rgb": [116, 116, 113], "role": "relief", "height_mm": 0.4, "required": true},
+      "ivory": {"index": 2, "rgb": [242, 231, 211], "role": "relief", "height_mm": 0.6, "required": true}
+    },
+    "artwork_process": {
+      "grid_size": 385,
+      "safe_border_mm": 0.25,
+      "prefilter": {"name": "none", "size": 3, "radius": 0.0},
+      "cleanup": {"enabled": true, "max_area_px": 8, "max_dimension_px": 3, "ring_px": 2, "dominance": 0.6, "apply_to": ["relief"]},
+      "assembly_mode": "auto"
+    }
   },
   "provenance": {
     "artwork_license": "OpenAI-generated test artwork; verify current provider terms before redistribution",

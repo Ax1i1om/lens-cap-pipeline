@@ -1,5 +1,6 @@
 {
   "schema_version": 1,
+  "binding_mode": "single_job",
   "job_slug": "replace-with-lens-slug",
   "lens_identity": {
     "brand": "REPLACE",
@@ -7,6 +8,7 @@
     "focal_length_mm": null,
     "focal_length_display": null,
     "maximum_aperture": "REPLACE",
+    "maximum_aperture_display": null,
     "mount_or_revision": null,
     "era": null
   },
@@ -31,6 +33,7 @@
     {
       "claim_kind": "brand_culture",
       "subject_scope": "brand",
+      "identity_binding": {"brand": "REPLACE", "scope": "brand"},
       "evidence_state": "verified",
       "source_role": "proof",
       "source": "URL OR ARCHIVE IDENTIFIER",
@@ -60,22 +63,54 @@
     "measured_diameter_mm": null,
     "face_target_mm": null,
     "foam_liner_status": null,
+    "liner_material": null,
     "liner_thickness_mm": null,
     "compression_fraction": null,
+    "compression_is_assumption": null,
+    "wall_thickness_mm": null,
+    "bottom_thickness_mm": null,
+    "side_height_mm": null,
+    "bare_clearance_mm": null,
     "friction_ribs_enabled": true,
     "friction_ribs_explicit": false,
     "friction_rib_profile": "light_tapered",
+    "friction_rib_profile_derived": null,
+    "friction_rib_profile_reference_cavity_mm": null,
     "friction_rib_count": 12,
     "friction_rib_protrusion_mm": 0.1,
     "friction_rib_width_mm": 1.2,
     "friction_rib_height_mm": 8.0,
     "friction_rib_start_mm": 1.0,
-    "nozzle_mm": null
+    "retention_strategy": null,
+    "nozzle_mm": null,
+    "adapter_nominal_ring_mm": null,
+    "adapter_radial_wall_mm": null,
+    "adapter_derived_mating_diameter_mm": null
+  },
+  "job_binding": {
+    "metadata_lens_identity": null,
+    "circle": {
+      "center_px": null,
+      "radius_px": null,
+      "allow_outside": false
+    },
+    "palette": {
+      "black": {"index": 0, "rgb": [17, 18, 17], "role": "base", "height_mm": 0.0, "required": true},
+      "gray": {"index": 1, "rgb": [116, 116, 113], "role": "relief", "height_mm": 0.4, "required": true},
+      "ivory": {"index": 2, "rgb": [242, 231, 211], "role": "relief", "height_mm": 0.6, "required": true}
+    },
+    "artwork_process": {
+      "grid_size": null,
+      "safe_border_mm": null,
+      "prefilter": {"name": "none", "size": 3, "radius": 0.0},
+      "cleanup": {"enabled": true, "max_area_px": 8, "max_dimension_px": 3, "ring_px": 2, "dominance": 0.6, "apply_to": ["relief"]},
+      "assembly_mode": "auto"
+    }
   },
   "provenance": {
     "artwork_license": "REPLACE",
-    "brand_mark_license": "REPLACE OR NONE",
-    "film_or_history_permissions": "REPLACE OR NONE",
+    "brand_mark_license": "REPLACE with permission status, or state that no brand mark is used",
+    "film_or_history_permissions": "REPLACE with permission status, or state that no protected film/history imagery is used",
     "notes": "Keep third-party terms separate from the Apache-2.0 code licence."
   }
 }

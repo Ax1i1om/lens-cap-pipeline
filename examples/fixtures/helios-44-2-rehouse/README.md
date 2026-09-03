@@ -41,21 +41,33 @@ diameter or a structure choice.
 
 ## Retained 3MF outputs
 
-`artifacts/` contains outputs generated from the fixture's current SCAD/STL
-chain, never from a user-supplied 3MF:
+`artifacts/` contains historical compatibility outputs generated from this
+fixture's SCAD/STL chain, never from a user-supplied 3MF. Unlike the current v2
+and v3 matrices, this retired baseline does not retain canonical
+`*-3mf-release.json` reports, so regenerate it before making a current release
+claim:
 
 | file | route | verification |
 | --- | --- | --- |
 | `helios-44-2-rehouse-95mm-native.3mf` | OpenSCAD `Manifold` native Core 3MF | ZIP/XML/mesh indices pass; unsliced |
 | `helios-44-2-rehouse-82mm-native.3mf` | OpenSCAD `Manifold` native Core 3MF | ZIP/XML/mesh indices pass; unsliced |
 | `helios-44-2-rehouse-77mm-native.3mf` | OpenSCAD `Manifold` native Core 3MF | ZIP/XML/mesh indices pass; unsliced |
-| `helios-44-2-rehouse-95mm-bambu-slice.3mf` | Bambu Studio A1 mini, 0.2 mm, 0.10 mm process | embedded non-empty G-code; preview still requires human review |
+| `helios-44-2-rehouse-95mm-bambu-slice.3mf` | historical Bambu Studio compatibility snapshot | embedded G-code; not current profile-provenance or release evidence |
 | `helios-44-2-rehouse-95mm-assembly-standard.3mf` | dependency-free STL → Core adapter | ZIP/XML/mesh indices pass; explicit non-manifold audit |
 | `helios-44-2-rehouse-82mm-assembly-standard.3mf` | dependency-free STL → Core adapter | ZIP/XML/mesh indices pass; explicit non-manifold audit |
 | `helios-44-2-rehouse-77mm-assembly-standard.3mf` | dependency-free STL → Core adapter | ZIP/XML/mesh indices pass; explicit non-manifold audit |
 
-Each file has a `.manifest.json` sidecar with input/output hashes, tool banner,
-portable command, package counts, and (for sliced output) G-code byte count.
+Each file has a `.manifest.json` sidecar with the input/output hashes, tool
+banner, portable command, and checks recorded when that snapshot was created.
+The historical Bambu sidecar records only basic package/G-code presence and
+byte count. It predates profile input/post-run hashes, inheritance resolution,
+`effective_profile_audit`, and the persisted semantic
+`verification.slice_audit`; its stored 0.10 mm print-settings label must not be
+read as proof because the embedded effective/G-code layer height is 0.20 mm.
+Use the ImageGen v3 Bambu export manifest for current multipart profile
+provenance and `tools/3mf_adapter/fixtures/fixture-cube-bambu-sliced.3mf` for
+current semantic G-code-gate evidence; generate a fresh job-specific slice with
+all three profiles before making a current claim about this fixture.
 Native OpenSCAD output avoids the coincident/internal-face ambiguity that can
 appear when a color-relief assembly is flattened to a single STL. The
 dependency-free `standard` adapter remains available as an explicit diagnostic
@@ -81,9 +93,16 @@ and TOML jobs into a temporary directory, so old outputs or conversation
 history cannot influence the result:
 
 ```sh
-python3 scripts/smoke_rehouse.py --bambu never --json
-# On a host with OpenSCAD and compatible Bambu profiles:
-python3 scripts/smoke_rehouse.py --bambu auto --require-external --keep-workdir --json
+python3 scripts/smoke_rehouse.py \
+  --fixture examples/fixtures/helios-44-2-rehouse \
+  --bambu never --json
+# On a host with OpenSCAD and compatible Bambu profiles, create new evidence:
+python3 scripts/smoke_rehouse.py \
+  --fixture examples/fixtures/helios-44-2-rehouse \
+  --bambu slice --require-external \
+  --machine-profile /path/to/machine.json \
+  --process-profile /path/to/process.json \
+  --filament-profile /path/to/filament.json --keep-workdir --json
 ```
 
 To refresh the retained artifacts explicitly, pass

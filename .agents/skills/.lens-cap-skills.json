@@ -1,27 +1,27 @@
 {
-  "manifest_sha256": "39dc1124208f5d7bb989a8eef425766a5a694d56acdde434687c81735fc2444b",
+  "manifest_sha256": "115da3cace0fb6a78d25f889cbf2897ae183b5dae4a489653d585be660d20961",
   "project": "lens-cap-pipeline",
   "project_version": "0.1.0a2",
   "schema_version": 1,
   "skills": {
     "lens-cap-imagegen": {
       "files": {
-        "SKILL.md": "e61eced9124b7c0777df585c7431b0b595c30e76dcea4c481571f01a0f6d66ab",
-        "SKILL.zh-CN.md": "d548870c4e1e7641fae1f4902ea5e6c4c032c8932d74979b4a6c644031a6166b",
-        "agents/openai.yaml": "84c4902cdb3d3ef82cfa8b94a75c92276b2a8474165330a1b6bf29f71c5eed80"
+        "SKILL.md": "3a8865ade7f6bba23cd30ef9204061feca6c4a2e43a6b9d4ee84c4aaae24d7ed",
+        "SKILL.zh-CN.md": "eb60a01de4eeff1742c03c3a6f1322da76873173877967e4acc4cc03886efc6d",
+        "agents/openai.yaml": "03da44233e067fde796190b93ec32b73768700d27b250b3bc71ec0e832e019bf"
       },
       "source_dir": "skills/lens-cap-imagegen",
-      "tree_sha256": "8c990b0290a0a701544036ee431d9ceae67cad3971a8989f04d5daa04a9ad21d",
+      "tree_sha256": "d5f44c90d1b24eaa3160263f9e373b970938755628e50377ef79318bcf620f0e",
       "version": "0.1.0a2"
     },
     "lens-cap-production": {
       "files": {
-        "SKILL.md": "21ed1d499d8578cfb8902575b4cf961606f60924fff17816b5288262493a6114",
-        "SKILL.zh-CN.md": "fd533c47d41c80e4ff61cd6cbd3d411107c42f378c58eab713a7168452079e71",
-        "agents/openai.yaml": "43afab4b37d01a892d6df6858758026cda0180fb55de28179d900d09d2b6866f"
+        "SKILL.md": "686a5b6dab2d924cf5d7b3c0e4b401b97353500cb16706d80a11c623b260af0a",
+        "SKILL.zh-CN.md": "0484dde700d61c86deec7930b61a7fbb3ced775cfb0413252ba82dad5493efdf",
+        "agents/openai.yaml": "c5af8df954dc21f2e37575cd5c004f87cde6a32cd9af8bec582337111415dd21"
       },
       "source_dir": "skills/lens-cap-production",
-      "tree_sha256": "7dfb34517ee3457456812bc3c5f83ecd3e46be8915a13dec923ad764f30a34d6",
+      "tree_sha256": "330f62fc29fe6ebfbff34bd0b51c2f256e536d3a40742fe9e9fa8dc1e11c9071",
       "version": "0.1.0a2"
     }
   }

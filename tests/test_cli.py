@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
@@ -7,6 +8,36 @@ from PIL import Image, ImageDraw
 
 from lens_cap_pipeline.cli import main
 from lens_cap_pipeline.config import load_config
+
+
+def _approve_design_brief(path: Path) -> dict:
+    """Replace every human-review placeholder needed by the strict gate."""
+
+    brief = json.loads(path.read_text(encoding="utf-8"))
+    brief["generation"]["approved"] = True
+    brief["generation"]["approval_note"] = (
+        "Human reviewer confirmed the exact text, hierarchy, circular composition, and source scope."
+    )
+    brief["anchors"][0].update(
+        {
+            "evidence_state": "verified_from_cited_source",
+            "summary": "The cited manufacturer catalog identifies this lens and system.",
+            "anchor_context": "Manufacturer-system evidence only; no film association is claimed.",
+            "anchor_visual_motif": "Original modular geometry derived from the documented system context.",
+            "recognition_cue": "The ordered model text and modular system grid remain recognizable.",
+            "qualifier": "Manufacturer catalog evidence; visual geometry is original.",
+        }
+    )
+    brief["provenance"].update(
+        {
+            "artwork_license": "Human-approved original artwork for this job.",
+            "brand_mark_license": "Text identification only; no copied logo artwork.",
+            "film_or_history_permissions": "No film material used; cited catalog facts only.",
+            "notes": "Third-party marks and sources remain separate from the code licence.",
+        }
+    )
+    path.write_text(json.dumps(brief, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    return brief
 
 
 def test_init_creates_a_portable_config(tmp_path: Path) -> None:
@@ -31,6 +62,893 @@ def test_init_creates_a_portable_config(tmp_path: Path) -> None:
     assert 'job_slug = "demo"' in config.read_text(encoding="utf-8")
     assert main(["process", str(config)]) == 0
     assert main(["validate", str(config)]) == 0
+
+
+def test_handoff_init_writes_hash_and_reviewable_circle_scaffold(tmp_path: Path, capsys) -> None:
+    source = tmp_path / "master.png"
+    image = Image.new("RGBA", (64, 64), (0, 0, 0, 0))
+    ImageDraw.Draw(image).ellipse((4, 4, 59, 59), fill=(17, 18, 17, 255))
+    image.save(source)
+    config_path = tmp_path / "job.toml"
+    assert main(
+        [
+            "init",
+            str(config_path),
+            "--source",
+            str(source),
+            "--measured-diameter",
+            "95",
+            "--lens-identity",
+            "Example Prime 50mm F1.4",
+            "--display-text",
+            "50",
+            "F1.4",
+        ]
+    ) == 0
+    assert main(
+        [
+            "handoff-init",
+            str(config_path),
+            "--brand",
+            "Example",
+            "--model",
+            "Prime 50mm F1.4",
+            "--focal-length",
+            "50",
+            "--maximum-aperture",
+            "F1.4",
+            "--provider",
+            "test-image-provider",
+            "--anchor-source",
+            "https://example.test/catalog",
+        ]
+    ) == 0
+    brief = json.loads((tmp_path / "design-brief.json").read_text(encoding="utf-8"))
+    assert brief["generation"]["approved"] is False
+    assert len(brief["generation"]["candidate_sha256"]) == 64
+    assert brief["circle_suggestion"]["method"] == "alpha_bbox_suggestion_review_required"
+    assert brief["physical_fit"]["measured_diameter_mm"] == 95.0
+
+
+def test_handoff_init_keeps_custom_brief_path_in_follow_up_commands(tmp_path: Path, capsys) -> None:
+    source = tmp_path / "master.png"
+    image = Image.new("RGB", (64, 64), (17, 18, 17))
+    image.save(source)
+    config_path = tmp_path / "jobs" / "demo" / "job.toml"
+    assert main(
+        [
+            "init",
+            str(config_path),
+            "--source",
+            str(source),
+            "--measured-diameter",
+            "95",
+            "--lens-identity",
+            "Example Prime 50mm F1.4",
+            "--display-text",
+            "50",
+            "F1.4",
+        ]
+    ) == 0
+    capsys.readouterr()
+    brief_path = tmp_path / "handoffs" / "reviewed-brief.json"
+    assert main(
+        [
+            "handoff-init",
+            str(config_path),
+            "--brief",
+            str(brief_path),
+            "--brand",
+            "Example",
+            "--model",
+            "Prime",
+            "--focal-length",
+            "50",
+            "--maximum-aperture",
+            "F1.4",
+            "--provider",
+            "test-image-provider",
+        ]
+    ) == 0
+    report = json.loads(capsys.readouterr().out)
+    assert brief_path.is_file()
+    assert all(str(brief_path) in step for step in report["next"][-2:])
+    assert "--brief" in report["next"][-1]
+
+
+def test_handoff_check_rejects_unapproved_scaffold(tmp_path: Path, capsys) -> None:
+    source = tmp_path / "master.png"
+    image = Image.new("RGB", (64, 64), (17, 18, 17))
+    image.save(source)
+    config_path = tmp_path / "job.toml"
+    assert main(
+        [
+            "init",
+            str(config_path),
+            "--source",
+            str(source),
+            "--measured-diameter",
+            "95",
+            "--lens-identity",
+            "Example Prime 50mm F1.4",
+            "--display-text",
+            "50",
+            "F1.4",
+        ]
+    ) == 0
+    assert main(
+        [
+            "handoff-init",
+            str(config_path),
+            "--brand",
+            "Example",
+            "--model",
+            "Prime",
+            "--focal-length",
+            "50",
+            "--maximum-aperture",
+            "F1.4",
+            "--provider",
+            "test-image-provider",
+        ]
+    ) == 0
+    assert main(["handoff-check", str(config_path), "--json"]) == 2
+    assert "approved" in capsys.readouterr().err
+
+
+def test_init_to_approved_handoff_round_trips_identity_and_closed_text(
+    tmp_path: Path, capsys
+) -> None:
+    """A fresh CLI user can reach the strict handoff gate without hidden edits."""
+
+    source = tmp_path / "jobs" / "mamiya" / "art" / "master.png"
+    source.parent.mkdir(parents=True)
+    image = Image.new("RGBA", (96, 96), (0, 0, 0, 0))
+    ImageDraw.Draw(image).ellipse((6, 6, 89, 89), fill=(17, 18, 17, 255))
+    image.save(source)
+    config_path = tmp_path / "jobs" / "mamiya" / "job.toml"
+    display_text = ["80", "F1.9", "MAMIYA", "SEKOR C", "645 SYSTEM"]
+
+    assert main(
+        [
+            "init",
+            str(config_path),
+            "--source",
+            str(source),
+            "--measured-diameter",
+            "85",
+            "--adapter-nominal-ring",
+            "80",
+            "--adapter-radial-wall",
+            "2.5",
+            "--foam-thickness",
+            "1.5",
+            "--job-slug",
+            "mamiya-sekor-c-80-f1-9-cap",
+            "--lens-identity",
+            "Mamiya-Sekor C 80mm F1.9",
+            "--display-text",
+            *display_text,
+        ]
+    ) == 0
+    config = load_config(config_path)
+    assert config.metadata["lens_identity"] == "Mamiya-Sekor C 80mm F1.9"
+    assert config.metadata["display_text"] == display_text
+
+    capsys.readouterr()
+    assert main(
+        [
+            "handoff-init",
+            str(config_path),
+            "--brand",
+            "Mamiya",
+            "--model",
+            "Mamiya-Sekor C 80mm F1.9",
+            "--focal-length",
+            "80",
+            "--maximum-aperture",
+            "F1.9",
+            "--provider",
+            "test-image-provider",
+            "--anchor-source",
+            "https://example.test/mamiya-m645-catalog",
+        ]
+    ) == 0
+    handoff_report = json.loads(capsys.readouterr().out)
+    assert any("evidence_state" in item for item in handoff_report["next"])
+    assert any("licence" in item.casefold() for item in handoff_report["next"])
+    assert any("display_text" in item for item in handoff_report["next"])
+
+    brief_path = tmp_path / "jobs" / "mamiya" / "design-brief.json"
+    brief = json.loads(brief_path.read_text(encoding="utf-8"))
+    assert brief["display_text"] == display_text
+    assert brief["allowed_text"] == display_text
+    assert brief["job_binding"]["metadata_lens_identity"] == "Mamiya-Sekor C 80mm F1.9"
+    _approve_design_brief(brief_path)
+
+    assert main(["handoff-check", str(config_path), "--json"]) == 0
+    check = json.loads(capsys.readouterr().out)
+    assert check["status"] == "passed"
+    assert check["display_text"] == display_text
+    assert check["job_identity_binding_checked"] is True
+    assert check["job_circle_binding_checked"] is True
+    assert check["job_palette_binding_checked"] is True
+    assert check["job_artwork_process_binding_checked"] is True
+    assert "adapter_derived_mating_diameter_mm" in check["physical_fit_checked"]
+
+
+def test_handoff_init_rejects_display_identity_disagreement(tmp_path: Path, capsys) -> None:
+    source = tmp_path / "master.png"
+    Image.new("RGB", (64, 64), (17, 18, 17)).save(source)
+    config_path = tmp_path / "job.toml"
+    assert main(
+        [
+            "init",
+            str(config_path),
+            "--source",
+            str(source),
+            "--measured-diameter",
+            "52",
+            "--lens-identity",
+            "Zeiss Planar 50mm F1.4",
+            "--display-text",
+            "50",
+            "F1.4",
+            "PLANAR",
+        ]
+    ) == 0
+    capsys.readouterr()
+    assert main(
+        [
+            "handoff-init",
+            str(config_path),
+            "--brand",
+            "Zeiss",
+            "--model",
+            "Planar 50mm F1.4",
+            "--focal-length",
+            "58",
+            "--maximum-aperture",
+            "F1.4",
+            "--provider",
+            "test-image-provider",
+        ]
+    ) == 2
+    assert "metadata.display_text[0]" in capsys.readouterr().err
+    assert not (tmp_path / "design-brief.json").exists()
+
+
+@pytest.mark.parametrize(
+    "aperture_args",
+    [
+        ["--maximum-aperture", "F3.5-5.6"],
+        [
+            "--maximum-aperture",
+            "F3.5",
+            "--maximum-aperture-display",
+            "F3.5–5.6",
+        ],
+    ],
+)
+def test_variable_aperture_handoff_preserves_full_second_read(
+    tmp_path: Path, capsys, aperture_args: list[str]
+) -> None:
+    source = tmp_path / "master.png"
+    Image.new("RGB", (64, 64), (17, 18, 17)).save(source)
+    config_path = tmp_path / "job.toml"
+    assert main(
+        [
+            "init",
+            str(config_path),
+            "--source",
+            str(source),
+            "--measured-diameter",
+            "67",
+            "--lens-identity",
+            "Sigma Zoom 28-70mm F3.5-5.6",
+            "--display-text",
+            "28–70",
+            "F3.5–5.6",
+            "SIGMA ZOOM",
+        ]
+    ) == 0
+    assert main(
+        [
+            "handoff-init",
+            str(config_path),
+            "--brand",
+            "Sigma",
+            "--model",
+            "Zoom 28-70mm F3.5-5.6",
+            "--focal-length",
+            "28",
+            "--focal-length-display",
+            "28–70mm",
+            *aperture_args,
+            "--provider",
+            "test-image-provider",
+            "--anchor-source",
+            "https://example.test/sigma-catalog",
+        ]
+    ) == 0
+
+    brief_path = tmp_path / "design-brief.json"
+    brief = json.loads(brief_path.read_text(encoding="utf-8"))
+    assert brief["lens_identity"]["maximum_aperture"] == "F3.5"
+    assert brief["lens_identity"]["maximum_aperture_display"] == "F3.5-5.6"
+    assert brief["display_text"][1] == "F3.5–5.6"
+    _approve_design_brief(brief_path)
+    capsys.readouterr()
+
+    assert main(["handoff-check", str(config_path), "--json"]) == 0
+    report = json.loads(capsys.readouterr().out)
+    assert report["identity"]["maximum_aperture"] == "F3.5"
+    assert report["identity"]["maximum_aperture_display"] == "F3.5-5.6"
+
+
+def test_variable_aperture_full_range_cannot_collapse_after_approval(
+    tmp_path: Path, capsys
+) -> None:
+    source = tmp_path / "master.png"
+    Image.new("RGB", (64, 64), (17, 18, 17)).save(source)
+    config_path = tmp_path / "job.toml"
+    assert main(
+        [
+            "init",
+            str(config_path),
+            "--source",
+            str(source),
+            "--measured-diameter",
+            "67",
+            "--lens-identity",
+            "Sigma Zoom 28-70mm F3.5-5.6",
+            "--display-text",
+            "28-70",
+            "F3.5-5.6",
+        ]
+    ) == 0
+    assert main(
+        [
+            "handoff-init",
+            str(config_path),
+            "--brand",
+            "Sigma",
+            "--model",
+            "Zoom 28-70mm F3.5-5.6",
+            "--focal-length",
+            "28",
+            "--focal-length-display",
+            "28-70",
+            "--maximum-aperture",
+            "F3.5-5.6",
+            "--provider",
+            "test-image-provider",
+            "--anchor-source",
+            "https://example.test/sigma-catalog",
+        ]
+    ) == 0
+    brief_path = tmp_path / "design-brief.json"
+    approved = _approve_design_brief(brief_path)
+    approved["display_text"][1] = "F3.5"
+    approved["allowed_text"][1] = "F3.5"
+    brief_path.write_text(json.dumps(approved, indent=2) + "\n", encoding="utf-8")
+    config_path.write_text(
+        config_path.read_text(encoding="utf-8").replace(
+            'display_text = ["28-70", "F3.5-5.6"]',
+            'display_text = ["28-70", "F3.5"]',
+        ),
+        encoding="utf-8",
+    )
+    capsys.readouterr()
+
+    assert main(["handoff-check", str(config_path), "--json"]) == 2
+    assert "maximum_aperture_display" in capsys.readouterr().err
+
+
+def test_handoff_init_rejects_t_stop_until_schema_support_exists(
+    tmp_path: Path, capsys
+) -> None:
+    source = tmp_path / "master.png"
+    Image.new("RGB", (64, 64), (17, 18, 17)).save(source)
+    config_path = tmp_path / "job.toml"
+    assert main(
+        [
+            "init",
+            str(config_path),
+            "--source",
+            str(source),
+            "--measured-diameter",
+            "52",
+            "--lens-identity",
+            "Example Cine 50mm T2.8",
+            "--display-text",
+            "50",
+            "T2.8",
+        ]
+    ) == 0
+    capsys.readouterr()
+
+    assert main(
+        [
+            "handoff-init",
+            str(config_path),
+            "--brand",
+            "Example",
+            "--model",
+            "Cine 50mm T2.8",
+            "--focal-length",
+            "50",
+            "--maximum-aperture",
+            "T2.8",
+            "--provider",
+            "test-image-provider",
+        ]
+    ) == 2
+    assert "F-number" in capsys.readouterr().err
+
+
+def test_handoff_init_requires_provider(tmp_path: Path, capsys) -> None:
+    """The shortest documented handoff cannot silently create a null provider."""
+
+    source = tmp_path / "master.png"
+    Image.new("RGB", (64, 64), (17, 18, 17)).save(source)
+    config_path = tmp_path / "job.toml"
+    assert main(
+        [
+            "init",
+            str(config_path),
+            "--source",
+            str(source),
+            "--measured-diameter",
+            "52",
+            "--lens-identity",
+            "Planar 50mm F1.4",
+            "--display-text",
+            "50",
+            "F1.4",
+            "PLANAR",
+        ]
+    ) == 0
+
+    with pytest.raises(SystemExit) as exc_info:
+        main(
+            [
+                "handoff-init",
+                str(config_path),
+                "--brand",
+                "Zeiss",
+                "--model",
+                "Planar 50mm F1.4",
+                "--focal-length",
+                "50",
+                "--maximum-aperture",
+                "F1.4",
+            ]
+        )
+
+    assert exc_info.value.code == 2
+    assert "--provider" in capsys.readouterr().err
+    assert not (tmp_path / "design-brief.json").exists()
+
+
+def test_handoff_check_rejects_secondary_text_drift(tmp_path: Path, capsys) -> None:
+    source = tmp_path / "master.png"
+    Image.new("RGB", (64, 64), (17, 18, 17)).save(source)
+    config_path = tmp_path / "job.toml"
+    assert main(
+        [
+            "init",
+            str(config_path),
+            "--source",
+            str(source),
+            "--measured-diameter",
+            "52",
+            "--lens-identity",
+            "Zeiss Planar 50mm F1.4",
+            "--display-text",
+            "50",
+            "F1.4",
+            "PLANAR",
+        ]
+    ) == 0
+    assert main(
+        [
+            "handoff-init",
+            str(config_path),
+            "--brand",
+            "Zeiss",
+            "--model",
+            "Planar 50mm F1.4",
+            "--focal-length",
+            "50",
+            "--maximum-aperture",
+            "F1.4",
+            "--provider",
+            "test-image-provider",
+            "--anchor-source",
+            "https://example.test/catalog",
+        ]
+    ) == 0
+    brief_path = tmp_path / "design-brief.json"
+    brief = _approve_design_brief(brief_path)
+    brief["display_text"][-1] = "DISTAGON"
+    brief["allowed_text"][-1] = "DISTAGON"
+    brief_path.write_text(json.dumps(brief, indent=2) + "\n", encoding="utf-8")
+    capsys.readouterr()
+
+    assert main(["handoff-check", str(config_path), "--json"]) == 2
+    assert "complete closed text set" in capsys.readouterr().err
+
+
+def test_handoff_check_rejects_synchronized_sigma_identity_drift(
+    tmp_path: Path, capsys
+) -> None:
+    """Changing both weak binding strings must not detach a Helios brief."""
+
+    source = tmp_path / "master.png"
+    Image.new("RGB", (64, 64), (17, 18, 17)).save(source)
+    config_path = tmp_path / "job.toml"
+    assert main(
+        [
+            "init",
+            str(config_path),
+            "--source",
+            str(source),
+            "--measured-diameter",
+            "95",
+            "--lens-identity",
+            "Helios / Zenit Helios-44-2 58mm F2",
+            "--display-text",
+            "58",
+            "F2",
+            "HELIOS 44-2",
+            "REHOUSED CINEMA",
+            "M42",
+        ]
+    ) == 0
+    assert main(
+        [
+            "handoff-init",
+            str(config_path),
+            "--brand",
+            "Helios / Zenit",
+            "--model",
+            "Helios-44-2",
+            "--focal-length",
+            "58",
+            "--maximum-aperture",
+            "F2",
+            "--provider",
+            "test-image-provider",
+            "--anchor-source",
+            "https://www.zenitcamera.com/mans/zenit-e/zenit-e-eng.html",
+        ]
+    ) == 0
+    brief_path = tmp_path / "design-brief.json"
+    brief = _approve_design_brief(brief_path)
+
+    wrong_identity = "Sigma 28-70mm F2.8 DG DN Contemporary"
+    config_path.write_text(
+        config_path.read_text(encoding="utf-8").replace(
+            'lens_identity = "Helios / Zenit Helios-44-2 58mm F2"',
+            f'lens_identity = "{wrong_identity}"',
+        ),
+        encoding="utf-8",
+    )
+    brief["job_binding"]["metadata_lens_identity"] = wrong_identity
+    brief_path.write_text(json.dumps(brief, indent=2) + "\n", encoding="utf-8")
+    capsys.readouterr()
+
+    assert main(["handoff-check", str(config_path), "--json"]) == 2
+    error = capsys.readouterr().err
+    assert "metadata.lens_identity" in error
+    assert "lens_identity.brand/model/focal length/maximum aperture" in error
+
+
+def test_handoff_check_binds_all_body_geometry_dimensions(
+    tmp_path: Path, capsys
+) -> None:
+    source = tmp_path / "master.png"
+    Image.new("RGB", (64, 64), (17, 18, 17)).save(source)
+    config_path = tmp_path / "job.toml"
+    assert main(
+        [
+            "init",
+            str(config_path),
+            "--source",
+            str(source),
+            "--measured-diameter",
+            "52",
+            "--lens-identity",
+            "Zeiss Planar 50mm F1.4",
+            "--display-text",
+            "50",
+            "F1.4",
+            "PLANAR",
+        ]
+    ) == 0
+    assert main(
+        [
+            "handoff-init",
+            str(config_path),
+            "--brand",
+            "Zeiss",
+            "--model",
+            "Planar 50mm F1.4",
+            "--focal-length",
+            "50",
+            "--maximum-aperture",
+            "F1.4",
+            "--provider",
+            "test-image-provider",
+            "--anchor-source",
+            "https://example.test/catalog",
+        ]
+    ) == 0
+    brief_path = tmp_path / "design-brief.json"
+    approved = _approve_design_brief(brief_path)
+    capsys.readouterr()
+    assert main(["handoff-check", str(config_path), "--json"]) == 0
+    capsys.readouterr()
+
+    mutations = {
+        "wall_thickness_mm": approved["physical_fit"]["wall_thickness_mm"] + 0.5,
+        "bottom_thickness_mm": approved["physical_fit"]["bottom_thickness_mm"] + 0.5,
+        "side_height_mm": approved["physical_fit"]["side_height_mm"] + 0.5,
+        "bare_clearance_mm": approved["physical_fit"]["bare_clearance_mm"] + 0.5,
+        "nozzle_mm": approved["physical_fit"]["nozzle_mm"] + 0.1,
+        "friction_rib_count": approved["physical_fit"]["friction_rib_count"] + 1,
+        "liner_material": "foam",
+        "compression_is_assumption": not approved["physical_fit"][
+            "compression_is_assumption"
+        ],
+        "retention_strategy": "tampered_strategy",
+        "friction_rib_profile_derived": not approved["physical_fit"][
+            "friction_rib_profile_derived"
+        ],
+    }
+    reference = approved["physical_fit"]["friction_rib_profile_reference_cavity_mm"]
+    mutations["friction_rib_profile_reference_cavity_mm"] = (
+        99.0 if reference is None else reference + 0.5
+    )
+    for field, value in mutations.items():
+        mutated = json.loads(json.dumps(approved))
+        mutated["physical_fit"][field] = value
+        brief_path.write_text(json.dumps(mutated, indent=2) + "\n", encoding="utf-8")
+        assert main(["handoff-check", str(config_path), "--json"]) == 2
+        assert f"physical_fit.{field}" in capsys.readouterr().err
+
+
+def test_handoff_check_rejects_circle_palette_and_artwork_process_job_drift(
+    tmp_path: Path, capsys
+) -> None:
+    source = tmp_path / "master.png"
+    Image.new("RGB", (64, 64), (17, 18, 17)).save(source)
+    config_path = tmp_path / "job.toml"
+    assert main(
+        [
+            "init",
+            str(config_path),
+            "--source",
+            str(source),
+            "--measured-diameter",
+            "52",
+            "--lens-identity",
+            "Zeiss Planar 50mm F1.4",
+            "--display-text",
+            "50",
+            "F1.4",
+            "PLANAR",
+        ]
+    ) == 0
+    assert main(
+        [
+            "handoff-init",
+            str(config_path),
+            "--brand",
+            "Zeiss",
+            "--model",
+            "Planar 50mm F1.4",
+            "--focal-length",
+            "50",
+            "--maximum-aperture",
+            "F1.4",
+            "--provider",
+            "test-image-provider",
+            "--anchor-source",
+            "https://example.test/catalog",
+        ]
+    ) == 0
+    brief_path = tmp_path / "design-brief.json"
+    approved = _approve_design_brief(brief_path)
+    assert approved["job_binding"]["circle"]["allow_outside"] is False
+    assert approved["job_binding"]["palette"]["gray"]["height_mm"] == 0.4
+    assert approved["job_binding"]["artwork_process"] == {
+        "grid_size": 260,
+        "safe_border_mm": 0.4,
+        "prefilter": {"name": "median", "size": 5, "radius": 0.8},
+        "cleanup": {
+            "enabled": True,
+            "max_area_px": 8,
+            "max_dimension_px": 3,
+            "ring_px": 2,
+            "dominance": 0.6,
+            "apply_to": ["relief"],
+        },
+        "assembly_mode": "auto",
+    }
+    original_config = config_path.read_text(encoding="utf-8")
+    capsys.readouterr()
+    assert main(["handoff-check", str(config_path), "--json"]) == 0
+    capsys.readouterr()
+
+    mutations = (
+        ("allow_outside = false", "allow_outside = true", "job_binding.circle"),
+        ("height_mm = 0.4", "height_mm = 0.9", "job_binding.palette"),
+        ("grid_size = 260", "grid_size = 512", "job_binding.artwork_process"),
+        ("safe_border_mm = 0.4", "safe_border_mm = 0.9", "job_binding.artwork_process"),
+        ('name = "median"', 'name = "none"', "job_binding.artwork_process"),
+        (
+            "[cleanup]\nenabled = true",
+            "[cleanup]\nenabled = false",
+            "job_binding.artwork_process",
+        ),
+        (
+            'assembly_mode = "auto"',
+            'assembly_mode = "integrated_part"',
+            "job_binding.artwork_process",
+        ),
+    )
+    for old, new, expected_error in mutations:
+        assert old in original_config
+        config_path.write_text(original_config.replace(old, new, 1), encoding="utf-8")
+        assert main(["handoff-check", str(config_path), "--json"]) == 2
+        assert expected_error in capsys.readouterr().err
+    config_path.write_text(original_config, encoding="utf-8")
+
+
+def test_handoff_check_rejects_empty_anchor_mapping_and_provenance(
+    tmp_path: Path, capsys
+) -> None:
+    source = tmp_path / "master.png"
+    Image.new("RGB", (64, 64), (17, 18, 17)).save(source)
+    config_path = tmp_path / "job.toml"
+    assert main(
+        [
+            "init",
+            str(config_path),
+            "--source",
+            str(source),
+            "--measured-diameter",
+            "52",
+            "--lens-identity",
+            "Zeiss Planar 50mm F1.4",
+            "--display-text",
+            "50",
+            "F1.4",
+            "PLANAR",
+        ]
+    ) == 0
+    assert main(
+        [
+            "handoff-init",
+            str(config_path),
+            "--brand",
+            "Zeiss",
+            "--model",
+            "Planar 50mm F1.4",
+            "--focal-length",
+            "50",
+            "--maximum-aperture",
+            "F1.4",
+            "--provider",
+            "test-image-provider",
+            "--anchor-source",
+            "https://example.test/catalog",
+        ]
+    ) == 0
+    brief_path = tmp_path / "design-brief.json"
+    scaffold = json.loads(brief_path.read_text(encoding="utf-8"))
+    assert (
+        "not applicable — no third-party mark rendered"
+        in scaffold["provenance"]["brand_mark_license"]
+    )
+    approved = _approve_design_brief(brief_path)
+    capsys.readouterr()
+
+    semantic_not_applicable = json.loads(json.dumps(approved))
+    semantic_not_applicable["provenance"]["brand_mark_license"] = (
+        "not applicable — no third-party mark rendered"
+    )
+    brief_path.write_text(
+        json.dumps(semantic_not_applicable, indent=2) + "\n", encoding="utf-8"
+    )
+    assert main(["handoff-check", str(config_path), "--json"]) == 0
+    capsys.readouterr()
+
+    archive_bound = json.loads(json.dumps(approved))
+    archive_bound["anchors"][0]["source"] = "archive:maker-catalog/volume-7/page-12"
+    brief_path.write_text(json.dumps(archive_bound, indent=2) + "\n", encoding="utf-8")
+    assert main(["handoff-check", str(config_path), "--json"]) == 0
+    capsys.readouterr()
+
+    invalid_source = json.loads(json.dumps(approved))
+    invalid_source["anchors"][0]["source"] = "manufacturer catalog"
+    brief_path.write_text(json.dumps(invalid_source, indent=2) + "\n", encoding="utf-8")
+    assert main(["handoff-check", str(config_path), "--json"]) == 2
+    assert "http(s) URL or an explicit archive identifier" in capsys.readouterr().err
+
+    for evidence_state in ("not verified", "not sourced", "unverified"):
+        invalid_evidence = json.loads(json.dumps(approved))
+        invalid_evidence["anchors"][0]["evidence_state"] = evidence_state
+        brief_path.write_text(
+            json.dumps(invalid_evidence, indent=2) + "\n", encoding="utf-8"
+        )
+        assert main(["handoff-check", str(config_path), "--json"]) == 2
+        assert "positive sourced/verified status" in capsys.readouterr().err
+
+    negative_claim = json.loads(json.dumps(approved))
+    negative_claim["anchors"][0]["claim_kind"] = "not_manufacturer_culture"
+    brief_path.write_text(json.dumps(negative_claim, indent=2) + "\n", encoding="utf-8")
+    assert main(["handoff-check", str(config_path), "--json"]) == 2
+    assert "canonical positive claim kinds" in capsys.readouterr().err
+
+    unrelated_brand = json.loads(json.dumps(approved))
+    unrelated_brand["anchors"][0]["subject_scope"] = "Canon FD 35-105 lens system"
+    unrelated_brand["anchors"][0]["identity_binding"]["brand"] = "Canon"
+    brief_path.write_text(
+        json.dumps(unrelated_brand, indent=2) + "\n", encoding="utf-8"
+    )
+    assert main(["handoff-check", str(config_path), "--json"]) == 2
+    assert "identity_binding.brand disagrees" in capsys.readouterr().err
+
+    unrelated_subject = json.loads(json.dumps(approved))
+    unrelated_subject["anchors"][0]["subject_scope"] = "Canon FD system"
+    brief_path.write_text(
+        json.dumps(unrelated_subject, indent=2) + "\n", encoding="utf-8"
+    )
+    assert main(["handoff-check", str(config_path), "--json"]) == 2
+    assert "must name this lens brand/model" in capsys.readouterr().err
+
+    anchor_fields = (
+        "claim_kind",
+        "subject_scope",
+        "evidence_state",
+        "source_role",
+        "source",
+        "summary",
+        "render_role",
+        "anchor_context",
+        "motif_commitment",
+        "anchor_visual_motif",
+        "recognition_cue",
+        "qualifier",
+    )
+    for field in anchor_fields:
+        mutated = json.loads(json.dumps(approved))
+        mutated["anchors"][0][field] = "x"
+        brief_path.write_text(json.dumps(mutated, indent=2) + "\n", encoding="utf-8")
+        assert main(["handoff-check", str(config_path), "--json"]) == 2
+        assert f"anchors[0].{field}" in capsys.readouterr().err
+
+    for field in (
+        "artwork_license",
+        "brand_mark_license",
+        "film_or_history_permissions",
+        "notes",
+    ):
+        mutated = json.loads(json.dumps(approved))
+        mutated["provenance"][field] = "x"
+        brief_path.write_text(json.dumps(mutated, indent=2) + "\n", encoding="utf-8")
+        assert main(["handoff-check", str(config_path), "--json"]) == 2
+        assert f"provenance.{field}" in capsys.readouterr().err
+
+    for token_only in ("NONE", "not applicable"):
+        mutated = json.loads(json.dumps(approved))
+        mutated["provenance"]["brand_mark_license"] = token_only
+        brief_path.write_text(json.dumps(mutated, indent=2) + "\n", encoding="utf-8")
+        assert main(["handoff-check", str(config_path), "--json"]) == 2
+        assert "provenance.brand_mark_license" in capsys.readouterr().err
 
 
 def test_init_derives_face_from_measured_diameter(tmp_path: Path) -> None:
@@ -63,6 +981,54 @@ def test_init_derives_face_from_measured_diameter(tmp_path: Path) -> None:
     # The generated TOML intentionally omits a duplicate face field when it is
     # derived from the measured mating diameter.
     assert "face_diameter_mm =" not in config_path.read_text(encoding="utf-8")
+
+
+def test_init_persists_and_checks_optional_adapter_envelope(tmp_path: Path) -> None:
+    source = tmp_path / "master.png"
+    Image.new("RGB", (64, 64), (17, 18, 17)).save(source)
+    config_path = tmp_path / "jobs" / "adapter" / "job.toml"
+    assert main(
+        [
+            "init",
+            str(config_path),
+            "--source",
+            str(source),
+            "--measured-diameter",
+            "85",
+            "--adapter-nominal-ring",
+            "80",
+            "--adapter-radial-wall",
+            "2.5",
+        ]
+    ) == 0
+    config = load_config(config_path)
+    assert config.metadata["adapter_nominal_ring_mm"] == 80.0
+    assert config.metadata["adapter_radial_wall_mm"] == 2.5
+    assert config.metadata["adapter_derived_mating_diameter_mm"] == 85.0
+    generated = config_path.read_text(encoding="utf-8")
+    assert "[metadata]" in generated
+    assert "adapter_nominal_ring_mm = 80.0" in generated
+
+
+def test_init_rejects_mismatched_adapter_envelope(tmp_path: Path) -> None:
+    source = tmp_path / "master.png"
+    Image.new("RGB", (64, 64), (17, 18, 17)).save(source)
+    config_path = tmp_path / "job.toml"
+    assert main(
+        [
+            "init",
+            str(config_path),
+            "--source",
+            str(source),
+            "--measured-diameter",
+            "85",
+            "--adapter-nominal-ring",
+            "77",
+            "--adapter-radial-wall",
+            "2.5",
+        ]
+    ) == 2
+    assert not config_path.exists()
 
 
 def test_init_defaults_to_inner_friction_ribs_and_records_default(tmp_path: Path) -> None:
@@ -146,6 +1112,66 @@ def test_init_can_select_profile_without_foam_option(tmp_path: Path) -> None:
     # Bare cavity = measured diameter + 0.40 mm clearance.
     assert config.fit.friction_rib_width_mm == pytest.approx(6.6601764256)
     assert config.fit.friction_rib_count == 6
+
+
+def test_profile_defaults_recompute_when_measured_diameter_changes(tmp_path: Path) -> None:
+    """Init's visible profile numbers must not freeze a later diameter edit."""
+    source = tmp_path / "master.png"
+    image = Image.new("RGBA", (64, 64), (0, 0, 0, 0))
+    ImageDraw.Draw(image).ellipse((4, 4, 59, 59), fill=(17, 18, 17, 255))
+    image.save(source)
+    config_path = tmp_path / "jobs" / "profile-recompute.toml"
+    assert main(
+        [
+            "init",
+            str(config_path),
+            "--source",
+            str(source),
+            "--measured-diameter",
+            "95",
+            "--friction-rib-profile",
+            "wide_tapered",
+        ]
+    ) == 0
+    original = load_config(config_path)
+    assert original.fit.friction_rib_profile_derived is True
+    assert original.fit.friction_rib_profile_reference_cavity_mm == pytest.approx(95.4)
+    edited = config_path.read_text(encoding="utf-8").replace(
+        "measured_diameter_mm = 95.0", "measured_diameter_mm = 85.0"
+    )
+    config_path.write_text(edited, encoding="utf-8")
+    changed = load_config(config_path)
+    assert changed.fit.friction_rib_profile_derived is True
+    assert changed.fit.friction_rib_width_mm == pytest.approx(
+        5.9620447248, rel=1e-5
+    )
+
+
+def test_profile_numeric_edit_becomes_explicit_override(tmp_path: Path) -> None:
+    source = tmp_path / "master.png"
+    image = Image.new("RGBA", (64, 64), (0, 0, 0, 0))
+    ImageDraw.Draw(image).ellipse((4, 4, 59, 59), fill=(17, 18, 17, 255))
+    image.save(source)
+    config_path = tmp_path / "jobs" / "profile-explicit.toml"
+    assert main(
+        [
+            "init",
+            str(config_path),
+            "--source",
+            str(source),
+            "--measured-diameter",
+            "95",
+        ]
+    ) == 0
+    config_path.write_text(
+        config_path.read_text(encoding="utf-8").replace(
+            "friction_rib_protrusion_mm = 0.1", "friction_rib_protrusion_mm = 0.25"
+        ),
+        encoding="utf-8",
+    )
+    config = load_config(config_path)
+    assert config.fit.friction_rib_profile_derived is False
+    assert config.fit.friction_rib_protrusion_mm == pytest.approx(0.25)
 
 
 def test_init_can_explicitly_disable_inner_friction_ribs(tmp_path: Path) -> None:

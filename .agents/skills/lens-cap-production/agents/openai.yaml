@@ -4,13 +4,22 @@ interface:
   brand_color: "#252525"
   default_prompt: >-
     Use $lens-cap-production as the only production/design Skill for lens-cap
-    relief, fit, CAD, SCAD, STL, 3MF, or printer-handoff requests. A named
-    camera lens plus a circular front, relief, fitted cap, circular image or
-    artwork, lens-cover model, printable model, or 3MF is the same intent even
-    when “lens cap” is omitted; optical design, repair, and unrelated product
-    photos are excluded. Natural wording such as “make a printable model for
-    this lens” is included only when the requested object is the cap/front
-    surface. Do not invoke generic mechanical-CAD, product-design,
+    relief, fit, CAD, SCAD, STL, 3MF, or printer-handoff requests. In a clean
+    request require an explicit lens-cap/front-cap object plus a physical,
+    fitted, printable, model/part, file-format, or printer deliverable. Accept
+    named-lens plus STL/SCAD/CAD/3MF shorthand only inside established lens-cap
+    context. A format owned by metadata/photos, or a
+    printable poster/card/cover, is not enough. Inspecting format support or
+    explaining an STL/3MF export is not production. Negated cap wording and
+    requests to show/audit/fix/test the Skill, generator, docs, task, or formats
+    are meta work even in sticky context. A quoted cap request in a prompt/route
+    test, replay, or read-only/no-file audit is test data. Lens body/barrel, focusing
+    ring/gear, hood, mount, cage, plate, label, case, or grip is not a cap.
+    Optical design/testing, repair,
+    unrelated product photos, and image-only
+    circular artwork are excluded; route explicit circular lens-front artwork
+    only to $lens-cap-imagegen. Do not invoke generic
+    mechanical-CAD, product-design,
     graphic-design, logo,
     poster, UI, or other design Skills in parallel. Preserve approved artwork
     with focal length as the first visual read and maximum aperture
@@ -23,4 +32,6 @@ interface:
     production (unless the current TOML already contains them). If approved
     artwork is missing, sequence $lens-cap-imagegen first and then return here.
     Do not treat an unsaved provider attachment as a source or fabricate its
-    approval/hash/circle handoff.
+    approval/hash/circle handoff. For an actual-3MF request, success requires a
+    passing canonical bridge and an existing verified .3mf; SCAD, STL, handoff
+    JSON, or an UNVERIFIABLE preflight is not completion.

@@ -177,6 +177,14 @@ The per-part report records the result under
 `format_check.canonicalization` (including whether the order changed); use the
 post-canonicalization SHA-256 for provenance.
 
+For a native OpenSCAD 3MF, the adapter also removes the volatile
+`CreationDate`, derives replacement UUIDv5 attributes from canonical semantic
+XML, and rewrites every ZIP entry in sorted order with fixed archive metadata.
+This makes repeated exports byte-stable under one OpenSCAD/Python/zlib
+toolchain. Across tool versions, use the recorded geometry, bounds, surface,
+material, projection, and rib evidence rather than assuming identical
+tessellation or compressed bytes.
+
 Before a printable release, run the public
 scripts/audit_stl_projection.py (or an equivalent recorded adapter) once for
 each positive-relief STL:

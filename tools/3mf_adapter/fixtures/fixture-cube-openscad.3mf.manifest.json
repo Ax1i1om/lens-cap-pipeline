@@ -10,19 +10,32 @@
     "tools/3mf_adapter/fixtures/fixture-cube.scad"
   ],
   "command_exit_code": 0,
-  "determinism": "geometry/command reproducible; OpenSCAD may vary UUIDs, XML metadata, and exporter details by release",
-  "generated_at_utc": "2026-09-02T18:58:57.866477+00:00",
+  "determinism": "byte-stable for identical OpenSCAD geometry under the same OpenSCAD/Python/zlib toolchain after nonsemantic metadata canonicalization; exporter geometry may vary by OpenSCAD release",
+  "generated_at_utc": "2026-09-03T10:12:08.593036+00:00",
   "input": "tools/3mf_adapter/fixtures/fixture-cube.scad",
   "input_sha256": "bcb6370fe11e7d39a888ef70a88c10e3b95b53c4fbcc6eedcd077bdbfd9ed109",
   "openscad": "<OpenSCAD.app>/Contents/MacOS/OpenSCAD",
   "openscad_version": "OpenSCAD version 2026.06.12",
   "output": "tools/3mf_adapter/fixtures/fixture-cube-openscad.3mf",
-  "python": "3.14.4",
+  "python": "3.11.15",
   "render_part": "assembly (SCAD default)",
+  "sanitization": {
+    "archive_entries_canonicalized": 3,
+    "canonicalized_uuid_attributes": 3,
+    "dropped_triangles": 0,
+    "dropped_vertices": 0,
+    "dropped_zero_volume_components": 0,
+    "maximum_nudge_mm": 0.0,
+    "nudged_collinear_triangles": 0,
+    "removed_volatile_metadata": 1,
+    "scope": "zero_volume_components_submicron_collinear_facets_and_nonsemantic_openscad_metadata",
+    "status": "passed"
+  },
   "stderr_tail": "Geometries in cache: 1\nGeometry cache size in bytes: 856\nCGAL Polyhedrons in cache: 0\nCGAL cache size in bytes: 0\nTotal rendering time: 0:00:00.006\nTop level object is a 3D object (PolySet):\n   Convex:       yes\n   Facets:         6\n",
   "stdout_tail": "",
   "verification": {
-    "bytes": 1786,
+    "bytes": 1378,
+    "closed_direct_mesh_required": true,
     "entries": [
       "3D/3dmodel.model",
       "[Content_Types].xml",
@@ -31,14 +44,46 @@
     "gcode_bytes": 0,
     "has_embedded_gcode": false,
     "model": {
+      "absolute_volume_mm3": 8000.000000000001,
+      "boundary_edges": 0,
+      "bounds": {
+        "max_mm": [
+          10.0,
+          10.0,
+          10.0
+        ],
+        "min_mm": [
+          -10.0,
+          -10.0,
+          -10.0
+        ],
+        "size_mm": [
+          20.0,
+          20.0,
+          20.0
+        ]
+      },
       "build_items": 1,
+      "component_references": 0,
+      "duplicate_triangles": 0,
+      "inconsistent_orientation_edges": 0,
+      "mesh_components": 1,
       "mesh_parts": 1,
+      "nonmanifold_edges": 0,
       "objects": 1,
       "parts": 1,
+      "transformed_build_items": 0,
+      "transformed_components": 0,
       "triangles": 12,
-      "vertices": 8
+      "unreferenced_vertices": 0,
+      "vertices": 8,
+      "volume_components": 1,
+      "zero_area_triangles": 0,
+      "zero_volume_components": 0
     },
     "path": "tools/3mf_adapter/fixtures/fixture-cube-openscad.3mf",
-    "sha256": "00867543072d964f909f89744a9144e746e31dea8e6029720e9868958c39fa81"
+    "sha256": "6d29d7206d789423c113a32fb641092758803975763b53d08754284d2751657a",
+    "single_positive_volume_required": true,
+    "slice_audit": null
   }
 }

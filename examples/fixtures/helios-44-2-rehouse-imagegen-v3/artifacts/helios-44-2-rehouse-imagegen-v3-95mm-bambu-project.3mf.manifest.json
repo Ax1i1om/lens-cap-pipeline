@@ -1,0 +1,332 @@
+{
+  "adapter": "bambu-studio-3mf",
+  "adapter_version": 1,
+  "bambu": "<BambuStudio.app>/Contents/MacOS/BambuStudio",
+  "bambu_result": {
+    "error_string": "Success.",
+    "export_time": 892,
+    "layer_height": 0.0,
+    "plate_index": 0,
+    "prepare_time": 155,
+    "return_code": 0,
+    "sparse_infill_density": 0.0,
+    "wall_loops": 0
+  },
+  "bambu_version": "BambuStudio-02.08.02.60:",
+  "command": [
+    "<BambuStudio.app>/Contents/MacOS/BambuStudio",
+    "--datadir",
+    "<temporary-datadir>",
+    "--outputdir",
+    "<temporary-outputdir>",
+    "--load-settings",
+    "<BambuStudio.app>/Contents/Resources/profiles/BBL/machine/Bambu Lab A1 mini 0.2 nozzle.json;<BambuStudio.app>/Contents/Resources/profiles/BBL/process/0.10mm Standard @BBL A1M 0.2 nozzle.json",
+    "--load-filaments",
+    "<BambuStudio.app>/Contents/Resources/profiles/BBL/filament/Bambu PLA Basic @BBL A1M 0.2 nozzle.json;<BambuStudio.app>/Contents/Resources/profiles/BBL/filament/Bambu PLA Basic @BBL A1M 0.2 nozzle.json;<BambuStudio.app>/Contents/Resources/profiles/BBL/filament/Bambu PLA Basic @BBL A1M 0.2 nozzle.json",
+    "--load-filament-ids",
+    "1,2,3",
+    "--assemble",
+    "--allow-multicolor-oneplate",
+    "--orient",
+    "0",
+    "--arrange",
+    "0",
+    "--export-3mf",
+    "helios-44-2-rehouse-imagegen-v3-95mm-bambu-project.3mf",
+    "<external>/helios-44-2-rehouse-imagegen-v3-95mm-base.stl",
+    "<external>/helios-44-2-rehouse-imagegen-v3-95mm-gray_relief.stl",
+    "<external>/helios-44-2-rehouse-imagegen-v3-95mm-ivory_relief.stl"
+  ],
+  "command_exit_code": 0,
+  "determinism": "input/command reproducible; Bambu UUIDs, PNGs, timestamps, and G-code metadata may vary by release/run",
+  "effective_profile_audit": {
+    "checked": {
+      "filament": {
+        "filament_diameter": {
+          "expected": [
+            "1.75"
+          ],
+          "observed": [
+            "1.75",
+            "1.75",
+            "1.75"
+          ]
+        },
+        "filament_type": {
+          "expected": [
+            "PLA"
+          ],
+          "observed": [
+            "PLA",
+            "PLA",
+            "PLA"
+          ]
+        }
+      },
+      "machine": {
+        "max_layer_height": {
+          "expected": [
+            "0.14"
+          ],
+          "observed": [
+            "0.14"
+          ]
+        },
+        "min_layer_height": {
+          "expected": [
+            "0.04"
+          ],
+          "observed": [
+            "0.04"
+          ]
+        },
+        "nozzle_diameter": {
+          "expected": [
+            "0.2"
+          ],
+          "observed": [
+            "0.2"
+          ]
+        }
+      },
+      "process": {
+        "initial_layer_line_width": {
+          "expected": "0.25",
+          "observed": "0.25"
+        },
+        "initial_layer_print_height": {
+          "expected": "0.1",
+          "observed": "0.1"
+        },
+        "inner_wall_line_width": {
+          "expected": "0.22",
+          "observed": "0.22"
+        },
+        "layer_height": {
+          "expected": "0.1",
+          "observed": "0.1"
+        },
+        "line_width": {
+          "expected": "0.22",
+          "observed": "0.22"
+        },
+        "outer_wall_line_width": {
+          "expected": "0.22",
+          "observed": "0.22"
+        },
+        "wall_loops": {
+          "expected": "4",
+          "observed": "4"
+        }
+      }
+    },
+    "scope": "resolved_profile_chain_and_effective_project_settings",
+    "status": "passed"
+  },
+  "generated_at_utc": "2026-09-03T09:42:39.859916+00:00",
+  "input": "<external>/helios-44-2-rehouse-imagegen-v3-95mm-base.stl",
+  "input_sha256": "a973b694238cedc809b4c7d1a08675d72b3e24e85fc5d35ecd5dfd24ecedd951",
+  "inputs": [
+    {
+      "path": "<external>/helios-44-2-rehouse-imagegen-v3-95mm-base.stl",
+      "sha256": "a973b694238cedc809b4c7d1a08675d72b3e24e85fc5d35ecd5dfd24ecedd951"
+    },
+    {
+      "path": "<external>/helios-44-2-rehouse-imagegen-v3-95mm-gray_relief.stl",
+      "sha256": "2b600e7b2d81b239fbe3a46b63849e0bc97f4d4fe99ad735c4dfbb7e6ff5bcda"
+    },
+    {
+      "path": "<external>/helios-44-2-rehouse-imagegen-v3-95mm-ivory_relief.stl",
+      "sha256": "973332cd4d86eb28f2a0484ee4322e9494a0ee16dbf4e4a169c83f16018506cb"
+    }
+  ],
+  "mode": "export",
+  "multipart": true,
+  "output": "examples/fixtures/helios-44-2-rehouse-imagegen-v3/artifacts/helios-44-2-rehouse-imagegen-v3-95mm-bambu-project.3mf",
+  "palette_patch": {
+    "colors": [
+      "#111211",
+      "#747471",
+      "#F2E7D3"
+    ],
+    "status": "passed"
+  },
+  "preparation": {
+    "input_kind": "multipart_stl",
+    "part_count": 3,
+    "parts": [
+      {
+        "path": "<external>/helios-44-2-rehouse-imagegen-v3-95mm-base.stl",
+        "sha256": "a973b694238cedc809b4c7d1a08675d72b3e24e85fc5d35ecd5dfd24ecedd951"
+      },
+      {
+        "path": "<external>/helios-44-2-rehouse-imagegen-v3-95mm-gray_relief.stl",
+        "sha256": "2b600e7b2d81b239fbe3a46b63849e0bc97f4d4fe99ad735c4dfbb7e6ff5bcda"
+      },
+      {
+        "path": "<external>/helios-44-2-rehouse-imagegen-v3-95mm-ivory_relief.stl",
+        "sha256": "973332cd4d86eb28f2a0484ee4322e9494a0ee16dbf4e4a169c83f16018506cb"
+      }
+    ]
+  },
+  "profile_resolution": {
+    "filament": {
+      "chain": [
+        {
+          "name": "fdm_filament_common",
+          "path": "<BambuStudio.app>/Contents/Resources/profiles/BBL/filament/fdm_filament_common.json",
+          "sha256": "8c7105b7d59a28f600c43a946f067b8b4d707b9711c0bf6b88e9166e48878548"
+        },
+        {
+          "name": "fdm_filament_pla",
+          "path": "<BambuStudio.app>/Contents/Resources/profiles/BBL/filament/fdm_filament_pla.json",
+          "sha256": "670d21ea6bdf1cd4b0a2bfddc743612ffd896cd6e5dbe767c25d2c4165c49a30"
+        },
+        {
+          "name": "Bambu PLA Basic @base",
+          "path": "<BambuStudio.app>/Contents/Resources/profiles/BBL/filament/Bambu PLA Basic @base.json",
+          "sha256": "7783968745a19570354ca0601258cd5b82a6c96f835b682741635095b49e9cc7"
+        },
+        {
+          "name": "Bambu PLA Basic @BBL A1M 0.2 nozzle",
+          "path": "<BambuStudio.app>/Contents/Resources/profiles/BBL/filament/Bambu PLA Basic @BBL A1M 0.2 nozzle.json",
+          "sha256": "4d3ad47c5384984540ca929d0da5292a92fd12f3950d7a867b8c0293044f226e"
+        }
+      ]
+    },
+    "machine": {
+      "chain": [
+        {
+          "name": "fdm_machine_common",
+          "path": "<BambuStudio.app>/Contents/Resources/profiles/BBL/machine/fdm_machine_common.json",
+          "sha256": "26ef8ee697849323e67d8e1a9026c175cebe3397e38c5091dddb5cd3fc52e94c"
+        },
+        {
+          "name": "fdm_bbl_3dp_001_common",
+          "path": "<BambuStudio.app>/Contents/Resources/profiles/BBL/machine/fdm_bbl_3dp_001_common.json",
+          "sha256": "2ca207f457c1f9b3eb25a1801adb2eaa8ddc5620f5a8945abb51a3fcddab5e47"
+        },
+        {
+          "name": "Bambu Lab A1 mini 0.4 nozzle",
+          "path": "<BambuStudio.app>/Contents/Resources/profiles/BBL/machine/Bambu Lab A1 mini 0.4 nozzle.json",
+          "sha256": "ca85210a9065eb658256385807cc715c3bb07727316a1be6818bfa6256bfbce8"
+        },
+        {
+          "name": "Bambu Lab A1 mini 0.2 nozzle",
+          "path": "<BambuStudio.app>/Contents/Resources/profiles/BBL/machine/Bambu Lab A1 mini 0.2 nozzle.json",
+          "sha256": "276a970d8bf5472392e8cb906bf71a4fb9b978818c15b0af1684a2814936855b"
+        }
+      ]
+    },
+    "process": {
+      "chain": [
+        {
+          "name": "fdm_process_common",
+          "path": "<BambuStudio.app>/Contents/Resources/profiles/BBL/process/fdm_process_common.json",
+          "sha256": "d7981c4b92854f251b8697e1bb621c63fe393f263fb8024ab63c401525d543d7"
+        },
+        {
+          "name": "fdm_process_single_common",
+          "path": "<BambuStudio.app>/Contents/Resources/profiles/BBL/process/fdm_process_single_common.json",
+          "sha256": "05b38ac1318e465e817978b36da51754f928da0172738a20bb3a8d4a69eb4769"
+        },
+        {
+          "name": "fdm_process_single_0.10_nozzle_0.2",
+          "path": "<BambuStudio.app>/Contents/Resources/profiles/BBL/process/fdm_process_single_0.10_nozzle_0.2.json",
+          "sha256": "9f2a228dc394cf2c3c4b0fbeb14d0693843513ddaadf97c037c7775ebaaa6a3d"
+        },
+        {
+          "name": "0.10mm Standard @BBL A1M 0.2 nozzle",
+          "path": "<BambuStudio.app>/Contents/Resources/profiles/BBL/process/0.10mm Standard @BBL A1M 0.2 nozzle.json",
+          "sha256": "ce92258ae92b997530b294c597828c187be5b080211efb03f5f83af39e32998b"
+        }
+      ]
+    }
+  },
+  "profiles": {
+    "filament": {
+      "path": "<BambuStudio.app>/Contents/Resources/profiles/BBL/filament/Bambu PLA Basic @BBL A1M 0.2 nozzle.json",
+      "post_run_sha256": "4d3ad47c5384984540ca929d0da5292a92fd12f3950d7a867b8c0293044f226e",
+      "sha256": "4d3ad47c5384984540ca929d0da5292a92fd12f3950d7a867b8c0293044f226e"
+    },
+    "machine": {
+      "path": "<BambuStudio.app>/Contents/Resources/profiles/BBL/machine/Bambu Lab A1 mini 0.2 nozzle.json",
+      "post_run_sha256": "276a970d8bf5472392e8cb906bf71a4fb9b978818c15b0af1684a2814936855b",
+      "sha256": "276a970d8bf5472392e8cb906bf71a4fb9b978818c15b0af1684a2814936855b"
+    },
+    "process": {
+      "path": "<BambuStudio.app>/Contents/Resources/profiles/BBL/process/0.10mm Standard @BBL A1M 0.2 nozzle.json",
+      "post_run_sha256": "ce92258ae92b997530b294c597828c187be5b080211efb03f5f83af39e32998b",
+      "sha256": "ce92258ae92b997530b294c597828c187be5b080211efb03f5f83af39e32998b"
+    }
+  },
+  "profiles_are_external": true,
+  "python": "3.11.15",
+  "stderr_tail": "",
+  "stdout_tail": "[2026-09-03 17:42:35.193351] [0x0000000204b87100] [trace]   Initializing StaticPrintConfigs\n",
+  "verification": {
+    "bytes": 2458834,
+    "closed_direct_mesh_required": false,
+    "entries": [
+      "3D/3dmodel.model",
+      "3D/Objects/object_1.model",
+      "3D/_rels/3dmodel.model.rels",
+      "Metadata/cut_information.xml",
+      "Metadata/filament_sequence.json",
+      "Metadata/model_settings.config",
+      "Metadata/pick_1.png",
+      "Metadata/plate_1.png",
+      "Metadata/plate_1_small.png",
+      "Metadata/plate_no_light_1.png",
+      "Metadata/project_settings.config",
+      "Metadata/slice_info.config",
+      "Metadata/top_1.png",
+      "[Content_Types].xml",
+      "_rels/.rels"
+    ],
+    "gcode_bytes": 0,
+    "has_embedded_gcode": false,
+    "model": {
+      "absolute_volume_mm3": 27360.519358456946,
+      "boundary_edges": 0,
+      "bounds": {
+        "max_mm": [
+          50.0999985,
+          50.0999985,
+          8.00049973
+        ],
+        "min_mm": [
+          -50.0999985,
+          -50.0999985,
+          -8.00049973
+        ],
+        "size_mm": [
+          100.199997,
+          100.199997,
+          16.00099946
+        ]
+      },
+      "build_items": 1,
+      "component_references": 3,
+      "duplicate_triangles": 0,
+      "inconsistent_orientation_edges": 0,
+      "mesh_components": 1298,
+      "mesh_parts": 3,
+      "nonmanifold_edges": 0,
+      "objects": 4,
+      "parts": 2,
+      "transformed_build_items": 1,
+      "transformed_components": 3,
+      "triangles": 299612,
+      "unreferenced_vertices": 0,
+      "vertices": 152364,
+      "volume_components": 1298,
+      "zero_area_triangles": 0,
+      "zero_volume_components": 0
+    },
+    "path": "examples/fixtures/helios-44-2-rehouse-imagegen-v3/artifacts/helios-44-2-rehouse-imagegen-v3-95mm-bambu-project.3mf",
+    "sha256": "7f1596a3eadc0f654cf9a325ed0c50dbb9f5d5abf63449f60f6cbd6ba23814dc",
+    "single_positive_volume_required": false,
+    "slice_audit": null
+  }
+}

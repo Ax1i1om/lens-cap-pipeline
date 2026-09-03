@@ -7,8 +7,8 @@ from pathlib import Path
 import numpy as np
 from PIL import Image, ImageDraw
 
-from lens_cap_pipeline.config import ConfigError, load_config
-from lens_cap_pipeline.process import ProcessError, process
+from lens_cap_pipeline.config import ConfigError, PaletteSpec, load_config
+from lens_cap_pipeline.process import ProcessError, _minimum_relief_feature_audit, process
 from lens_cap_pipeline.validate import validate_job
 
 
@@ -76,6 +76,96 @@ deltas = {{ g = 45, b = 40 }}
 
 def _sha(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def test_minimum_feature_gate_rejects_hairline_below_nozzle() -> None:
+    palettes = (
+        PaletteSpec("black", 0, (0, 0, 0), "base", 0.0, True),
+        PaletteSpec("gray", 1, (116, 116, 113), "relief", 0.4, True),
+    )
+    inside = np.ones((64, 64), dtype=bool)
+    labels = np.zeros((64, 64), dtype=np.int32)
+    labels[8:24, 8:24] = 1
+    labels[30:55, 40] = 1
+    failed = _minimum_relief_feature_audit(
+        labels,
+        inside,
+        palettes,
+        face_diameter_mm=9.5,
+        grid_size=64,
+        nozzle_mm=0.2,
+        allowed_area_px=8,
+        allowed_dimension_px=3,
+    )
+    assert 1.0 < failed["minimum_feature_px"] < 2.0
+    assert failed["support_kernel_px"] == 2
+    assert failed["status"] == "failed"
+    assert failed["colors"]["gray"]["largest_violation_dimension_px"] == 25
+
+    labels[30:55, 41] = 1
+    passed = _minimum_relief_feature_audit(
+        labels,
+        inside,
+        palettes,
+        face_diameter_mm=9.5,
+        grid_size=64,
+        nozzle_mm=0.2,
+        allowed_area_px=8,
+        allowed_dimension_px=3,
+    )
+    assert passed["status"] == "passed"
+
+
+def test_minimum_feature_gate_rejects_long_sub_nozzle_negative_channel() -> None:
+    palettes = (
+        PaletteSpec("black", 0, (0, 0, 0), "base", 0.0, True),
+        PaletteSpec("gray", 1, (116, 116, 113), "relief", 0.4, True),
+    )
+    inside = np.ones((100, 100), dtype=bool)
+    labels = np.ones((100, 100), dtype=np.int32)
+    labels[10:90, 50] = 0
+
+    report = _minimum_relief_feature_audit(
+        labels,
+        inside,
+        palettes,
+        face_diameter_mm=10.0,
+        grid_size=100,
+        nozzle_mm=0.2,
+        allowed_area_px=8,
+        allowed_dimension_px=3,
+    )
+
+    assert report["status"] == "failed"
+    assert report["colors"]["black"]["role"] == "base"
+    assert report["colors"]["black"]["largest_violation_dimension_px"] == 80
+
+
+def test_minimum_feature_gate_rejects_many_sub_nozzle_negative_dots() -> None:
+    palettes = (
+        PaletteSpec("black", 0, (0, 0, 0), "base", 0.0, True),
+        PaletteSpec("gray", 1, (116, 116, 113), "relief", 0.4, True),
+    )
+    inside = np.ones((100, 100), dtype=bool)
+    labels = np.ones((100, 100), dtype=np.int32)
+    for y in range(10, 95, 5):
+        for x in range(10, 95, 5):
+            labels[y, x] = 0
+
+    report = _minimum_relief_feature_audit(
+        labels,
+        inside,
+        palettes,
+        face_diameter_mm=10.0,
+        grid_size=100,
+        nozzle_mm=0.2,
+        allowed_area_px=8,
+        allowed_dimension_px=3,
+    )
+
+    assert report["status"] == "failed"
+    assert report["colors"]["black"]["unsupported_components"] == 289
+    assert report["colors"]["black"]["aggregate_cleanup_budget_exceeded"] is True
 
 
 def test_process_emits_safe_partition_and_report(tmp_path: Path) -> None:
@@ -153,6 +243,26 @@ def test_metadata_must_be_json_serialisable(tmp_path: Path) -> None:
         assert "JSON-serialisable" in str(exc)
     else:  # pragma: no cover
         raise AssertionError("non-JSON metadata was accepted")
+
+
+def test_adapter_envelope_metadata_must_match_measured_diameter(tmp_path: Path) -> None:
+    config = _job(tmp_path)
+    text = config.read_text(encoding="utf-8").replace(
+        "face_diameter_mm = 52.0",
+        """face_diameter_mm = 52.0
+measured_diameter_mm = 85.0
+
+[metadata]
+adapter_nominal_ring_mm = 77.0
+adapter_radial_wall_mm = 2.5""",
+    )
+    config.write_text(text, encoding="utf-8")
+    try:
+        load_config(config)
+    except ConfigError as exc:
+        assert "nominal_ring" in str(exc)
+    else:  # pragma: no cover
+        raise AssertionError("a mismatched adapter envelope was accepted")
 
 
 def test_palette_names_are_casefold_unique_for_output_files(tmp_path: Path) -> None:

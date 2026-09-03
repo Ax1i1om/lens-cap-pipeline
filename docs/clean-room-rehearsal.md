@@ -10,29 +10,74 @@ invocation if automatic matching has not refreshed.
 
 ## Latest audit snapshot
 
-The committed Alpha snapshot was replayed from a fresh Git archive and a new
-Python virtual environment on the development host. The repository suite
-collected **150 tests**, all passed; Ruff, both official Skill validators, and
-the source/mirror hash check passed. The fresh ImageGen Helios-44-2 REHOUSE
-fixture then passed at 77, 82, and 95 mm with the native one-piece OpenSCAD
-route, same-canvas projection audits, and default integrated friction ribs. The
-independent Mamiya-Sekor C 80mm F1.9 fixture passed at 77, 85, and 95 mm,
-including a 1.5 mm foam-lined 85 mm adapter case. Both structured clean-room
-user/agent transcripts passed, and the exact `bin/lens-cap-3mf` endpoint passed
-from an arbitrary working directory and from an extracted source distribution.
-With the local Bambu A1 mini 0.2 mm profiles, both 95 mm optional slices
-produced non-empty-G-code 3MFs and passed Core-package verification.
-The smoke gate also rejects an unapproved raster handoff, a missing
-source-backed culture/rehouse anchor, or a prompt/artwork path outside the
-fixture.
+The 2026-09-03 Alpha candidate passes the repository test suite, Ruff,
+`compileall`, both official Skill validators, and the canonical
+`skills/`-to-`.agents/skills/` hash receipt. `make smoke-all` runs three
+fixtures and three four-turn no-history interaction transcripts. On the
+development host (OpenSCAD 2026.06.12 with Manifold), every matrix job emitted
+a native 3MF through `scripts/build_3mf.py`; no smoke-only native/Bambu writer
+exists. All three transcript-selected jobs passed that same bridge. The v3
+95 mm case additionally passed a current Bambu Studio multipart `export` with
+the exact A1 mini 0.2 mm machine, 0.10 mm process, and PLA profile files plus
+their fully resolved inheritance chains. This is an audited unsliced printer
+project, not a claim that it contains G-code.
+Separately, the current 20 mm adapter cube passed `--require-slice`: its
+manifest preserves the same profile provenance/effective-settings contract and
+records 200/200 extrusion-bearing layers at 0.10 mm plus 13,438 positive XY
+extrusion moves. That cube proves the semantic G-code gate; it is not a
+lens-cap slice or physical-print claim. Older retained Helios/Mamiya slices are
+historical compatibility samples and are excluded from this current evidence.
 
-This is a reproducibility result for the declared host/tool matrix, not a
-promise that every Codex host has the same Skill catalog, ImageGen save API,
-OpenSCAD installation, slicer profiles, or physical fit. A fresh ephemeral
-Codex CLI blind prompt for “Sigma 28–70mm F2.8 + circular image + printable
-model” selected `$lens-cap-imagegen` → `$lens-cap-production` and rejected
-parallel generic design Skills; hosts with a stale catalog still need the
-explicit invocation documented below.
+The default fixture is now an actual built-in ImageGen Helios-44-2 REHOUSE v3
+candidate, frozen after visual approval. Its retained 95 mm native package
+(`e1fda045…`) contains one object/one connected volume, 32,736 vertices and
+65,468 triangles, with 100.2 × 100.2 × 16.601 mm world bounds. The
+final-package gates verify ZIP/Core structure, bounds, non-empty
+black/gray/ivory triangle assignments, no used colour outside the active job
+palette, and all 12 expected friction ribs at their start, three interior
+cross-sections, and end. Each rib must also expose a connected full-width tip
+face and pass 15 full-height axial continuity samples. The rib gate proves
+structural presence in the 3MF; the default bare-wall profile still reports
+`guide_only_clearance` and requires a physical coupon before any retention
+claim.
+
+The v2 Helios fixture remains a 77/82/95 mm no-foam adapter matrix. The
+independent Mamiya-Sekor C 80mm F1.9 fixture covers 77/85/95 mm with 1.5 mm
+foam; its 85 mm primary case records and validates `80 + 2×2.5 = 85 mm` and
+reports `foam_contact_unverified` until a coupon is measured. The resolver
+selects `$lens-cap-imagegen` → `$lens-cap-production` for explicit Sigma
+28–70mm F2.8 lens-cap/3MF wording and schedules no generic design Skill. A clean
+task rejects generic “某镜头” and terse “test this lens” wording; the latter is
+accepted only with the explicit `--lens-cap-context` continuation flag.
+
+This is evidence for the declared repository/tool matrix, not a promise that
+every Codex host exposes the same Skill discovery cache, provider attachment
+save API, OpenSCAD version, Bambu profiles, or printer tolerances. The fixture
+records a real ImageGen result and approval boundary; the deterministic
+rehearsal does not call ImageGen again or claim pixel-identical regeneration.
+After Skill sync, a host must start a new task/reload its catalog, or use the
+documented explicit `$lens-cap-*` invocation.
+
+### Blind Codex route audit
+
+A separate agent was started without this conversation and was given only the
+repository path plus the natural request “design a Sigma 28–70mm F2.8 DG DN
+lens cap for an 82-to-95 cinema adapter, no foam, default ribs, 0.2 mm nozzle,
+finish at printable 3MF.” The resolver selected
+`lens-cap-imagegen -> lens-cap-production`, reported no generic parallel design
+Skill, and preserved the already supplied no-foam/rib/nozzle choices. Its one
+legitimate clarification was whether 95 mm was the caliper-measured cylindrical
+gripping surface or only the adapter's nominal label; the latter must not be
+invented as `measured_diameter_mm` or reverse-engineered into a 6.5 mm radial
+wall without evidence.
+
+That blind run also found two portability defects now covered by regression
+tests: the project-local `.agents/skills` mirror had drifted from authoritative
+`skills/`, and a quoted creation request inside a read-only prompt/route audit
+was mistaken for a real deliverable. The mirror now has a checked hash receipt,
+and explicit prompt simulations, interaction replays, and read-only/no-file
+wrappers hard-veto quoted affirmative verbs. A genuine later cap deliverable in
+an ordinary mixed turn remains clause-aware and can still route.
 
 ## Simulated new-user interaction
 
@@ -101,11 +146,11 @@ temporary fixture:
 
 ```sh
 python3 scripts/rehearse_user_agent.py \
-  examples/rehearsals/helios-44-2-rehouse-clean-room.json \
+  examples/rehearsals/helios-44-2-imagegen-v3-95mm-clean-room.json \
   --bambu never --json
 ```
 
-The checked-in scenario is intentionally a four-turn “new user” exchange:
+Each checked-in scenario is intentionally a four-turn “new user” exchange:
 the first user turn names the lens and asks for a circular cap/3MF, the agent
 declares the two dedicated Skills, the next user turn answers diameter/foam/
 ribs together, and the final agent turn records the bridge endpoint. The
@@ -129,12 +174,12 @@ call an image provider or pretend that a generated image can be reproduced
 byte-for-byte: the fixture’s approved artwork/hash remains the human approval
 boundary.
 
-The repository also includes
-`examples/rehearsals/mamiya-sekor-c-80-f1-9-rehouse-clean-room.json`. It repeats
-the same clean-room exchange with a different lens identity and an 85 mm
-envelope (`80 mm nominal ring + 2.5 mm radial wall`) plus 1.5 mm uncompressed
-foam. Running both scenarios is a useful cross-job leakage check: Helios text,
-M42, T*, and other maker-specific marks must not carry into the Mamiya brief.
+The repository also retains the legacy multi-diameter Helios transcript and
+`examples/rehearsals/mamiya-sekor-c-80-f1-9-rehouse-clean-room.json`. The latter
+repeats the exchange with a different lens identity and an 85 mm envelope
+(`80 mm nominal ring + 2.5 mm radial wall`) plus 1.5 mm uncompressed foam.
+Running all three is a cross-job leakage check: Helios text, M42, maker-specific
+coating marks, and other job-local tokens must not carry into the Mamiya brief.
 
 ## Matrix exercised on the development host
 
@@ -144,26 +189,31 @@ radial wall is not accidentally treated as a filter-thread diameter.
 
 | fixture | approved visual identity | adapter envelope | mating diameter | liner | retained output |
 | --- | --- | ---: | ---: | --- | --- |
-| Helios-44-2 REHOUSE (baseline) | 58 / F2 | 72 + 2×2.5 mm | 77 mm | none | native 3MF |
-| Helios-44-2 REHOUSE (baseline) | 58 / F2 | 77 + 2×2.5 mm | 82 mm | none | native 3MF |
-| Helios-44-2 REHOUSE (baseline) | 58 / F2 | nominal 95 mm PL front | 95 mm | none | native + Bambu slice |
-| Helios-44-2 REHOUSE (fresh ImageGen v2) | 58 / F2 | 72 + 2×2.5 mm | 77 mm | none | native 3MF |
-| Helios-44-2 REHOUSE (fresh ImageGen v2) | 58 / F2 | 77 + 2×2.5 mm | 82 mm | none | native 3MF |
-| Helios-44-2 REHOUSE (fresh ImageGen v2) | 58 / F2 | nominal 95 mm PL front | 95 mm | none | native + Bambu slice |
-| Mamiya-Sekor C REHOUSE | 80 / F1.9 | 72 + 2×2.5 mm | 77 mm | 1.5 mm | native 3MF |
-| Mamiya-Sekor C REHOUSE | 80 / F1.9 | 80 + 2×2.5 mm | 85 mm | 1.5 mm | native 3MF |
-| Mamiya-Sekor C REHOUSE | 80 / F1.9 | nominal 95 mm PL front | 95 mm | 1.5 mm | native + Bambu slice |
+| Helios-44-2 REHOUSE (actual ImageGen v3 default) | 58 / F2 | 95 + 2×0 mm | 95 mm | none | canonical native 3MF + release report |
+| Helios-44-2 REHOUSE (legacy ImageGen v2) | 58 / F2 | 72 + 2×2.5 mm | 77 mm | none | canonical native 3MF + release report |
+| Helios-44-2 REHOUSE (legacy ImageGen v2) | 58 / F2 | 77 + 2×2.5 mm | 82 mm | none | canonical native 3MF + release report |
+| Helios-44-2 REHOUSE (legacy ImageGen v2) | 58 / F2 | 95 + 2×0 mm | 95 mm | none | canonical native 3MF + release report |
+| Mamiya-Sekor C REHOUSE | 80 / F1.9 | 72 + 2×2.5 mm | 77 mm | 1.5 mm | canonical native 3MF + release report |
+| Mamiya-Sekor C REHOUSE | 80 / F1.9 | 80 + 2×2.5 mm | 85 mm | 1.5 mm | canonical native 3MF + release report |
+| Mamiya-Sekor C REHOUSE | 80 / F1.9 | 95 + 2×0 mm | 95 mm | 1.5 mm | canonical native 3MF + release report |
 
-The 77/82/95 and 77/85/95 job TOMLs, approved masters, prompt records,
-briefs, and verified 3MF sidecars live under:
+The v3 default plus the 77/82/95 and 77/85/95 job TOMLs, approved masters,
+prompt records, briefs, and retained 3MF evidence live under:
 
-- `examples/fixtures/helios-44-2-rehouse/`
+- `examples/fixtures/helios-44-2-rehouse-imagegen-v3/`
 - `examples/fixtures/helios-44-2-rehouse-imagegen-v2/`
 - `examples/fixtures/mamiya-sekor-c-80-f1-9-rehouse/`
 
-The native 3MF files are unsliced Core packages. The retained Bambu files
-contain non-empty G-code and are snapshots of the recorded A1 mini/0.2 mm
-profile; Bambu UUIDs, timestamps, and G-code metadata may vary by release.
+The native 3MF files are unsliced Core packages. The adapter removes OpenSCAD's
+volatile creation timestamp, replaces generated UUID attributes with
+content-derived UUIDv5 values, and rewrites ZIP entries in a canonical order
+with fixed metadata. Repeated exports are therefore byte-identical under the
+same OpenSCAD/Python/zlib toolchain. Across different tool versions, the
+portable equivalence criteria remain source/config hashes, geometry
+counts/bounds and surface evidence, projection, palette assignments, and rib
+gates; the project does not promise identical mesh tessellation or compressed
+bytes across arbitrary OpenSCAD/zlib versions. Printer-specific slicing remains
+a separate local stage.
 
 ## Rehearse from a clean checkout
 
@@ -199,11 +249,12 @@ Use `--artifact-dir examples/fixtures/<fixture>/artifacts
 
 ## What “pass” means
 
-The machine-readable report separates four claims:
+The machine-readable report separates these claims:
 
 - `passed`: source/config hashes, palette roles, mask coverage, SVG canvas,
   model parameters, STL projection, 3MF package/XML/mesh indices, and (when
-  requested) non-empty G-code all satisfy their declared gates;
+  requested) ordered layer metadata plus spatially plausible extrusion paths
+  all satisfy their declared gates;
 - `unverifiable`: an external executable, printer profile, or physical coupon
   is absent; no stronger claim is made;
 - `failed`: a required input or invariant disagrees, so downstream release is
@@ -211,6 +262,12 @@ The machine-readable report separates four claims:
 - `fit_status = unverifiable_until_coupon_measurement`: a physical lens,
   foam batch, ribs, printer, and material still need a short same-material
   fit-ring print and measurement.
+
+The portable smoke runner may exit zero when OpenSCAD is absent so its JSON can
+be collected, but top-level `status=unverifiable` and
+`native_3mf_complete=false` are not success. `deterministic_preflight_status`
+or `interaction_status` may independently be `passed`. Use
+`--require-external` when a real native 3MF is the acceptance endpoint.
 
 The artwork contract is style/specification equivalence, not byte-identical
 image generation. Once a user approves a raster, its hash makes the boundary
@@ -225,8 +282,9 @@ deterministic; all later stages preserve its coordinates and text hierarchy.
 3. Install OpenSCAD with Manifold for a native one-piece 3MF. The bridge also
    accepts an explicit `--openscad` path or the job `[print]` executable field;
    explicit values are authoritative and do not silently fall back.
-4. Add Bambu machine/process/filament profiles only for a sliced printer
-   project. The repository does not log into MakerWorld or ChromaCanvas.
+4. Add explicit Bambu machine/process/filament profiles for either an exported
+   or sliced printer project. They are not needed for a native Core 3MF. The
+   repository does not log into MakerWorld or ChromaCanvas.
 5. Measure the real cylindrical surface the cap grips, including adapter wall;
    do not substitute a nominal filter size. Print a coupon before claiming fit.
 

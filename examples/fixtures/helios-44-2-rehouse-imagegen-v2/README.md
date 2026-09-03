@@ -47,16 +47,28 @@ The `artifacts/` directory contains the outputs from the same source art and
 job TOMLs:
 
 - `*-native.3mf`: OpenSCAD Manifold native Core packages, one integrated mesh
-  part, unsliced.
+  part, unsliced. Each current native package has an adjacent
+  `*-3mf-release.json` proving the job passed `scripts/build_3mf.py`.
 - `*-assembly-standard.3mf`: explicit STL-to-Core diagnostic packages; their
   internal relief interfaces are retained as a topology diagnostic, not a
   printability claim.
-- `95mm-bambu-slice.3mf`: Bambu Studio A1 mini, 0.2 mm nozzle, 0.10 mm
-  Standard profile, with non-empty embedded G-code.
+- `95mm-bambu-slice.3mf`: a historical Bambu Studio compatibility snapshot
+  with embedded G-code. Its stored print-settings label names the 0.10 mm
+  Standard profile, but the embedded effective/G-code layer height is 0.20 mm.
+  Do not use it as evidence that the named 0.10 mm process was applied.
 
 Every package has a `.manifest.json` sidecar containing input/output hashes,
-tool information, and package verification. A valid package or slicer result
-does not establish physical fit; print a same-material coupon and measure it.
+tool information, and the checks recorded when that snapshot was created. The
+historical Bambu sidecar predates profile input/post-run hashes, inheritance
+resolution, `effective_profile_audit`, and the persisted semantic
+`verification.slice_audit`; G-code presence/byte count in that sidecar is not
+current release evidence. Use the v3 fixture's Bambu export manifest for the
+current multipart profile-provenance contract and
+`tools/3mf_adapter/fixtures/fixture-cube-bambu-sliced.3mf` for current semantic
+G-code-gate evidence; create a fresh job-specific slice with all three profiles
+before making a current claim about this fixture. A valid
+package or slicer result does not establish physical fit; print a same-material
+coupon and measure it.
 
 ## Reproduce
 
@@ -67,10 +79,13 @@ python3 scripts/smoke_rehouse.py \
   --fixture examples/fixtures/helios-44-2-rehouse-imagegen-v2 \
   --bambu never --require-external --json
 
-# On a host with compatible Bambu Studio profiles:
+# On a host with compatible Bambu Studio profiles, create new current evidence:
 python3 scripts/smoke_rehouse.py \
   --fixture examples/fixtures/helios-44-2-rehouse-imagegen-v2 \
-  --bambu auto --require-external --json
+  --bambu slice --require-external \
+  --machine-profile /path/to/machine.json \
+  --process-profile /path/to/process.json \
+  --filament-profile /path/to/filament.json --json
 ```
 
 To refresh retained files intentionally, add

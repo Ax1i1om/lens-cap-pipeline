@@ -5,10 +5,14 @@ description: >
   CAD、SCAD、STL、3MF 或打印交接时，优先并只使用本 Skill，不要并行调用
   通用机械 CAD、产品设计、平面设计、Logo、海报、UI 或其他设计 Skill。
   本 Skill 把批准的镜头盖图稿和当前测量转换为可复现的遮罩、浮雕、OpenSCAD
-  与打印交接包；明确指定相机镜头并要求圆形正面、浮雕、圆形图像／圆形艺术图、
-  镜头闷盖／镜头帽／镜头罩模型、可打印模型或 3MF 时，即使没有写出“镜头盖”
-  也属于本路由；光学设计、维修和普通产品照片不属于此路由。没有正面／盖体
-  交付物的纯图像概念仍由 imagegen 阶段处理。
+  与打印交接包。生产路由必须同时正向识别镜头盖／镜头前盖对象，以及实体、
+  卡合、可打印、模型／零件、CAD／SCAD／STL／3MF 或打印交接信号；也接受“明确
+  指定镜头 + STL／SCAD／CAD／3MF 或可打印模型”这一受控简写仅可用于已建立的
+  镜头盖上下文。文件格式若归属
+  元数据／照片，或可打印对象其实是封面、卡片、海报，就不足以触发；光学设计、
+  光学测试、维修、普通产品照片、检查格式支持、解释导出流程和仅要求圆形图像／
+  艺术图的概念任务也不属于此路由。否定镜头盖对象，或查看／审计／修复／测试
+  Skill、生成器、文档、任务、状态、触发器与支持格式等元任务，也不得选择本 Skill。
 metadata:
   short-description: 可复现的镜头盖生产
   routing: primary-exclusive-for-lens-cap-production
@@ -29,6 +33,7 @@ metadata:
     - "lens cap production"
     - "lens-cap production"
     - "make a printable lens cap"
+    - "make a cap for a named lens"
     - "printable lens cap"
     - "lens cap model"
     - "lens-cap model"
@@ -42,34 +47,25 @@ metadata:
     - "lens cap STL"
     - "lens cap SCAD"
     - "lens cap 3MF"
-    - "lens front relief"
-    - "circular lens front"
-    - "lens badge model"
-    - "circular lens badge model"
-    - "lens front medallion model"
-    - "lens front 3MF"
-    - "lens relief model"
-    - "镜头正面浮雕"
-    - "镜头徽章模型"
-    - "圆形镜头徽章模型"
-    - "镜头正面徽章模型"
-    - "镜头正面图案模型"
-    - "圆形镜头正面"
-    - "镜头正面 3MF"
-    - "镜头浮雕模型"
-    - "圆形镜头浮雕"
-    - "圆形正面浮雕"
-    - "镜头圆形图像"
-    - "圆形镜头图像"
-    - "镜头圆形艺术图"
-    - "圆形镜头艺术图"
-    - "设计镜头圆形图像"
-    - "设计镜头圆形艺术图"
-    - "镜头闷盖模型"
-    - "镜头帽模型"
-    - "镜头罩模型"
-    - "可打印镜头模型"
-    - "镜头可打印模型"
+    - "lens-cap front relief"
+    - "lens-cap badge model"
+    - "circular lens-cap badge model"
+    - "lens-cap front medallion model"
+    - "lens-cap front 3MF"
+    - "lens-cap relief model"
+    - "front-cap model"
+    - "printable front-cap model"
+    - "镜头盖正面浮雕"
+    - "镜头盖徽章模型"
+    - "圆形镜头盖徽章模型"
+    - "镜头盖正面徽章模型"
+    - "镜头盖正面图案模型"
+    - "镜头盖正面 3MF"
+    - "镜头盖浮雕模型"
+    - "圆形镜头盖浮雕"
+    - "前盖正面浮雕"
+    - "镜头前盖模型"
+    - "实体盖模型"
 ---
 
 # 镜头盖生产 Skill（中文）
@@ -83,11 +79,17 @@ metadata:
 个镜头盖。网页研究、OpenSCAD 和仓库 CLI 属于允许的非设计辅助。只有用户
 明确要求一个无关的独立交付物时，才允许例外。
 
-如果用户明确指定了一颗相机镜头，并要求圆形正面、浮雕、圆形图像／圆形艺术图、
-镜头闷盖／镜头帽／镜头罩模型、可打印模型或 3MF，即使没有写出“镜头盖”，也按
-本 Skill 路由。“为这颗镜头生成可打印模型”这类自然表达也适用，但必须同时
-指向盖体／正面交付物。仅有光学设计、镜头维修或普通产品照片时，不要因为出现
-镜头名称就误触发本 Skill。
+“明确指定镜头 + STL／SCAD／CAD／3MF 或可打印模型”只在已经建立镜头盖上下文
+时是受控生产简写；clean request 必须明确写出镜头盖、镜头前盖、前盖正面或实体盖，并同时要求实体、卡合、
+可打印、模型／零件、文件格式或打印交接。归属元数据／照片的 `3MF`，以及可打印
+封面、卡片或海报均不够。镜身／镜筒、对焦环／齿轮、遮光罩、卡口、兔笼、快装板、
+标签、盒子或手柄也不是镜头盖，不能借用 sticky context。仅有圆形图稿、光学设计、镜头维修、用镜头拍摄的海报或普通产品照片
+时，不得因为出现镜头名称就误触发；圆形图稿只路由到 imagegen。
+盖体归属必须为正向请求；“除镜头盖外”“不要／不是镜头盖”以及 `anything but /
+other than a lens cap` 不得触发。查看、审计、修复或测试 Skill／生成器／文档／任务、
+询问任务状态或支持格式也不是生产任务。提示词／路由测试、交互模拟复演或明确只读
+且不生成文件的审计中引用的镜头盖请求只是测试数据；引号内的生成动词不得触发。
+即使已有 sticky context 仍然如此。
 
 这是本仓库的决策层：把已经批准的镜头盖图稿，稳定地转换成同画布
 遮罩、SVG、参数化 OpenSCAD 和打印交接清单。概念图创作仍由图像生成
@@ -123,6 +125,11 @@ Skill 完成；本 Skill 不在建模阶段重画图稿。
 厚度和压缩率的实测。滤镜螺纹名义尺寸不能代替实测卡合外径。只做独立浮雕
 正面时，才需要另问成品直径及喷嘴／
 最小线宽。
+如果实测外径来自转接环，可选把公称环直径
+`metadata.adapter_nominal_ring_mm` 与径向壁厚
+`metadata.adapter_radial_wall_mm` 写入任务；两者出现时配置门禁强制校验
+“公称直径 + 2 × 径向壁厚 = 实测外径”。它们是审计分解，不是在实际卡合外径
+已经可靠给出后额外增加的必答问题。
 
 需要接近参考附件中“宽而粗”的内壁凸起时，使用中性的
 `friction_rib_profile = "wide_tapered"`（6 条宽楔形凸条，约 8° 基部角、
@@ -144,6 +151,9 @@ ImageGen 对话附件本身不是已批准的文件输入。如果结果尚未�
 已批准图稿中的焦段仍是第一阅读层级，最大光圈（F 值）／F值／F-stop／F-number 是第二层级。生产阶段只生成
 同画布派生物，必须保留这些文字及其位置；机械适配器或其他宿主 Skill 不得
 重新输入或重设计它们。
+可变光圈变焦以首端 F 值保留 `maximum_aperture` 机器锚点，用可选的
+`maximum_aperture_display` 记录规范化完整范围，并要求 `display_text[1]` 保持
+完整范围；当前 schema 暂不接受 T-stop。
 
 ## 每个任务的身份与来源
 
@@ -168,16 +178,28 @@ ImageGen 对话附件本身不是已批准的文件输入。如果结果尚未�
     . .venv/bin/activate
     # Windows PowerShell：.venv\Scripts\Activate.ps1
     lenscap init jobs/name/job.toml --source art/master.png \
-      --measured-diameter 95 --foam-thickness 1.5
+      --measured-diameter 95 --foam-thickness 1.5 \
+      --lens-identity "Helios / Zenit Helios-44-2 58mm F2" \
+      --display-text 58 F2 "HELIOS 44-2" "REHOUSED CINEMA" M42
+    # 先审核圆形、palette／浮雕高度、grid、过滤／cleanup 和 assembly mode，
+    # 再生成脚手架，让批准 brief 绑定最终 job 值：
+    # 保存并审核图稿后，建立 provider-neutral 交接简报：
+    lens-cap handoff-init jobs/name/job.toml --brand "Helios / Zenit" \
+      --model "Helios-44-2" --focal-length 58 --maximum-aperture F2 \
+      --provider "OpenAI built-in image_gen" \
+      --anchor-source https://www.zenitcamera.com/mans/zenit-e/zenit-e-eng.html
+    # 用正向 sourced／verified 证据状态，替换占位，并解释任何 N/A 许可后再批准：
+    lens-cap handoff-check jobs/name/job.toml --json
     # 仅在用户明确选择光滑内壁时：
     # lenscap init jobs/name/job.toml --source art/master.png \
     #   --measured-diameter 95 --no-friction-ribs
-    # 编辑圆心、半径和 palette 后：
-    lenscap build jobs/name/job.toml --force --export-openscad --bambu-handoff
-    lenscap validate jobs/name/job.toml
-    # 实际生成并校验原生（未切片）3MF
+    # bridge 自己会重跑 build、投影审计、导出和校验：
     ./bin/lens-cap-3mf jobs/name/job.toml --force --json
     # Windows：py -3 scripts/build_3mf.py jobs/name/job.toml --force --json
+
+严格 brief 门只接受以 verified／sourced／documented／attested／archived 等正向
+状态开头的证据字段，否定句不能通过。不适用的许可仍须给出理由，例如
+`not applicable — no third-party mark rendered`；裸 `NONE`／`N/A` 会失败。
 
 发布或跨机器比较时，若已安装 uv，可改用
 `./scripts/bootstrap.py --dev --locked` 固定 `uv.lock`；不带
@@ -193,12 +215,21 @@ UNVERIFIABLE。Bambu handoff 是版本中立的清单，不等于已经生成或
 配置的切片 3MF，还需提供本机 Bambu Studio 配置并检查预览。model 阶段会重新计算当前源图和每个浮雕 SVG 的哈希；即使旧报告
 仍写着 `passed`，被替换的源图或手改遮罩也不能继续建模。`bin/lens-cap-3mf` 是请求
 实际 3MF 时的标准终点：它串联公开 build、同画布投影审计、OpenSCAD 一体导出和
-无第三方依赖的 ZIP/Core XML／网格索引／边界校验。要得到带 G-code 的打印机项目，
+无第三方依赖的 ZIP/Core XML／网格索引／边界校验，并直接检查最终网格中的必需
+palette 分配与已开启凸条位置。要得到带 G-code 的打印机项目，
 再加 `--bambu slice` 和三份明确的本机配置。缺少 OpenSCAD 时必须返回
 `UNVERIFIABLE`，并给出安装或“已有外部 STL 使用 standard 适配器”的替代方案，
-不能把 SCAD 或 handoff JSON 称作 3MF。强制重建模型后若目录
+不能把 SCAD 或 handoff JSON 称作 3MF。桥接器在开始前使用与
+`handoff-check` 相同的严格 `design-brief.json` 门禁；缺失、未批准或与当前任务不一致时返回
+`FAILED`。brief 中每个非空机械字段必须与当前 job 一致；直径字段留空时，
+同一批准图稿可服务多个尺寸，但每份 TOML 仍是机械权威。强制重建模型后若目录
 里残留同名 STL，handoff 只有在当前 OpenSCAD 报告的模型哈希和逐件哈希都匹配
 时才会接收；没有该报告的手工 STL 会明确标为未核验。
+
+用户要求真实 3MF 时，不得停在 `build`、SCAD、STL、Bambu handoff JSON 或一条
+建议命令。只有 bridge 返回 `passed`、报告中的 `.3mf` 确实存在且 Core package
+校验通过，才可报告完成；便携预检在缺少 OpenSCAD 时即使正常退出，其顶层仍应是
+`unverifiable`，这只是诊断结果，不是生产完成。
 
 不透明 master 必须在 `[circle]` 中明确填写 `center_px` 与 `radius_px`；只有
 经过审核的二值 Alpha 边界才可使用可追溯的圆形推断，不能默默重新居中。

@@ -211,6 +211,12 @@ class FitSpec:
     # end of the dataclass to preserve positional compatibility with the
     # original FitSpec constructor.
     friction_rib_profile: str = "light_tapered"
+    # ``init`` writes the resolved profile values for discoverability, but
+    # marks them as derived so changing the mating diameter can safely
+    # recompute scale-dependent defaults.  A user edit to any numeric field
+    # automatically turns the values into explicit overrides at load time.
+    friction_rib_profile_derived: bool = False
+    friction_rib_profile_reference_cavity_mm: float | None = None
 
     def public(self) -> dict[str, Any]:
         return {
@@ -231,6 +237,8 @@ class FitSpec:
             "friction_rib_height_mm": self.friction_rib_height_mm,
             "friction_rib_start_mm": self.friction_rib_start_mm,
             "friction_rib_profile": self.friction_rib_profile,
+            "friction_rib_profile_derived": self.friction_rib_profile_derived,
+            "friction_rib_profile_reference_cavity_mm": self.friction_rib_profile_reference_cavity_mm,
             "retention_strategy": self.retention_strategy,
         }
 
@@ -788,37 +796,91 @@ def load_config(path: str | Path) -> PipelineConfig:
     except ValueError as exc:
         raise ConfigError(str(exc)) from exc
 
+    # ``lens-cap init`` keeps resolved numbers visible in TOML, but marks
+    # them as derived.  If the user later changes the measured diameter (or
+    # foam stack), recognise unchanged derived values and recompute the
+    # scale-dependent profile instead of freezing the old circumference.  A
+    # deliberate edit to any numeric rib field is treated as an explicit
+    # override and is preserved exactly.
+    profile_derived = False
+    profile_reference: float | None = None
+    if _boolean(
+        fit_raw.get("friction_rib_profile_derived"),
+        "fit.friction_rib_profile_derived",
+        default=False,
+    ):
+        reference_raw = fit_raw.get("friction_rib_profile_reference_cavity_mm")
+        if reference_raw is not None:
+            reference = float(
+                _number(
+                    reference_raw,
+                    "fit.friction_rib_profile_reference_cavity_mm",
+                )
+            )
+            if reference <= 0:
+                raise ConfigError("fit.friction_rib_profile_reference_cavity_mm must be > 0")
+            try:
+                reference_defaults = friction_rib_profile_defaults(rib_profile, reference, side)
+            except ValueError as exc:
+                raise ConfigError(str(exc)) from exc
+            profile_keys = (
+                "friction_rib_count",
+                "friction_rib_protrusion_mm",
+                "friction_rib_width_mm",
+                "friction_rib_height_mm",
+                "friction_rib_start_mm",
+            )
+            profile_derived = True
+            for key in profile_keys:
+                supplied = fit_raw.get(key)
+                if supplied is None:
+                    continue
+                try:
+                    supplied_value = float(supplied)
+                    expected_value = float(reference_defaults[key])
+                except (TypeError, ValueError, OverflowError) as exc:
+                    raise ConfigError(f"fit.{key} must be numeric") from exc
+                if not math.isfinite(supplied_value) or not math.isclose(
+                    supplied_value, expected_value, rel_tol=0.0, abs_tol=1e-7
+                ):
+                    profile_derived = False
+                    break
+            if profile_derived:
+                profile_reference = profile_cavity
+
+    def profile_value(key: str) -> Any:
+        if profile_derived:
+            return profile_defaults[key]
+        return fit_raw.get(key, profile_defaults[key])
+
     rib_count = int(
         _number(
-            fit_raw.get("friction_rib_count", profile_defaults["friction_rib_count"]),
+            profile_value("friction_rib_count"),
             "fit.friction_rib_count",
             integer=True,
         )
     )
     rib_protrusion = float(
         _number(
-            fit_raw.get(
-                "friction_rib_protrusion_mm",
-                profile_defaults["friction_rib_protrusion_mm"],
-            ),
+            profile_value("friction_rib_protrusion_mm"),
             "fit.friction_rib_protrusion_mm",
         )
     )
     rib_width = float(
         _number(
-            fit_raw.get("friction_rib_width_mm", profile_defaults["friction_rib_width_mm"]),
+            profile_value("friction_rib_width_mm"),
             "fit.friction_rib_width_mm",
         )
     )
     rib_height = float(
         _number(
-            fit_raw.get("friction_rib_height_mm", profile_defaults["friction_rib_height_mm"]),
+            profile_value("friction_rib_height_mm"),
             "fit.friction_rib_height_mm",
         )
     )
     rib_start = float(
         _number(
-            fit_raw.get("friction_rib_start_mm", profile_defaults["friction_rib_start_mm"]),
+            profile_value("friction_rib_start_mm"),
             "fit.friction_rib_start_mm",
         )
     )
@@ -834,11 +896,6 @@ def load_config(path: str | Path) -> PipelineConfig:
             raise ConfigError("fit friction rib width/height must be > 0")
         if rib_start < 0 or rib_start + rib_height > side:
             raise ConfigError("fit friction ribs must lie within side_height_mm")
-        # A rib thinner than the declared nozzle is not a reliable printable
-        # feature.  Limit its width to a fraction of the angular pitch so
-        # adjacent ribs cannot merge into an accidental continuous ring.
-        if rib_width < nozzle:
-            raise ConfigError("fit.friction_rib_width_mm must be >= nozzle_mm")
         # Use the actual mating diameter for the circumferential pitch.  A
         # synthetic 1 mm floor would make tiny, otherwise valid fixtures pass
         # the width/protrusion gate and then fail later in the model stage.
@@ -852,6 +909,19 @@ def load_config(path: str | Path) -> PipelineConfig:
             raise ConfigError("fit.friction_rib_width_mm is too wide for the selected rib count")
         if rib_protrusion >= mating_diameter / 4.0:
             raise ConfigError("fit.friction_rib_protrusion_mm is too large for the mating diameter")
+        rib_angle_deg = min(
+            8.0,
+            360.0 * rib_width / (math.pi * pitch_diameter),
+            180.0 / rib_count,
+        )
+        tip_angle_deg = rib_angle_deg * 0.55
+        tip_radius = pitch_diameter / 2.0 - rib_protrusion
+        tip_chord_mm = 2.0 * tip_radius * math.sin(math.radians(tip_angle_deg / 2.0))
+        if tip_chord_mm < nozzle:
+            raise ConfigError(
+                "fit friction rib contact-tip width must be >= nozzle_mm; "
+                "increase friction_rib_width_mm"
+            )
         if foam_status == "foam":
             assert liner is not None
             compressed_radial_gap = liner * (1.0 - compression)
@@ -897,6 +967,8 @@ def load_config(path: str | Path) -> PipelineConfig:
         friction_rib_start_mm=rib_start,
         retention_strategy=str(fit_raw.get("retention_strategy", "auto")),
         friction_rib_profile=rib_profile,
+        friction_rib_profile_derived=profile_derived,
+        friction_rib_profile_reference_cavity_mm=profile_reference,
     )
 
     layer = float(_number(print_section.get("layer_height_mm", 0.1), "print.layer_height_mm"))
@@ -922,6 +994,46 @@ def load_config(path: str | Path) -> PipelineConfig:
     if not isinstance(metadata_raw, Mapping):
         raise ConfigError("metadata must be a table/object")
     metadata = dict(metadata_raw)
+    adapter_nominal_raw = metadata.get("adapter_nominal_ring_mm")
+    adapter_wall_raw = metadata.get("adapter_radial_wall_mm")
+    if (adapter_nominal_raw is None) != (adapter_wall_raw is None):
+        raise ConfigError(
+            "metadata.adapter_nominal_ring_mm and metadata.adapter_radial_wall_mm must be declared together"
+        )
+    if adapter_nominal_raw is not None:
+        if measured is None:
+            raise ConfigError("adapter envelope metadata requires measured_diameter_mm")
+        adapter_nominal = float(
+            _number(adapter_nominal_raw, "metadata.adapter_nominal_ring_mm")
+        )
+        adapter_wall = float(
+            _number(adapter_wall_raw, "metadata.adapter_radial_wall_mm")
+        )
+        if adapter_nominal <= 0 or adapter_wall < 0:
+            raise ConfigError(
+                "metadata adapter nominal diameter must be > 0 and radial wall must be >= 0"
+            )
+        adapter_derived = adapter_nominal + 2.0 * adapter_wall
+        if not math.isclose(adapter_derived, measured, rel_tol=0.0, abs_tol=0.05):
+            raise ConfigError(
+                "measured_diameter_mm must equal metadata.adapter_nominal_ring_mm + "
+                "2 * metadata.adapter_radial_wall_mm (within 0.05 mm)"
+            )
+        declared_derived = metadata.get("adapter_derived_mating_diameter_mm")
+        if declared_derived is not None:
+            declared_value = float(
+                _number(
+                    declared_derived,
+                    "metadata.adapter_derived_mating_diameter_mm",
+                )
+            )
+            if not math.isclose(declared_value, adapter_derived, rel_tol=0.0, abs_tol=1e-6):
+                raise ConfigError(
+                    "metadata.adapter_derived_mating_diameter_mm disagrees with nominal ring + 2 * wall"
+                )
+        metadata["adapter_nominal_ring_mm"] = adapter_nominal
+        metadata["adapter_radial_wall_mm"] = adapter_wall
+        metadata["adapter_derived_mating_diameter_mm"] = adapter_derived
     if palette_base_label is not None:
         metadata.setdefault("palette_base_label", palette_base_label)
     metadata.setdefault("face_target_derived_from_measured", face_raw_value is None and measured is not None)
@@ -972,16 +1084,26 @@ def template_config(
     source: str,
     face_diameter_mm: float | None,
     output_dir: str = "build",
+    nozzle_mm: float = 0.2,
 ) -> dict[str, Any]:
     """Return a portable starter config for ``lens-cap init``."""
+    manufacturing_grid = 1000
+    if face_diameter_mm is not None and face_diameter_mm > 0 and nozzle_mm > 0:
+        # A starter job should not encode raster cells narrower than the
+        # nozzle. Users may deliberately raise the grid later, but the
+        # minimum-feature gate will then reject meaningful hairlines.
+        manufacturing_grid = max(
+            64,
+            min(1000, int(math.floor(face_diameter_mm / nozzle_mm + 1e-9))),
+        )
     return {
         "schema_version": 1,
         "job_slug": "my-lens-cap",
         "source_art": source,
         "output_dir": output_dir,
         "face_diameter_mm": face_diameter_mm,
-        "grid_size": 1000,
-        "nozzle_mm": 0.2,
+        "grid_size": manufacturing_grid,
+        "nozzle_mm": nozzle_mm,
         "safe_border_mm": 0.4,
         "circle": {"center_px": None, "radius_px": None, "allow_outside": False},
         "prefilter": {"name": "median", "size": 5, "radius": 0.8},
@@ -1004,7 +1126,12 @@ def template_config(
             "friction_rib_start_mm": 1.0,
             "retention_strategy": "auto",
         },
-        "print": {"nozzle_mm": 0.2, "layer_height_mm": 0.1, "printer": "", "filament_slots": []},
+        "print": {
+            "nozzle_mm": nozzle_mm,
+            "layer_height_mm": min(0.1, nozzle_mm),
+            "printer": "",
+            "filament_slots": [],
+        },
         "assembly_mode": "auto",
         "palette": {
             "black": {"index": 0, "rgb": [17, 18, 17], "role": "base", "height_mm": 0.0, "required": True},

@@ -5,7 +5,8 @@ The repository has two deliberately separate contracts:
 1. The lens-cap-imagegen Skill researches a named lens and produces a candidate
    circular artwork plus a provenance brief.
 2. The lens-cap-production Skill accepts the human-approved raster and
-   deterministically produces masks, SVGs, SCAD and printer handoff files.
+   deterministically produces masks, SVGs, SCAD, and—when requested and the
+   required local tool is available—a verified 3MF.
 
 This boundary matters. “High quality” means equivalence of the declared lens
 specification, text hierarchy, and visual style—not pixel-identical generation.
@@ -13,6 +14,13 @@ A generative image provider can change typography, texture, or composition
 between runs; no prompt can make that output a reproducible CAD input. Once a
 candidate is approved, copy it into the job, compute its SHA-256, and never let
 a downstream tool redraw it.
+
+The clean-room fixture records a real candidate, its prompt/provenance, and the
+human approval boundary. Its rehearsal deliberately does not call ImageGen a
+second time; it tests whether a fresh agent can consume that approved packet
+and complete the deterministic production route. Provider output therefore
+needs style/specification equivalence at review time, not pixel identity across
+runs.
 
 ## Design brief
 
@@ -46,6 +54,9 @@ The default prompt contract is:
 
 - complete circular medallion on a square canvas;
 - focal length as the largest first read and maximum aperture as the second;
+- for a variable-aperture zoom, keep the first F-number as the machine anchor,
+  record the full normalized range in `maximum_aperture_display`, and preserve
+  that complete range as `display_text[1]`; T-stops are not yet supported;
 - restrained brand/model text, quoted exactly;
 - black/charcoal/gray/ivory broad shapes and continuous engraved lines;
 - no pointillism, dense halftone, gradients, glossy 3D, random numerals,
@@ -71,10 +82,25 @@ editable text layer; never silently substitute a near model name.
 After approval:
 
 1. copy the selected candidate to a descriptive path inside the job;
-2. record its SHA-256 and the approval note in the design brief/manifest;
-3. if the source is opaque, declare its circle center and radius in the TOML;
-4. run the production CLI from the repository;
-5. compare the process master and role masks before any external adapter.
+2. create the job with `lens-cap init ... --lens-identity ... --display-text
+   FOCAL APERTURE ...`; the text list is the complete ordered closed set,
+   including every secondary model/system line;
+3. review the job TOML circle, complete palette (including relief heights),
+   grid, safe border, prefilter, cleanup, and assembly mode;
+4. run `lens-cap handoff-init JOB.toml --brand ... --model ...
+   --focal-length ... --maximum-aperture ... --provider ...` to scaffold a
+   brief with the candidate hash, mechanical values, and (when alpha is
+   present) a reviewed circle suggestion;
+5. verify each http(s) or explicit archive anchor source, replace its
+   `to_verify` evidence state and every
+   scaffold placeholder, complete all provenance licence fields, confirm the
+   full `display_text`/`allowed_text` set and circular composition, and set
+   `generation.approved=true` only after human review;
+6. run `lens-cap handoff-check JOB.toml` and then the production CLI;
+7. compare the process master and role masks before any external adapter;
+8. if the requested deliverable is a 3MF, continue through the canonical
+   bridge and verify that the `.3mf` actually exists and passes package and
+   projection checks.
 
 This approval handoff is an intentional human gate in Alpha. Image-generation
 providers expose their result differently (a conversation attachment, a local
@@ -96,6 +122,9 @@ Do not mark a candidate approved, invent a missing hash, or infer circle
 coordinates from a cropped preview merely to keep the chain moving. The
 clean-room rehearsal starts *after* this packet exists; it proves the
 deterministic packet-to-3MF route, not a provider-specific save/download API.
+On a host without OpenSCAD it may still prove the interaction and deterministic
+preflight, but its top-level production status remains `unverifiable`; that is
+not an actual 3MF success.
 
 For a standalone printable front, ask for the finished face diameter and
 nozzle/minimum-feature limit. For a fitted cap, ask for the actual mating
@@ -104,17 +133,50 @@ friction ribs. Ribs default to on; only an explicit smooth-wall request
 disables them. The confirmed diameter also sets the face/relief diameter by
 default. The production Skill asks this gate before modeling and does not ask
 users to choose an assembly structure.
+If the adapter's nominal diameter and one-side radial wall are also known, they
+may be recorded as the optional `--adapter-nominal-ring` /
+`--adapter-radial-wall` pair. The production configuration verifies
+`nominal + 2 × radial wall = measured mating diameter` within 0.05 mm. This is
+provenance for the envelope, not a fourth mandatory question; the actual
+measured mating diameter remains the sole required mechanical dimension.
 If a supplied reference shows chunky internal projections, record the neutral
 `wide_tapered` profile request for production; keep the default
 `light_tapered` profile for ordinary compatibility. This mechanical choice
 must not alter the approved focal-length/aperture artwork, and the reference
 archive remains provenance-only rather than a mesh to copy.
 
-The design brief is a human/provenance contract. The CLI does not infer or
-silently fill its semantic fields: `validate` proves deterministic file
-integrity, while the release checklist must separately mark a missing identity
-or licence brief as UNVERIFIABLE for public publication. This keeps creative
-evidence honest without blocking a private, relief-only experiment.
+The design brief is a human/provenance contract. `handoff-init` only writes a
+review-required scaffold; it does not infer brand history, approve a provider
+result, or call an image service. Its `--provider` argument is required so the
+scaffold cannot silently record a null provider. It copies the complete
+`metadata.display_text` list from the job and refuses focal/aperture
+disagreement; `handoff-check` requires both brief text lists to remain exactly
+equal to that complete job list. It also snapshots the job's circle, full
+palette (including relief heights), grid, safe border, prefilter, cleanup, and
+assembly mode; edit those before scaffolding, or rerun
+`handoff-init --force` before approval if they change. Anchor mapping fields
+must be substantive, sources must be http(s) or explicit archive identifiers,
+and evidence states must start with an explicit positive sourced/verified
+status. All provenance licence/brand-mark/notes fields are mandatory; a
+reasoned `not applicable — ...` statement is valid, while bare `NONE`/`N/A` is
+not.
+`handoff-check` and the canonical
+`bin/lens-cap-3mf` bridge verify the approved flag, exact identity/text order,
+source hash, culture/rehousing anchor, and licence fields. A missing or
+unapproved or mismatched brief is `FAILED` at the 3MF endpoint, while private
+relief-only experiments may still use the core `process`/`model` commands.
+Treat any `physical_fit` data in the brief as a snapshot from approval time.
+For multi-diameter production, each job TOML is authoritative for measured
+diameter, wall/bottom/side dimensions, bare clearance, liner, ribs, adapter
+envelope, nozzle, and print settings; the strict gate compares every
+geometry-driving snapshot field. Never propagate one size's brief summary over
+another job.
+
+When the user asks for an actual 3MF, neither the concept image nor a generated
+SCAD/STL/handoff is a terminal result. Success requires the existing output
+`.3mf` plus the canonical verification evidence. A passed interaction or
+preflight with `status=unverifiable` must be reported as incomplete production,
+not upgraded to success.
 
 The concept Skill and first-party templates are distributed with the source
 repository/sdist. The installed CLI wheel is intentionally provider-neutral;

@@ -1,10 +1,12 @@
 {
   "schema_version": 1,
+  "binding_mode": "shared_artwork_variants",
   "job_slug": "mamiya-sekor-c-80-f1-9-rehouse",
   "lens_identity": {
     "brand": "Mamiya",
     "model": "Mamiya-Sekor C 80mm F1.9",
     "focal_length_mm": 80,
+    "focal_length_display": "80",
     "maximum_aperture": "F1.9",
     "mount_or_revision": "Mamiya M645 bayonet; original C variant",
     "era": "late-1970s M645 medium-format still lens; later cinema rehousings"
@@ -41,6 +43,7 @@
     {
       "claim_kind": "manufacturer_culture",
       "subject_scope": "Mamiya M645 lens system",
+      "identity_binding": {"brand": "Mamiya", "scope": "brand"},
       "evidence_state": "verified_period_system_brochure",
       "source_role": "context",
       "source": "https://www.pacificrimcamera.com/rl/00302/00302.pdf",
@@ -90,17 +93,45 @@
     "measured_diameter_mm": null,
     "face_target_mm": null,
     "foam_liner_status": "foam",
+    "liner_material": null,
     "liner_thickness_mm": 1.5,
     "compression_fraction": 0.2,
+    "compression_is_assumption": true,
+    "wall_thickness_mm": 2.4,
+    "bottom_thickness_mm": 2.0,
+    "side_height_mm": 14.0,
+    "bare_clearance_mm": 0.4,
     "friction_ribs_enabled": true,
     "friction_ribs_explicit": false,
     "friction_rib_profile": "light_tapered",
+    "friction_rib_profile_derived": false,
+    "friction_rib_profile_reference_cavity_mm": null,
     "friction_rib_count": 12,
     "friction_rib_protrusion_mm": 0.1,
     "friction_rib_width_mm": 1.2,
     "friction_rib_height_mm": 8.0,
     "friction_rib_start_mm": 1.0,
-    "nozzle_mm": 0.2
+    "retention_strategy": "continuous_foam",
+    "nozzle_mm": 0.2,
+    "adapter_nominal_ring_mm": null,
+    "adapter_radial_wall_mm": null,
+    "adapter_derived_mating_diameter_mm": null
+  },
+  "job_binding": {
+    "metadata_lens_identity": "Mamiya-Sekor C 80mm F1.9 M645, rehoused cinema test",
+    "circle": {"center_px": [626.0, 625.0], "radius_px": 610.0, "allow_outside": false},
+    "palette": {
+      "black": {"index": 0, "rgb": [18, 18, 18], "role": "base", "height_mm": 0.0, "required": true},
+      "gray": {"index": 1, "rgb": [112, 112, 112], "role": "relief", "height_mm": 0.4, "required": true},
+      "ivory": {"index": 2, "rgb": [240, 230, 215], "role": "relief", "height_mm": 0.6, "required": true}
+    },
+    "artwork_process": {
+      "grid_size": 385,
+      "safe_border_mm": 0.25,
+      "prefilter": {"name": "none", "size": 3, "radius": 0.0},
+      "cleanup": {"enabled": true, "max_area_px": 8, "max_dimension_px": 3, "ring_px": 2, "dominance": 0.6, "apply_to": ["relief"]},
+      "assembly_mode": "auto"
+    }
   },
   "provenance": {
     "artwork_license": "OpenAI-generated test artwork; verify current provider terms before redistribution",

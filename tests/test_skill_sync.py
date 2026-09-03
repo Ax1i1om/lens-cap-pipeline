@@ -188,3 +188,36 @@ def test_sync_refuses_a_dangling_symlink_destination(tmp_path: Path) -> None:
         assert "symlink" in str(exc).lower()
     else:
         raise AssertionError("dangling symlink destination was accepted")
+
+
+def test_legacy_skill_migration_is_recoverable_and_explicit(tmp_path: Path) -> None:
+    destination = tmp_path / "skills"
+    legacy = destination / "lens-cap-front-image"
+    legacy.mkdir(parents=True)
+    (legacy / "SKILL.md").write_text("legacy\n", encoding="utf-8")
+    planned = install_skills.migrate_legacy_skills(destination, root=ROOT, dry_run=True)
+    assert planned["status"] == "planned"
+    assert legacy.is_dir()
+    blocked = install_skills.main(["migrate", "--dest", str(destination), "--apply", "--json"])
+    assert blocked == 2
+    assert legacy.is_dir()
+    applied = install_skills.main(
+        ["migrate", "--dest", str(destination), "--apply", "--force", "--json"]
+    )
+    assert applied == 0
+    assert not legacy.exists()
+    backup = destination / ".lens-cap-legacy" / "lens-cap-front-image"
+    assert backup.is_dir()
+    assert (destination / install_skills.MIGRATION_MARKER_NAME).is_file()
+
+
+def test_legacy_canonical_collision_requires_explicit_opt_in(tmp_path: Path) -> None:
+    destination = tmp_path / "skills"
+    canonical = destination / "lens-cap-production"
+    canonical.mkdir(parents=True)
+    (canonical / "SKILL.md").write_text("old\n", encoding="utf-8")
+    report = install_skills.inspect_legacy_skills(destination, root=ROOT)
+    assert report["status"] == "passed"  # ambiguous canonical is not moved by default
+    report = install_skills.inspect_legacy_skills(destination, root=ROOT, include_canonical=True)
+    assert report["status"] == "drift"
+    assert report["legacy"][0]["kind"] == "canonical_collision"

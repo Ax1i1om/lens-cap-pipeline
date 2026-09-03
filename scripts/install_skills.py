@@ -36,6 +36,11 @@ MANIFEST_PATH = ROOT / "skills" / "manifest.json"
 MARKER_NAME = ".lens-cap-skills.json"
 MARKER_SCHEMA_VERSION = 1
 _SAFE_NAME_CHARS = frozenset("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-")
+# Names used by pre-Alpha prototypes.  They are intentionally not silently
+# deleted: a migration moves them to a recoverable quarantine directory before
+# the canonical Skills are installed.
+LEGACY_SKILL_ALIASES = ("lens-cap-front-image", "lens-cap-front-artwork")
+MIGRATION_MARKER_NAME = ".lens-cap-legacy-migration.json"
 
 
 class SkillSyncError(ValueError):
@@ -761,6 +766,160 @@ def sync_skills(
     return report
 
 
+def _legacy_candidates(target: Path, *, include_canonical: bool = False) -> list[tuple[str, Path, str]]:
+    """Find known pre-Alpha Skill directories without following symlinks.
+
+    The old ``lens-cap-production`` name is also the current canonical name,
+    so it is reported as an *ambiguous canonical collision* unless the caller
+    explicitly opts in.  This prevents a manually installed current Skill
+    (without our receipt) from being moved unexpectedly.
+    """
+
+    candidates: list[tuple[str, Path, str]] = []
+    for alias in LEGACY_SKILL_ALIASES:
+        path = target / alias
+        if path.exists() or path.is_symlink():
+            candidates.append((alias, path, "legacy_alias"))
+    canonical = target / "lens-cap-production"
+    if (canonical.exists() or canonical.is_symlink()) and include_canonical:
+        candidates.append(("lens-cap-production", canonical, "canonical_collision"))
+    return candidates
+
+
+def inspect_legacy_skills(
+    destination: str | Path,
+    *,
+    root: str | Path = ROOT,
+    include_canonical: bool = False,
+) -> dict[str, Any]:
+    """Return a non-mutating report for stale prototype Skill directories."""
+
+    target = resolve_destination(destination, root=root)
+    _reject_symlink(target, "Skill destination")
+    entries: list[dict[str, Any]] = []
+    for name, path, kind in _legacy_candidates(target, include_canonical=include_canonical):
+        if path.is_symlink():
+            status = "blocked_symlink"
+        elif path.is_dir():
+            status = "legacy" if kind == "legacy_alias" else "canonical_collision"
+        else:
+            status = "not_directory"
+        entries.append({"name": name, "path": str(path), "kind": kind, "status": status})
+    return {
+        "status": "drift" if entries else "passed",
+        "destination": str(target),
+        "legacy": entries,
+        "recoverable": True,
+        "note": (
+            "Run `lens-cap-skills migrate --apply --force` before syncing; files are moved, "
+            "not deleted. Use --include-canonical only when the old canonical production Skill "
+            "is known to be stale."
+        ),
+    }
+
+
+def migrate_legacy_skills(
+    destination: str | Path,
+    *,
+    root: str | Path = ROOT,
+    dry_run: bool = True,
+    force: bool = False,
+    allow_global: bool = False,
+    backup_dir: str | Path | None = None,
+    include_canonical: bool = False,
+) -> dict[str, Any]:
+    """Quarantine prototype Skill aliases so canonical sync can proceed.
+
+    The operation is deliberately explicit and recoverable.  It never removes
+    files; applying it requires ``force=True`` and an inferred global host
+    destination additionally requires ``allow_global=True``.
+    """
+
+    target = resolve_destination(destination, root=root)
+    if not dry_run and not force:
+        raise SkillSyncError("legacy migration requires force=True; moved directories are recoverable")
+    _reject_symlink(target, "Skill destination")
+    if not dry_run and not target.exists():
+        return {
+            "status": "passed",
+            "operation": "migrate-legacy",
+            "dry_run": False,
+            "destination": str(target),
+            "actions": [],
+            "moved": [],
+        }
+    if target.exists() and not target.is_dir():
+        raise SkillSyncError(f"Skill destination is not a directory: {target}")
+    candidates = _legacy_candidates(target, include_canonical=include_canonical)
+    backup_root = (
+        Path(backup_dir).expanduser().resolve()
+        if backup_dir is not None
+        else target / ".lens-cap-legacy"
+    )
+    if backup_root == target:
+        # Never move a directory onto itself.  An explicit external backup is
+        # allowed, but is still a concrete path chosen by the caller.
+        backup_root = target / ".lens-cap-legacy"
+    actions: list[dict[str, Any]] = []
+    for name, path, kind in candidates:
+        if path.is_symlink():
+            raise SkillSyncError(f"refusing symlinked legacy Skill: {path}")
+        if not path.is_dir():
+            raise SkillSyncError(f"legacy Skill path is not a directory: {path}")
+        destination_path = backup_root / name
+        suffix = 1
+        while destination_path.exists() or destination_path.is_symlink():
+            destination_path = backup_root / f"{name}.{suffix}"
+            suffix += 1
+        actions.append(
+            {
+                "name": name,
+                "kind": kind,
+                "source": str(path),
+                "backup": str(destination_path),
+                "action": "move" if not dry_run else "planned_move",
+            }
+        )
+    if dry_run:
+        return {
+            "status": "planned" if actions else "passed",
+            "operation": "migrate-legacy",
+            "dry_run": True,
+            "destination": str(target),
+            "backup_dir": str(backup_root),
+            "actions": actions,
+            "moved": [],
+        }
+    backup_root.mkdir(parents=True, exist_ok=True)
+    _reject_symlink(backup_root, "legacy backup directory")
+    moved: list[str] = []
+    for action in actions:
+        source = Path(action["source"])
+        backup = Path(action["backup"])
+        if backup.exists() or backup.is_symlink():
+            raise SkillSyncError(f"legacy backup target appeared during migration: {backup}")
+        shutil.move(str(source), str(backup))
+        moved.append(str(backup))
+    marker = target / MIGRATION_MARKER_NAME
+    payload = {
+        "schema_version": 1,
+        "operation": "migrate-legacy",
+        "moved": actions,
+        "recover": "move each backup directory back to its original source path if needed",
+    }
+    _atomic_write_json(marker, payload)
+    return {
+        "status": "passed",
+        "operation": "migrate-legacy",
+        "dry_run": False,
+        "destination": str(target),
+        "backup_dir": str(backup_root),
+        "actions": actions,
+        "moved": moved,
+        "receipt": str(marker),
+    }
+
+
 # Short aliases keep the helper pleasant to use from small host wrappers and
 # make the read-only/check vocabulary discoverable without coupling callers to
 # the command-line implementation.
@@ -788,9 +947,9 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "command",
         nargs="?",
-        choices=("check", "doctor", "status", "sync", "install", "update"),
+        choices=("check", "doctor", "status", "sync", "install", "update", "migrate"),
         default=None,
-        help="check source/destination (default) or plan/apply a sync",
+        help="check source/destination (default), plan/apply a sync, or quarantine legacy aliases",
     )
     parser.add_argument("--check", action="store_true", help="alias for the check command")
     parser.add_argument(
@@ -823,6 +982,16 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--dry-run", action="store_true", help="force read-only planning")
     parser.add_argument("--force", action="store_true", help="allow replacing user-modified Skill files")
     parser.add_argument("--prune", action="store_true", help="with --force, remove files absent from the source")
+    parser.add_argument(
+        "--backup-dir",
+        type=Path,
+        help="legacy migration quarantine directory (default: <dest>/.lens-cap-legacy)",
+    )
+    parser.add_argument(
+        "--include-canonical",
+        action="store_true",
+        help="also quarantine an ambiguous old lens-cap-production directory",
+    )
     parser.add_argument(
         "--allow-global",
         action="store_true",
@@ -885,6 +1054,45 @@ def main(argv: list[str] | None = None) -> int:
     root = args.root.expanduser().resolve() if args.root else ROOT
     destination_explicit = args.dest is not None or args.environment is not None
     apply = bool(args.apply or args.yes) and not args.dry_run
+    if command == "migrate":
+        if args.dest is None and args.environment is None:
+            print(
+                "lens-cap-skills: error: migrate requires --dest or --environment",
+                file=sys.stderr,
+            )
+            return 2
+        if args.prune:
+            print("lens-cap-skills: error: --prune is not used by migrate", file=sys.stderr)
+            return 2
+        if apply and not args.force:
+            print(
+                "lens-cap-skills: error: migrate --apply requires --force; the quarantine is recoverable",
+                file=sys.stderr,
+            )
+            return 2
+        if apply and args.dest is None and args.environment in {"codex", "claude"} and not args.allow_global:
+            print(
+                "lens-cap-skills: error: refusing to migrate an inferred global destination; "
+                "pass --dest or --allow-global explicitly",
+                file=sys.stderr,
+            )
+            return 2
+        try:
+            target = resolve_destination(args.dest, environment=args.environment, root=root)
+            report = migrate_legacy_skills(
+                target,
+                root=root,
+                dry_run=not apply,
+                force=args.force,
+                allow_global=args.allow_global,
+                backup_dir=args.backup_dir,
+                include_canonical=args.include_canonical,
+            )
+        except (SkillSyncError, OSError, ValueError) as exc:
+            print(f"lens-cap-skills: error: {exc}", file=sys.stderr)
+            return 2
+        _print_report(report, as_json=args.json)
+        return 0 if report.get("status") in {"passed", "planned"} else 1
     if command == "check":
         # A plain check is source-only and therefore safe in CI.  Supplying a
         # destination/environment turns it into a host drift check.

@@ -10,8 +10,8 @@
     "<external>/helios-44-2-rehouse-imagegen-v2-82mm.scad"
   ],
   "command_exit_code": 0,
-  "determinism": "geometry/command reproducible; OpenSCAD may vary UUIDs, XML metadata, and exporter details by release",
-  "generated_at_utc": "2026-09-02T21:45:21.011569+00:00",
+  "determinism": "byte-stable for identical OpenSCAD geometry under the same OpenSCAD/Python/zlib toolchain after nonsemantic metadata canonicalization; exporter geometry may vary by OpenSCAD release",
+  "generated_at_utc": "2026-09-03T09:44:44.355677+00:00",
   "input": "<external>/helios-44-2-rehouse-imagegen-v2-82mm.scad",
   "input_sha256": "2f0be18b63d2e35790ce4c2b6612c5918cd2830770b7ed743c608b28fc1b9e3b",
   "openscad": "<OpenSCAD.app>/Contents/MacOS/OpenSCAD",
@@ -19,10 +19,23 @@
   "output": "<external>/helios-44-2-rehouse-imagegen-v2-82mm-native.3mf",
   "python": "3.11.15",
   "render_part": "assembly (SCAD default)",
-  "stderr_tail": "Geometries in cache: 27\nGeometry cache size in bytes: 35308064\nCGAL Polyhedrons in cache: 6\nCGAL cache size in bytes: 25437750\nTotal rendering time: 0:00:00.594\n   Top level object is a 3D object (manifold):\n   Status:     NoError\n   Genus:      0\n   Vertices:    94095\n   Facets:     188186\n",
+  "sanitization": {
+    "archive_entries_canonicalized": 3,
+    "canonicalized_uuid_attributes": 3,
+    "dropped_triangles": 0,
+    "dropped_vertices": 0,
+    "dropped_zero_volume_components": 0,
+    "maximum_nudge_mm": 8.093506e-06,
+    "nudged_collinear_triangles": 17,
+    "removed_volatile_metadata": 1,
+    "scope": "zero_volume_components_submicron_collinear_facets_and_nonsemantic_openscad_metadata",
+    "status": "passed"
+  },
+  "stderr_tail": "Geometries in cache: 27\nGeometry cache size in bytes: 8534192\nCGAL Polyhedrons in cache: 6\nCGAL cache size in bytes: 8893250\nTotal rendering time: 0:00:00.174\n   Top level object is a 3D object (manifold):\n   Status:     NoError\n   Genus:      0\n   Vertices:    27917\n   Facets:      55830\n",
   "stdout_tail": "",
   "verification": {
-    "bytes": 2225116,
+    "bytes": 510027,
+    "closed_direct_mesh_required": true,
     "entries": [
       "3D/3dmodel.model",
       "[Content_Types].xml",
@@ -31,6 +44,8 @@
     "gcode_bytes": 0,
     "has_embedded_gcode": false,
     "model": {
+      "absolute_volume_mm3": 21929.682061705007,
+      "boundary_edges": 0,
       "bounds": {
         "max_mm": [
           43.6,
@@ -49,13 +64,26 @@
         ]
       },
       "build_items": 1,
+      "component_references": 0,
+      "duplicate_triangles": 0,
+      "inconsistent_orientation_edges": 0,
+      "mesh_components": 1,
       "mesh_parts": 1,
+      "nonmanifold_edges": 0,
       "objects": 1,
       "parts": 1,
-      "triangles": 188186,
-      "vertices": 94095
+      "transformed_build_items": 0,
+      "transformed_components": 0,
+      "triangles": 55830,
+      "unreferenced_vertices": 0,
+      "vertices": 27917,
+      "volume_components": 1,
+      "zero_area_triangles": 0,
+      "zero_volume_components": 0
     },
     "path": "<external>/helios-44-2-rehouse-imagegen-v2-82mm-native.3mf",
-    "sha256": "b9852b497bd5a935caad41c95a44f9a7c74dfcbf006e170a4d459560abc9845a"
+    "sha256": "63ca8ef029aa5fdec77b0a4543a4c992d9e0fd878d5c3e9bd375822471e4b24e",
+    "single_positive_volume_required": true,
+    "slice_audit": null
   }
 }

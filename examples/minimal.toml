@@ -4,7 +4,7 @@ job_slug = "minimal-cap"
 source_art = "art/master.ppm"
 output_dir = "build"
 face_diameter_mm = 52.0
-grid_size = 512
+grid_size = 260
 nozzle_mm = 0.2
 safe_border_mm = 0.3
 

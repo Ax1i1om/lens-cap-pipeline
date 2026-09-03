@@ -42,6 +42,10 @@ The bridge prefers explicit --openscad / --bambu-path, then the job's
 file; bare command names use PATH), then host discovery. Explicit values are
 authoritative: a missing configured path does not silently select another app.
 It runs the same-canvas relief projection audit before writing the native 3MF.
+When the user requested an actual 3MF, the route is complete only after that
+`.3mf` exists and the package/projection gates pass. A process report, SCAD,
+STL, handoff JSON, or passed preflight is useful evidence but is not a 3MF
+delivery.
 
 ### Keep companion Skills in sync
 
@@ -89,8 +93,12 @@ catalog cache.
 
 ## 1. Declare one job
 
-Run `lens-cap init jobs/name/job.toml --source ...` and edit the generated
-file. For a standalone relief, add `--face-diameter <mm>`; for a fitted cap,
+Run `lens-cap init jobs/name/job.toml --source ... --lens-identity ...
+--display-text FOCAL APERTURE ...` and edit the generated file. The two
+identity options form the release binding: supply them together, keep focal
+length and aperture first, and include every secondary model/system line that
+may appear in the artwork. For a standalone relief, add `--face-diameter <mm>`;
+for a fitted cap,
 `--measured-diameter <mm>` is required. Add `--foam-thickness <mm>` only when
 an uncompressed foam liner (including adhesive) is actually planned; for bare
 plastic, declare `foam_liner_status = "none"` (and the bare clearance) in the
@@ -98,6 +106,14 @@ plastic, declare `foam_liner_status = "none"` (and the bare clearance) in the
 chosen; otherwise ribs remain enabled by the documented default (use
 `--friction-ribs` to record an explicit enabled choice). The measured
 mating diameter automatically becomes the face diameter.
+
+If the adapter construction is known, `init` also accepts the optional pair
+`--adapter-nominal-ring <mm> --adapter-radial-wall <mm>`. They must be supplied
+together and satisfy
+`nominal ring + 2 × one-side radial wall = measured diameter` within 0.05 mm;
+the values are persisted under `[metadata]`. They explain the measured
+envelope but are not another mandatory intake question. The actual measured
+mating diameter remains the sole required mechanical dimension.
 
 When the starter artwork does not exist yet, a relative `--source` is kept
 relative to the new job directory and its source-parent placeholder (normally
@@ -125,21 +141,89 @@ An opaque square source needs an explicit `[circle]` center/radius. A
 transparent source may use alpha as its exclusion mask only when that alpha is
 approved and documented.
 
+After the approved raster is copied into the job, first review the job's circle,
+complete palette, grid, safe border, prefilter, cleanup, and assembly mode. The
+provider-neutral handoff scaffold then freezes those values and fills the
+mechanical and hash boilerplate:
+
+```sh
+lens-cap init jobs/name/job.toml \
+  --source jobs/name/art/master.png \
+  --measured-diameter 85 \
+  --lens-identity "Mamiya-Sekor C 80mm F1.9" \
+  --display-text 80 F1.9 "MAMIYA-SEKOR C" 645 "REHOUSED MEDIUM FORMAT"
+lens-cap handoff-init jobs/name/job.toml \
+  --brand Mamiya --model "Mamiya-Sekor C 80mm F1.9" \
+  --focal-length 80 --maximum-aperture F1.9 \
+  --provider "OpenAI built-in image_gen" \
+  --anchor-source https://www.suaudeau.eu/memo/Manuels/Mamiya_M645_Service_Manual.pdf
+```
+
+Review the cited source, change each anchor's `evidence_state` from `to_verify`
+to a truthful value beginning with a positive `sourced`, `verified`,
+`documented`, `attested`, or `archived` status, replace every `REPLACE`, and
+complete all provenance licence fields and notes. `not verified` and `not
+sourced` are failures, not positive substring matches. When a provenance field
+does not apply, use a reasoned sentence such as `not applicable — no
+third-party mark rendered`; bare `NONE`/`N/A` remains insufficient. Confirm that `display_text` and
+`allowed_text` exactly preserve the complete job metadata text list, review
+the circular composition, then set `generation.approved=true` only after a
+human review and run `lens-cap handoff-check jobs/name/job.toml --json`.
+The scaffold never invokes an image provider and never assumes approval. For
+opaque artwork, set an explicitly reviewed `[circle]` rather than letting a
+downstream stage recenter the image. If any bound artwork-process setting
+changes after the scaffold was written, rerun the same `handoff-init --force` command before
+filling its review fields so `job_binding` captures the final values.
+
+Every anchor source must be an http(s) URL or an explicit `archive:`/`urn:`
+identifier. Claim/scope/evidence/source-role/summary/render-role/context/motif/
+recognition fields must all be substantive and non-placeholder; a qualifier may
+be null only when none is needed. The strict gate also requires artwork,
+brand-mark, film/history, and notes provenance entries.
+
+The design brief is the semantic/provenance/approval snapshot for an artwork.
+The job TOML is the mechanical authority for each size variant, including the
+measured diameter, liner, ribs, and print settings. A shared brief's mechanical
+summary is informative and must never overwrite a variant's job values.
+
 ### Clean-room rehearsal
 
 The repository includes a deterministic-input integration rehearsal that does
-not depend on the current conversation or any old generated directory:
+not depend on the current conversation or any old generated directory. Its
+default is the fresh, actually ImageGen-produced and human-approved
+Helios-44-2 REHOUSE v3 fixture: one 95 mm job is sent through the canonical
+bridge.
 
 ```sh
-python3 scripts/smoke_rehouse.py --bambu never --json
+python3 scripts/smoke_rehouse.py \
+  --fixture examples/fixtures/helios-44-2-rehouse-imagegen-v3 \
+  --bridge-job jobs/95mm/job.toml --bambu never --json
 ```
 
-It copies the Helios-44-2 REHOUSE fixture into a temporary checkout and runs
-the public CLI for measured 95, 82, and 77 mm mating envelopes. On a host with
-OpenSCAD, add `--bambu auto --require-external --keep-workdir` to exercise native
-3MF export and one Bambu slice. `--artifact-dir` is an explicit opt-in for
-copying those 3MFs out of the temporary run. Missing desktop tools remain
-`UNVERIFIABLE`; physical fit remains pending until a coupon is measured.
+The v2 Helios fixture remains the legacy 77/82/95 mm multi-diameter matrix. The
+Mamiya-Sekor C 80mm F1.9 fixture is the cross-brand matrix for adapter-wall and
+foam cases; both can be selected explicitly with `--fixture`. On a host with
+OpenSCAD, add `--require-external` (and optionally `--bambu auto` plus local
+profiles) to require actual native 3MF export. `--artifact-dir` is an explicit
+opt-in for retaining those outputs.
+
+```sh
+python3 scripts/smoke_rehouse.py \
+  --fixture examples/fixtures/helios-44-2-rehouse-imagegen-v2 \
+  --bambu never --json
+python3 scripts/smoke_rehouse.py \
+  --fixture examples/fixtures/mamiya-sekor-c-80-f1-9-rehouse \
+  --bambu never --json
+```
+
+Without OpenSCAD, the portable runner may exit zero to preserve its diagnostic
+report, but the top-level `status` is `unverifiable` and
+`native_3mf_complete=false`; only `deterministic_preflight_status` may be
+`passed`. Likewise, the conversation rehearsal may report
+`interaction_status=passed` while its top-level production status remains
+`unverifiable`. It never calls ImageGen again: the fixture's candidate, prompt
+record, and human approval are the provider boundary. Physical fit remains
+pending until a same-material coupon is measured.
 
 ## 2. Process the artwork
 
@@ -179,10 +263,12 @@ with `lens-cap model`; it imports every mask on the same canvas and writes a
 parameterized SCAD plus `geometry-report.json`. `lens-cap export-openscad` asks
 the explicitly installed OpenSCAD executable to export selectors, while
 `lens-cap bambu-handoff` writes a version-neutral Bambu manifest. (`mesh` and
-`handoff` are compatibility aliases.) The `bin/lens-cap-3mf` bridge chains
+`handoff` are compatibility aliases.) The `bin/lens-cap-3mf` bridge first
+requires a passing `design-brief.json` (approved flag, current raster hash,
+identity/text hierarchy, sourced anchor, and licence fields), then chains
 these gates, exports the integrated native 3MF, and verifies its Core package;
-it returns `UNVERIFIABLE` rather than pretending a missing desktop tool is a
-complete file. Never redraw or retype artwork in a CAD script. Keep the
+missing, unapproved, or mismatched briefs return `FAILED` rather than creating a
+publishable release. Never redraw or retype artwork in a CAD script. Keep the
 mechanical body parameterized by the current measured diameter and liner plan.
 Generate and measure a short fit ring before a full multicolour print. The
 bundled `wide_tapered` profile is mechanical geometry only and must not alter
@@ -200,6 +286,13 @@ attribute bytes are preserved, but renderer-native raw byte order is not; the
 report's `format_check.canonicalization` and the resulting file hash document
 this normalization. A reproducibility check must compare the canonicalized
 file, not an unprocessed OpenSCAD byte stream.
+
+Native OpenSCAD 3MF output is normalized separately: volatile creation times
+are removed, generated UUIDs become content-derived UUIDv5 values, and ZIP
+entry order/metadata are fixed. Same-toolchain reruns are byte-stable; across
+OpenSCAD/Python/zlib versions, the release contract compares semantic geometry,
+bounds, source/config hashes, projection, material assignments, and rib gates
+rather than promising identical tessellation bytes.
 
 The Bambu handoff exposes mutually exclusive `print_sets`: choose
 `integrated_monochrome` or `multicolor_components` for the cap, and print
@@ -224,6 +317,10 @@ present, and config validity. It must follow a successful `process`/`build`
 run; it is not a config-only lint. Add `--external` to run the OpenSCAD compile
 probe; missing desktop tools are reported as `UNVERIFIABLE`, not as a pass.
 Physical fit is also `UNVERIFIABLE` until a coupon is measured.
+
+A release claiming an actual 3MF must additionally point to the existing
+verified `.3mf` and its reports. Do not promote an interaction/preflight pass,
+SCAD, STL, or handoff-only result to a successful 3MF release.
 
 Publish a job only with its normalized config, process report, source lock,
 provenance/licence notes, generated CAD source, slicer preview and fit result.
