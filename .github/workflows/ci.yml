@@ -73,3 +73,27 @@ jobs:
         run: python -m pip install -e '.[dev]'
       - name: Ruff check
         run: ruff check lens_cap_pipeline tests scripts tools/3mf_adapter
+
+  windows-portability:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - name: Install package and tests
+        run: python -m pip install -e '.[test]'
+      - name: Exercise repository batch launchers
+        shell: cmd
+        run: |
+          bin\lens-cap-skills.cmd check --dest .agents\skills --json
+          bin\lens-cap-3mf.cmd --help
+      - name: Run cross-platform route and handoff tests
+        run: >-
+          python -m pytest -q
+          tests/test_skill_sync.py
+          tests/test_resolve_skill_route.py
+          tests/test_rehearse_user_agent.py
+      - name: Run portable smoke test
+        run: python scripts/smoke.py
