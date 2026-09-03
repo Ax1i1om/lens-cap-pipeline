@@ -1,0 +1,76 @@
+{
+  "adapter": "standard-core-3mf",
+  "adapter_version": 1,
+  "determinism": "byte-stable for identical input/title under the same Python/zlib implementation",
+  "input": "<external>/helios-44-2-rehouse-imagegen-v2-82mm-assembly.stl",
+  "input_sha256": "77fda0f6bb7e8f6bd5fb3bb9efeae61e322bf6ec7d4ce0e7b09c3a93ce9341a9",
+  "mesh": {
+    "boundary_edges": 21,
+    "bounds": {
+      "max_mm": [
+        43.599998474121094,
+        43.599998474121094,
+        16.60099983215332
+      ],
+      "min_mm": [
+        -43.599998474121094,
+        -43.599998474121094,
+        0.0
+      ],
+      "size_mm": [
+        87.19999694824219,
+        87.19999694824219,
+        16.60099983215332
+      ]
+    },
+    "bytes": 2278404,
+    "closed": false,
+    "closure_required": false,
+    "dropped_degenerate": 8,
+    "nonmanifold_edges": 1694,
+    "sha256": "c0cfd14b09d2b9196f4048817b7147921d4d0d6427f5cd07bc8661af77a68f93",
+    "triangles": 188178,
+    "unique_edges": 280584,
+    "vertices": 92401
+  },
+  "output": "examples/fixtures/helios-44-2-rehouse-imagegen-v2/artifacts/helios-44-2-rehouse-imagegen-v2-82mm-assembly-standard.3mf",
+  "python": "3.14.4",
+  "verification": {
+    "bytes": 2278404,
+    "entries": [
+      "3D/3dmodel.model",
+      "3D/_rels/3dmodel.model.rels",
+      "[Content_Types].xml",
+      "_rels/.rels"
+    ],
+    "gcode_bytes": 0,
+    "has_embedded_gcode": false,
+    "model": {
+      "bounds": {
+        "max_mm": [
+          43.599998474,
+          43.599998474,
+          16.600999832
+        ],
+        "min_mm": [
+          -43.599998474,
+          -43.599998474,
+          0.0
+        ],
+        "size_mm": [
+          87.199996948,
+          87.199996948,
+          16.600999832
+        ]
+      },
+      "build_items": 1,
+      "mesh_parts": 1,
+      "objects": 1,
+      "parts": 1,
+      "triangles": 188178,
+      "vertices": 92401
+    },
+    "path": "examples/fixtures/helios-44-2-rehouse-imagegen-v2/artifacts/helios-44-2-rehouse-imagegen-v2-82mm-assembly-standard.3mf",
+    "sha256": "c0cfd14b09d2b9196f4048817b7147921d4d0d6427f5cd07bc8661af77a68f93"
+  }
+}

@@ -45,6 +45,9 @@ The confirmed diameter drives the default face/relief size, and focal length
 and maximum aperture remain the artwork's first and second visual reads.
 Ask this intake once, persist it in the job TOML, and have the production stage
 reuse a complete current handoff instead of repeating the same questions.
+For fitted, printable, assembled, or 3MF delivery, this grouped intake must be
+complete and persisted before the first geometry/build/export/3MF command.
+Concept art may precede the gate; production may not.
 
 When a host stores Skills outside this checkout, use the repository's
 read-only-by-default `scripts/install_skills.py` (or `bin/lens-cap-skills`) to

@@ -21,12 +21,14 @@ import hashlib
 import json
 import math
 import os
+import re
 import shutil
 import subprocess
 import sys
 import tempfile
+import unicodedata
 from pathlib import Path
-from typing import Any, Iterable
+from typing import Any, Iterable, Mapping
 
 # Keep direct execution usable before an editable install exists.
 ROOT = Path(__file__).resolve().parents[1]
@@ -43,6 +45,57 @@ DEFAULT_SIZES = (95, 82, 77)  # fallback for the original Helios fixture
 
 class SmokeError(RuntimeError):
     """Raised when a deterministic smoke gate fails."""
+
+
+_FOCAL_DISPLAY_RE = re.compile(
+    r"^(?P<start>[0-9]+(?:\.[0-9]+)?)(?:mm)?"
+    r"(?:-(?P<end>[0-9]+(?:\.[0-9]+)?)(?:mm)?)?$"
+)
+
+
+def _canonical_focal_display(value: Any, *, label: str = "focal_length_display") -> str:
+    """Return a strict, unit-free focal display token.
+
+    ``focal_length_mm`` remains the numeric machine anchor.  This optional
+    companion accepts a prime token (``50mm``) or a zoom range (``28–70mm``)
+    for the human-facing first display token, while rejecting arbitrary text.
+    Unicode dashes, optional ``mm`` units, and the words ``to``/``至`` are
+    normalized so briefs and natural-language transcripts can use ordinary
+    typography without weakening the closed text contract.
+    """
+
+    if not isinstance(value, str) or not value.strip():
+        raise SmokeError(f"{label} must be non-empty text")
+    text = unicodedata.normalize("NFKC", value).casefold().strip()
+    text = (
+        text.replace("−", "-")
+        .replace("–", "-")
+        .replace("—", "-")
+        .replace("‑", "-")
+        .replace("‒", "-")
+        .replace("－", "-")
+        .replace("~", "-")
+        .replace("毫米", "mm")
+    )
+    text = re.sub(r"\bto\b|至", "-", text)
+    text = re.sub(r"\s+", "", text)
+    match = _FOCAL_DISPLAY_RE.fullmatch(text)
+    if match is None:
+        raise SmokeError(
+            f"{label} must be a focal token such as '50mm' or a zoom range such as '28–70mm'"
+        )
+    start = match.group("start")
+    end = match.group("end")
+    try:
+        start_value = float(start)
+        end_value = float(end) if end is not None else None
+    except (TypeError, ValueError, OverflowError) as exc:  # pragma: no cover - regex already limits input
+        raise SmokeError(f"{label} contains an invalid focal number") from exc
+    if not math.isfinite(start_value) or start_value <= 0:
+        raise SmokeError(f"{label} must use a positive focal length")
+    if end_value is not None and (not math.isfinite(end_value) or end_value <= start_value):
+        raise SmokeError(f"{label} zoom range must end above its starting focal length")
+    return f"{start}-{end}" if end is not None else start
 
 
 def _sha256(path: Path) -> str:
@@ -216,9 +269,53 @@ def _validate_brief(fixture: Path) -> dict[str, Any]:
         or set(display) != set(allowed)
     ):
         raise SmokeError("display_text and allowed_text must be the same closed set")
-    focal_token = format(focal_value, "g").upper()
-    displayed_focal = display[0].strip().upper().replace("MM", "")
-    if displayed_focal != focal_token:
+    generation = brief.get("generation")
+    if not isinstance(generation, Mapping):
+        raise SmokeError("fixture must declare a generation handoff object")
+    if generation.get("approved") is not True:
+        raise SmokeError("approved artwork handoff must set generation.approved=true")
+    anchors = brief.get("anchors")
+    if not isinstance(anchors, list) or not anchors:
+        raise SmokeError("fixture must declare at least one sourced design anchor")
+    sourced_anchors = []
+    culture_anchors = []
+    for index, raw_anchor in enumerate(anchors):
+        if not isinstance(raw_anchor, Mapping):
+            raise SmokeError(f"anchors[{index}] must be an object")
+        source = raw_anchor.get("source")
+        evidence = raw_anchor.get("evidence_state")
+        render_role = raw_anchor.get("render_role")
+        if not all(isinstance(value, str) and value.strip() for value in (source, evidence, render_role)):
+            raise SmokeError(f"anchors[{index}] must include source, evidence_state, and render_role")
+        sourced_anchors.append(str(source).strip())
+        claim_kind = str(raw_anchor.get("claim_kind", "")).casefold()
+        if any(term in claim_kind for term in ("culture", "manufacturer", "rehouse", "cinema", "history", "craft", "system")):
+            culture_anchors.append(str(source).strip())
+    if not culture_anchors:
+        raise SmokeError("fixture needs a source-backed manufacturer/culture or qualified rehouse anchor")
+    provenance = brief.get("provenance")
+    if not isinstance(provenance, Mapping):
+        raise SmokeError("fixture must declare provenance/licence notes")
+    for field in ("artwork_license", "film_or_history_permissions"):
+        if not isinstance(provenance.get(field), str) or not provenance[field].strip():
+            raise SmokeError(f"provenance.{field} must be recorded")
+
+    focal_display_value = identity.get("focal_length_display")
+    if focal_display_value is None:
+        focal_display = format(focal_value, "g")
+    else:
+        # Keep the reviewed spelling (including an en dash or ``mm``) for the
+        # provenance report; compare canonical forms only for validation.
+        _canonical_focal_display(focal_display_value)
+        focal_display = focal_display_value.strip()
+    focal_display_canonical = _canonical_focal_display(focal_display, label="focal display")
+    focal_display_start = float(focal_display_canonical.split("-", 1)[0])
+    if not math.isclose(focal_display_start, focal_value, abs_tol=1e-9):
+        raise SmokeError("focal_length_display must start at focal_length_mm")
+    displayed_focal = _canonical_focal_display(
+        display[0], label="display_text[0]"
+    )
+    if displayed_focal != focal_display_canonical:
         raise SmokeError("the first display_text token must be the focal length")
     aperture_token = "".join(aperture.upper().split()).replace("/", "")
     if not aperture_token.startswith("F"):
@@ -226,38 +323,44 @@ def _validate_brief(fixture: Path) -> dict[str, Any]:
     displayed_aperture = "".join(display[1].strip().upper().split()).replace("/", "")
     if displayed_aperture != aperture_token:
         raise SmokeError("the second display_text token must be the maximum aperture")
-    prompt_value = brief.get("generation", {}).get("prompt")
+    prompt_value = generation.get("prompt")
     if not isinstance(prompt_value, str) or not prompt_value.strip():
         raise SmokeError("generation.prompt must point to the committed prompt record")
     prompt_path = (fixture / prompt_value).resolve()
     if not prompt_path.is_file() or fixture.resolve() not in prompt_path.parents:
         raise SmokeError("generation.prompt must stay inside the fixture")
-    prompt_hash = brief.get("generation", {}).get("prompt_sha256")
-    if prompt_hash and str(prompt_hash).lower() != _sha256(prompt_path).lower():
+    prompt_hash = generation.get("prompt_sha256")
+    if not isinstance(prompt_hash, str) or prompt_hash.lower() != _sha256(prompt_path).lower():
         raise SmokeError("generation.prompt_sha256 does not match prompt.txt")
     prompt = prompt_path.read_text(encoding="utf-8")
-    required_tokens = brief.get("generation", {}).get("required_prompt_tokens", display[:2])
+    required_tokens = generation.get("required_prompt_tokens", display[:2])
     if not isinstance(required_tokens, list) or not all(isinstance(token, str) for token in required_tokens):
         raise SmokeError("generation.required_prompt_tokens must be a list of strings")
     for token in required_tokens:
         if token not in prompt:
             raise SmokeError(f"prompt record is missing exact token {token!r}")
-    art_path = (fixture / brief["generation"]["candidate_path"]).resolve()
-    if not art_path.is_file():
+    candidate_value = generation.get("candidate_path")
+    if not isinstance(candidate_value, str) or not candidate_value.strip():
+        raise SmokeError("generation.candidate_path must name the approved raster")
+    art_path = (fixture / candidate_value).resolve()
+    if fixture.resolve() not in art_path.parents or not art_path.is_file():
         raise SmokeError(f"approved artwork is missing: {art_path}")
-    art_hash = brief["generation"].get("candidate_sha256")
+    art_hash = generation.get("candidate_sha256")
     if not isinstance(art_hash, str) or _sha256(art_path).lower() != art_hash.lower():
         raise SmokeError("approved artwork hash does not match design brief")
     return {
         "status": "passed",
         "identity": identity,
         "focal_length_mm": focal_value,
+        "focal_length_display": focal_display,
         "maximum_aperture": aperture,
         "display_text": display,
         "prompt": Path(os.path.relpath(prompt_path, fixture)).as_posix(),
         "prompt_sha256": _sha256(prompt_path),
         "artwork": Path(os.path.relpath(art_path, fixture)).as_posix(),
         "artwork_sha256": _sha256(art_path),
+        "anchor_count": len(sourced_anchors),
+        "culture_anchor_count": len(culture_anchors),
     }
 
 

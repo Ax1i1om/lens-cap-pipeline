@@ -43,15 +43,32 @@ film references, and generated artwork require separate provenance and rights.
 * Documents the provider-dependent ImageGen approval handoff as an explicit
   human gate, including the minimum raster/hash/brief/circle/fit packet needed
   before the deterministic 3MF bridge.
+* Supports an optional `lens_identity.focal_length_display` for zoom ranges
+  such as `28–70mm`; the numeric `focal_length_mm` anchor and existing prime
+  briefs remain unchanged, while smoke/rehearsal gates match the full range.
 
 * Adds `scripts/build_3mf.py` and `bin/lens-cap-3mf`, the canonical one-command
   endpoint from a job file to a verified integrated native 3MF, with an
   explicit optional Bambu slice path and machine-readable release report.
   Missing desktop tools remain `UNVERIFIABLE` instead of being mistaken for a
   completed 3MF.
-* Adds clean-room REHOUSE smoke fixtures for Helios-44-2 and Mamiya-Sekor C
-  80mm F1.9 across multiple adapter envelopes, with retained native/sliced
-  3MF snapshots and portable sidecars.
+* Adds a fresh ImageGen Helios-44-2 REHOUSE smoke fixture and a cross-brand
+  Mamiya-Sekor C 80mm F1.9 fixture across multiple adapter envelopes, with
+  retained native/sliced 3MF snapshots and portable sidecars.
+* Adds a provider-neutral clean-room user/agent rehearsal runner and transcripts;
+  it verifies exclusive Skill sequencing, one grouped diameter/foam/rib intake,
+  persistence before the first geometry command, adapter-wall arithmetic, and
+  the final 3MF bridge. Its brief gate also requires an approved raster,
+  in-fixture hashes, provenance, and a sourced culture/rehouse anchor. The
+  fixture matrix is CI-smoked without requiring a desktop slicer.
+* Adds a dependency-free manifest-driven route shim
+  (`scripts/resolve_skill_route.py`) and badge/front trigger vocabulary for
+  legacy or host-specific Skill loaders; the clean-room rehearsal executes the
+  shim against its first user turn.
+  The shim now accepts terse named-lens noun phrases and compact catalog
+  notation while rejecting unnamed generic-lens requests. Rehearsal intake
+  checks also verify foam/rib polarity, the default-vs-explicit rib flag, and
+  that no production command is claimed before the physical gate.
 * Adds a read-only-by-default, idempotent companion-Skill synchronizer with
   manifest/version/file-hash drift reports for project, Codex, and Claude
   destinations. Explicit `--apply`/`--force` gates writes and preserves local

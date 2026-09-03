@@ -10,16 +10,21 @@ invocation if automatic matching has not refreshed.
 
 ## Latest audit snapshot
 
-The `6e1d112` Alpha snapshot was replayed from a fresh Git archive and a new
+The committed Alpha snapshot was replayed from a fresh Git archive and a new
 Python virtual environment on the development host. The repository suite
-collected **92 tests**, all passed; Ruff, both official Skill validators, and
-the source/mirror hash check passed. The Mamiya-Sekor C 80mm F1.9 fixture then
-passed at 77, 85, and 95 mm with the native one-piece OpenSCAD route, including
-same-canvas projection audits and the default integrated friction ribs. A
-second run from `/tmp` through `bin/lens-cap-3mf` passed for the 85 mm job.
-The same route also passed from an extracted source distribution. With the
-local Bambu A1 mini 0.2 mm profiles, the 95 mm optional slice produced a
-non-empty-G-code 3MF and passed Core-package verification.
+collected **150 tests**, all passed; Ruff, both official Skill validators, and
+the source/mirror hash check passed. The fresh ImageGen Helios-44-2 REHOUSE
+fixture then passed at 77, 82, and 95 mm with the native one-piece OpenSCAD
+route, same-canvas projection audits, and default integrated friction ribs. The
+independent Mamiya-Sekor C 80mm F1.9 fixture passed at 77, 85, and 95 mm,
+including a 1.5 mm foam-lined 85 mm adapter case. Both structured clean-room
+user/agent transcripts passed, and the exact `bin/lens-cap-3mf` endpoint passed
+from an arbitrary working directory and from an extracted source distribution.
+With the local Bambu A1 mini 0.2 mm profiles, both 95 mm optional slices
+produced non-empty-G-code 3MFs and passed Core-package verification.
+The smoke gate also rejects an unapproved raster handoff, a missing
+source-backed culture/rehouse anchor, or a prompt/artwork path outside the
+fixture.
 
 This is a reproducibility result for the declared host/tool matrix, not a
 promise that every Codex host has the same Skill catalog, ImageGen save API,
@@ -81,6 +86,56 @@ still confirm that its catalog has loaded the synced files. This is a host
 integration prerequisite, not evidence that a generic design Skill may run in
 parallel.
 
+The manifest-driven `scripts/resolve_skill_route.py` is the optional bridge for
+older hosts that cannot evaluate semantic descriptions. The rehearsal invokes
+it against the first user turn, so a transcript cannot claim the dedicated
+sequence while the checked-in resolver would miss the cap/front surface.
+
+### Replay the interaction gate
+
+For a reusable, host-neutral rehearsal of the *conversation* boundary, use the
+structured transcript runner. It checks the first natural-language request,
+the exclusive Skill sequence, the one grouped physical intake, and the values
+written to the selected job TOML before invoking `smoke_rehouse.py` in its own
+temporary fixture:
+
+```sh
+python3 scripts/rehearse_user_agent.py \
+  examples/rehearsals/helios-44-2-rehouse-clean-room.json \
+  --bambu never --json
+```
+
+The checked-in scenario is intentionally a four-turn “new user” exchange:
+the first user turn names the lens and asks for a circular cap/3MF, the agent
+declares the two dedicated Skills, the next user turn answers diameter/foam/
+ribs together, and the final agent turn records the bridge endpoint. The
+runner requires `conversation_history = none`, an isolated temporary file
+system, no generic design Skill in parallel, and exactly these canonical
+questions (in this order):
+
+```text
+mating_outside_diameter_mm
+foam_liner_plan_and_uncompressed_thickness_mm
+friction_rib_preference
+```
+
+Use another JSON transcript with the same schema for a different lens or
+adapter envelope. The `fixture.primary_job` values must match the answered
+diameter, foam decision/thickness, and rib profile; this catches a conversation
+that asked the right question but silently dropped it before production.
+`--artifact-dir PATH --force-artifacts` deliberately retains the new native
+(and, when requested, Bambu) 3MF snapshots. The transcript runner does not
+call an image provider or pretend that a generated image can be reproduced
+byte-for-byte: the fixture’s approved artwork/hash remains the human approval
+boundary.
+
+The repository also includes
+`examples/rehearsals/mamiya-sekor-c-80-f1-9-rehouse-clean-room.json`. It repeats
+the same clean-room exchange with a different lens identity and an 85 mm
+envelope (`80 mm nominal ring + 2.5 mm radial wall`) plus 1.5 mm uncompressed
+foam. Running both scenarios is a useful cross-job leakage check: Helios text,
+M42, T*, and other maker-specific marks must not carry into the Mamiya brief.
+
 ## Matrix exercised on the development host
 
 The checked-in fixtures use generated, provider-neutral artwork and no copied
@@ -89,9 +144,12 @@ radial wall is not accidentally treated as a filter-thread diameter.
 
 | fixture | approved visual identity | adapter envelope | mating diameter | liner | retained output |
 | --- | --- | ---: | ---: | --- | --- |
-| Helios-44-2 REHOUSE | 58 / F2 | 72 + 2×2.5 mm | 77 mm | none | native 3MF |
-| Helios-44-2 REHOUSE | 58 / F2 | 77 + 2×2.5 mm | 82 mm | none | native 3MF |
-| Helios-44-2 REHOUSE | 58 / F2 | nominal 95 mm PL front | 95 mm | none | native + Bambu slice |
+| Helios-44-2 REHOUSE (baseline) | 58 / F2 | 72 + 2×2.5 mm | 77 mm | none | native 3MF |
+| Helios-44-2 REHOUSE (baseline) | 58 / F2 | 77 + 2×2.5 mm | 82 mm | none | native 3MF |
+| Helios-44-2 REHOUSE (baseline) | 58 / F2 | nominal 95 mm PL front | 95 mm | none | native + Bambu slice |
+| Helios-44-2 REHOUSE (fresh ImageGen v2) | 58 / F2 | 72 + 2×2.5 mm | 77 mm | none | native 3MF |
+| Helios-44-2 REHOUSE (fresh ImageGen v2) | 58 / F2 | 77 + 2×2.5 mm | 82 mm | none | native 3MF |
+| Helios-44-2 REHOUSE (fresh ImageGen v2) | 58 / F2 | nominal 95 mm PL front | 95 mm | none | native + Bambu slice |
 | Mamiya-Sekor C REHOUSE | 80 / F1.9 | 72 + 2×2.5 mm | 77 mm | 1.5 mm | native 3MF |
 | Mamiya-Sekor C REHOUSE | 80 / F1.9 | 80 + 2×2.5 mm | 85 mm | 1.5 mm | native 3MF |
 | Mamiya-Sekor C REHOUSE | 80 / F1.9 | nominal 95 mm PL front | 95 mm | 1.5 mm | native + Bambu slice |
@@ -100,6 +158,7 @@ The 77/82/95 and 77/85/95 job TOMLs, approved masters, prompt records,
 briefs, and verified 3MF sidecars live under:
 
 - `examples/fixtures/helios-44-2-rehouse/`
+- `examples/fixtures/helios-44-2-rehouse-imagegen-v2/`
 - `examples/fixtures/mamiya-sekor-c-80-f1-9-rehouse/`
 
 The native 3MF files are unsliced Core packages. The retained Bambu files

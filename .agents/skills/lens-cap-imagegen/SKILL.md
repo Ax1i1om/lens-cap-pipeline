@@ -31,9 +31,13 @@ metadata:
     - "lens front graphic"
     - "lens relief"
     - "lens front badge"
+    - "lens badge"
+    - "circular lens badge"
+    - "lens front medallion"
     - "circular lens graphic"
     - "circular lens relief"
     - "circular front pattern"
+    - "circular lens front"
     - "circular lens image"
     - "circular lens artwork"
     - "lens cover artwork"
@@ -58,6 +62,11 @@ metadata:
     - "圆形镜头艺术图"
     - "设计镜头圆形图像"
     - "设计镜头圆形艺术图"
+    - "镜头徽章"
+    - "圆形镜头徽章"
+    - "镜头正面徽章"
+    - "镜头正面图案"
+    - "圆形镜头正面"
     - "镜头闷盖"
     - "镜头帽图稿"
     - "镜头罩图稿"
@@ -102,7 +111,12 @@ Use this skill when the user names a camera lens and asks for a lens-cap,
 medallion, badge, poster, or a related circular graphic. Extract:
 
 - brand, canonical model, focal length, maximum aperture, mount/revision when
-  it matters, and the exact display text;
+  it matters, and the exact display text. Keep `focal_length_mm` as the
+  positive numeric machine anchor; for a zoom, optionally set the sibling
+  `lens_identity.focal_length_display` (for example `28–70mm`) and use that
+  exact token as the first display item. The range must be positive, ascending,
+  and start at the numeric anchor. Prime briefs may omit the optional field and
+  retain the existing numeric behavior;
 - object mode: typographic medallion by default, or a cap silhouette/hybrid
   only when requested;
 - palette, medium, aspect ratio, and explicit omissions such as no barrel,
@@ -128,6 +142,12 @@ Ask this grouped intake at most once per job. Persist the answers in the
 handoff/job TOML; when the production Skill receives a complete, current TOML,
 it must consume those values and ask only for a missing, stale, or ambiguous
 field rather than repeating the intake.
+For any fitted, printable, assembled, or 3MF request, this is the first
+production gate: concept art may be generated before it, but do not invoke
+`lens-cap-production`, a geometry/build/export command, or the
+`lens-cap-3mf` bridge until all three answers have been received and persisted
+in the current handoff/job TOML (unless a complete, current TOML already
+supplies them).
 If the user asks for an inner-wall shape closer to an attached reference, the
 physical stage may select production Skill's neutral `wide_tapered` rib profile;
 this changes only cap mechanics and must not redraw, degrade, or re-layout the

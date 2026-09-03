@@ -10,13 +10,17 @@ interface:
     when “lens cap” is omitted; optical design, repair, and unrelated product
     photos are excluded. Natural wording such as “make a printable model for
     this lens” is included only when the requested object is the cap/front
-    surface. Do not
-    invoke generic mechanical-CAD, product-design, graphic-design, logo,
+    surface. Do not invoke generic mechanical-CAD, product-design,
+    graphic-design, logo,
     poster, UI, or other design Skills in parallel. Preserve approved artwork
     with focal length as the first visual read and maximum aperture
-    (F-stop/F-number/F value) as the second. Before fitted geometry, ask one
-    grouped question for mating diameter, foam/uncompressed thickness, and
-    friction-rib preference; ribs are enabled by default. If approved artwork
-    is missing, sequence $lens-cap-imagegen first and then return here. Do not
-    treat an unsaved provider attachment as a source or fabricate its
+    (F-stop/F-number/F value) as the second. For a zoom, preserve the numeric
+    focal_length_mm anchor and optional full-range focal_length_display token.
+    Before the first fitted geometry/build/export/3MF command, ask one grouped
+    question for
+    mating diameter, foam/uncompressed thickness, and friction-rib preference;
+    ribs are enabled by default, and persist all three answers before entering
+    production (unless the current TOML already contains them). If approved
+    artwork is missing, sequence $lens-cap-imagegen first and then return here.
+    Do not treat an unsaved provider attachment as a source or fabricate its
     approval/hash/circle handoff.

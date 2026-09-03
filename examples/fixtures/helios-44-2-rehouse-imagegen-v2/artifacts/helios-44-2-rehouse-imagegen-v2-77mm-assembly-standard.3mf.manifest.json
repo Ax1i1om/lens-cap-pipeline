@@ -1,0 +1,76 @@
+{
+  "adapter": "standard-core-3mf",
+  "adapter_version": 1,
+  "determinism": "byte-stable for identical input/title under the same Python/zlib implementation",
+  "input": "<external>/helios-44-2-rehouse-imagegen-v2-77mm-assembly.stl",
+  "input_sha256": "0c66c791d2ca0b26acbc48d29bb3903a6a583de387b4ddf23e152c7a5ea54ff5",
+  "mesh": {
+    "boundary_edges": 28,
+    "bounds": {
+      "max_mm": [
+        41.099998474121094,
+        41.099998474121094,
+        16.60099983215332
+      ],
+      "min_mm": [
+        -41.099998474121094,
+        -41.099998474121094,
+        0.0
+      ],
+      "size_mm": [
+        82.19999694824219,
+        82.19999694824219,
+        16.60099983215332
+      ]
+    },
+    "bytes": 2307966,
+    "closed": false,
+    "closure_required": false,
+    "dropped_degenerate": 13,
+    "nonmanifold_edges": 1688,
+    "sha256": "76f0d51b884001504f6bca246481c67e08faf81d6378d77f25de830be5d71e05",
+    "triangles": 187743,
+    "unique_edges": 279941,
+    "vertices": 92192
+  },
+  "output": "examples/fixtures/helios-44-2-rehouse-imagegen-v2/artifacts/helios-44-2-rehouse-imagegen-v2-77mm-assembly-standard.3mf",
+  "python": "3.14.4",
+  "verification": {
+    "bytes": 2307966,
+    "entries": [
+      "3D/3dmodel.model",
+      "3D/_rels/3dmodel.model.rels",
+      "[Content_Types].xml",
+      "_rels/.rels"
+    ],
+    "gcode_bytes": 0,
+    "has_embedded_gcode": false,
+    "model": {
+      "bounds": {
+        "max_mm": [
+          41.099998474,
+          41.099998474,
+          16.600999832
+        ],
+        "min_mm": [
+          -41.099998474,
+          -41.099998474,
+          0.0
+        ],
+        "size_mm": [
+          82.199996948,
+          82.199996948,
+          16.600999832
+        ]
+      },
+      "build_items": 1,
+      "mesh_parts": 1,
+      "objects": 1,
+      "parts": 1,
+      "triangles": 187743,
+      "vertices": 92192
+    },
+    "path": "examples/fixtures/helios-44-2-rehouse-imagegen-v2/artifacts/helios-44-2-rehouse-imagegen-v2-77mm-assembly-standard.3mf",
+    "sha256": "76f0d51b884001504f6bca246481c67e08faf81d6378d77f25de830be5d71e05"
+  }
+}

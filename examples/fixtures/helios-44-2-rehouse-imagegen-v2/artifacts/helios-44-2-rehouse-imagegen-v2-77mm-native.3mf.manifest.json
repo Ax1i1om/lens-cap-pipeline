@@ -1,0 +1,61 @@
+{
+  "adapter": "openscad-native-3mf",
+  "adapter_version": 1,
+  "command": [
+    "<OpenSCAD.app>/Contents/MacOS/OpenSCAD",
+    "--backend",
+    "Manifold",
+    "-o",
+    "<temporary-workdir>/helios-44-2-rehouse-imagegen-v2-77mm-native.3mf",
+    "<external>/helios-44-2-rehouse-imagegen-v2-77mm.scad"
+  ],
+  "command_exit_code": 0,
+  "determinism": "geometry/command reproducible; OpenSCAD may vary UUIDs, XML metadata, and exporter details by release",
+  "generated_at_utc": "2026-09-02T21:45:15.816239+00:00",
+  "input": "<external>/helios-44-2-rehouse-imagegen-v2-77mm.scad",
+  "input_sha256": "c83da55223f68f4bf40b3cb53ae154718b64912b56f2d072ba212b53eec49b88",
+  "openscad": "<OpenSCAD.app>/Contents/MacOS/OpenSCAD",
+  "openscad_version": "OpenSCAD version 2026.06.12",
+  "output": "<external>/helios-44-2-rehouse-imagegen-v2-77mm-native.3mf",
+  "python": "3.11.15",
+  "render_part": "assembly (SCAD default)",
+  "stderr_tail": "Geometries in cache: 27\nGeometry cache size in bytes: 35219296\nCGAL Polyhedrons in cache: 6\nCGAL cache size in bytes: 25384000\nTotal rendering time: 0:00:00.587\n   Top level object is a 3D object (manifold):\n   Status:     NoError\n   Genus:      0\n   Vertices:    93880\n   Facets:     187756\n",
+  "stdout_tail": "",
+  "verification": {
+    "bytes": 2223373,
+    "entries": [
+      "3D/3dmodel.model",
+      "[Content_Types].xml",
+      "_rels/.rels"
+    ],
+    "gcode_bytes": 0,
+    "has_embedded_gcode": false,
+    "model": {
+      "bounds": {
+        "max_mm": [
+          41.1,
+          41.1,
+          16.601
+        ],
+        "min_mm": [
+          -41.1,
+          -41.1,
+          0.0
+        ],
+        "size_mm": [
+          82.2,
+          82.2,
+          16.601
+        ]
+      },
+      "build_items": 1,
+      "mesh_parts": 1,
+      "objects": 1,
+      "parts": 1,
+      "triangles": 187756,
+      "vertices": 93880
+    },
+    "path": "<external>/helios-44-2-rehouse-imagegen-v2-77mm-native.3mf",
+    "sha256": "9507dd147207cdb99ed84233e3feac4a3ff9d61ff159bd9fd0af507b15c67dac"
+  }
+}

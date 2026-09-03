@@ -25,6 +25,16 @@ relative to the config file, so a job directory can be moved or archived.
 an alias for `face_diameter_mm`. The canonical normalized config is written to
 `config.normalized.json`.
 
+In a `design-brief.json`, `lens_identity.focal_length_mm` remains the required
+positive numeric machine anchor. The optional sibling
+`lens_identity.focal_length_display` is the exact human-facing first text token;
+use it for a zoom range such as `28–70mm` (or a unit-bearing prime such as
+`50mm`). Its normalized form must be a number or number-range, and
+`display_text[0]`/`allowed_text` must contain the same token. A range must be
+positive, ascend from its first number, and start at `focal_length_mm` (the
+machine anchor is the wide-end value). Omitting it keeps the prime-lens
+behavior: the numeric focal length is rendered and checked.
+
 In that normalized file, absolute OpenSCAD/Bambu executable settings are
 reduced to their basenames so the core config digest remains clone-portable;
 the original TOML is still used to locate the tool, and the external adapter
@@ -192,3 +202,55 @@ report also records the derived rib-tip diameter, signed bare-wall interference
 the entire compressed foam gap is rejected before geometry generation. When
 ribs are disabled, rib-tip geometry is reported as not applicable rather than
 as an implied hidden feature.
+
+## Clean-room interaction scenario
+
+`scripts/rehearse_user_agent.py` accepts a small JSON transcript in addition to
+the TOML job. The transcript is an acceptance record for a fresh host, not a
+prompt that the runner executes as code. Its stable fields are:
+
+```json
+{
+  "schema_version": 1,
+  "workspace": {"conversation_history": "none", "filesystem": "isolated_temp"},
+  "conversation": {"turns": [{"speaker": "user", "text": "..."}]},
+  "route": {
+    "skills": ["lens-cap-imagegen", "lens-cap-production"],
+    "sequence": "sequential", "generic_parallel_skills": []
+  },
+  "intake": {
+    "asked_once": true, "persisted_in_job_toml": true,
+    "questions": [
+      "mating_outside_diameter_mm",
+      "foam_liner_plan_and_uncompressed_thickness_mm",
+      "friction_rib_preference"
+    ],
+    "answer": {
+      "mating_outside_diameter_mm": 77,
+      "adapter_nominal_ring_mm": 72,
+      "adapter_radial_wall_mm": 2.5,
+      "foam_liner_status": "none", "liner_thickness_mm": null,
+      "friction_ribs_enabled": true, "friction_ribs_explicit": false,
+      "friction_rib_profile": "light_tapered"
+    },
+    "answer_turn_index": 2
+  },
+  "fixture": {
+    "path": "examples/fixtures/...", "primary_job": "jobs/77mm/job.toml",
+    "identity_terms": ["optional translated brand/model alias"]
+  },
+  "production": {"endpoint": "./bin/lens-cap-3mf"}
+}
+```
+
+The validator requires the selected job's measured diameter, foam status,
+rib enabled/explicit flags, and rib profile to equal the answer; it also
+checks that the answer text agrees with the foam/rib polarity. When the
+optional adapter-envelope pair is present it checks
+`nominal ring + 2 × radial wall = mating diameter` and
+matches both values against the job metadata. This catches a dropped handoff
+even when the conversation text sounds correct. A scenario may live outside the checkout
+when passed by absolute path. For such a scenario, a relative `fixture.path`
+is resolved beside the scenario first; the bundled examples continue to use
+checkout-relative paths. The fixture itself may be external, but
+`fixture.primary_job` is always constrained to that fixture after resolution.

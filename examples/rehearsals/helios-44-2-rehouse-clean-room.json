@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "scenario_id": "helios-44-2-rehouse-imagegen-v2-clean-room",
+  "workspace": {
+    "conversation_history": "none",
+    "filesystem": "isolated_temp"
+  },
+  "conversation": {
+    "turns": [
+      {
+        "speaker": "user",
+        "text": "没有任何历史上下文：请为我的 IronGlass REHOUSE Helios-44-2 58mm F2 设计圆形镜头盖正面图稿，最后生成可打印的 3MF。焦段 58 和 F2 必须是主要信息。"
+      },
+      {
+        "speaker": "agent",
+        "text": "我会只按顺序使用 $lens-cap-imagegen 再交给 $lens-cap-production，不并行调用通用设计 Skill。先核对镜头文化/REHOUSE 资料并生成待审批图稿；在进入生产前我只问一组物理参数：实际卡合圆柱外径（含转接圈壁）是多少？是否贴泡棉及未压缩厚度？内壁摩擦凸条是否开启、使用哪种轮廓？"
+      },
+      {
+        "speaker": "user",
+        "text": "卡合外径为 77 mm（72 mm 名义环加 2.5 mm 径向转接壁），不贴泡棉，内壁摩擦凸条保持默认开启。"
+      },
+      {
+        "speaker": "agent",
+        "text": "已将 77 mm、foam=none、light_tapered 摩擦凸条开启写入 jobs/77mm/job.toml，并保持一次性 handoff。图稿批准后运行 ./bin/lens-cap-3mf jobs/77mm/job.toml --force --json，完成同画布审计、原生一体 3MF 和 Core 校验；实体卡合仍需 coupon。"
+      }
+    ]
+  },
+  "route": {
+    "skills": ["lens-cap-imagegen", "lens-cap-production"],
+    "sequence": "sequential",
+    "generic_parallel_skills": []
+  },
+  "intake": {
+    "asked_once": true,
+    "persisted_in_job_toml": true,
+    "questions": [
+      "mating_outside_diameter_mm",
+      "foam_liner_plan_and_uncompressed_thickness_mm",
+      "friction_rib_preference"
+    ],
+    "answer_turn_index": 2,
+    "answer": {
+      "mating_outside_diameter_mm": 77,
+      "adapter_nominal_ring_mm": 72,
+      "adapter_radial_wall_mm": 2.5,
+      "foam_liner_status": "none",
+      "liner_thickness_mm": null,
+      "friction_ribs_enabled": true,
+      "friction_ribs_explicit": false,
+      "friction_rib_profile": "light_tapered"
+    }
+  },
+  "fixture": {
+    "path": "examples/fixtures/helios-44-2-rehouse-imagegen-v2",
+    "primary_job": "jobs/77mm/job.toml"
+  },
+  "production": {
+    "endpoint": "./bin/lens-cap-3mf",
+    "bambu_mode": "never",
+    "artifact_policy": "retain when --artifact-dir is supplied"
+  }
+}

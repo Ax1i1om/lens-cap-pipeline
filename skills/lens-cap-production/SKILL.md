@@ -38,10 +38,14 @@ metadata:
     - "lens-cap STL"
     - "lens-cap SCAD"
     - "lens front relief"
+    - "lens badge model"
+    - "circular lens badge model"
+    - "lens front medallion model"
     - "lens front 3MF"
     - "lens relief model"
     - "circular lens relief"
     - "circular front pattern"
+    - "circular lens front"
     - "circular lens image"
     - "circular lens artwork"
     - "lens cover model"
@@ -56,6 +60,11 @@ metadata:
     - "镜头盖 3MF"
     - "镜头盖 STL"
     - "镜头正面浮雕"
+    - "镜头徽章模型"
+    - "圆形镜头徽章模型"
+    - "镜头正面徽章模型"
+    - "镜头正面图案模型"
+    - "圆形镜头正面"
     - "镜头正面 3MF"
     - "镜头浮雕模型"
     - "圆形镜头浮雕"
@@ -103,6 +112,14 @@ For the Chinese translation, see [SKILL.zh-CN.md](SKILL.zh-CN.md); both files
 describe the same gates and CLI, and the localized wording must not weaken the
 production checks.
 
+Extract the exact approved text from the brief; never retype or normalize it
+from memory. `lens_identity.focal_length_mm` remains the positive numeric
+identity anchor. If the brief supplies the optional sibling
+`lens_identity.focal_length_display` (for example a zoom range such as
+`28–70mm`), preserve that exact token as the first display item and validate it
+as a positive ascending number/range beginning at the numeric anchor; prime
+briefs may omit it and retain numeric behavior.
+
 ## Intake contract
 
 For concept art only, do not invent mechanical dimensions. For a fitted cap,
@@ -120,6 +137,12 @@ before generating geometry:
    `--no-friction-ribs` only when the user explicitly requests a smooth wall,
    then record `friction_ribs_enabled=false` and
    `friction_ribs_explicit=true`.
+
+This grouped intake is a hard gate before the first geometry, build, export, or
+3MF command (including `lens-cap-3mf`), not only before final export. A
+concept-art-only pass may precede it, but production must stop until all three
+answers are persisted in the current job TOML/handoff; a complete, current
+handoff is the only way to skip asking again.
 
 Use the confirmed mating diameter as the face/relief diameter by default; do
 not ask for a second relief-diameter value. Do not ask the user to choose a

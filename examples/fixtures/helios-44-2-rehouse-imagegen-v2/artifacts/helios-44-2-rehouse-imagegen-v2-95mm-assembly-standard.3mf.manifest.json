@@ -1,0 +1,76 @@
+{
+  "adapter": "standard-core-3mf",
+  "adapter_version": 1,
+  "determinism": "byte-stable for identical input/title under the same Python/zlib implementation",
+  "input": "<external>/helios-44-2-rehouse-imagegen-v2-95mm-assembly.stl",
+  "input_sha256": "72895556f2c22fe42ba9c1bc2933aeedb07ef60e099499c4e4beac83bd01b002",
+  "mesh": {
+    "boundary_edges": 28,
+    "bounds": {
+      "max_mm": [
+        50.099998474121094,
+        50.099998474121094,
+        16.60099983215332
+      ],
+      "min_mm": [
+        -50.099998474121094,
+        -50.099998474121094,
+        0.0
+      ],
+      "size_mm": [
+        100.19999694824219,
+        100.19999694824219,
+        16.60099983215332
+      ]
+    },
+    "bytes": 2271111,
+    "closed": false,
+    "closure_required": false,
+    "dropped_degenerate": 13,
+    "nonmanifold_edges": 1682,
+    "sha256": "4965586e54a0f4a5e95253d643825cb4ef0d1a7df46de676d94e583b4bfeb6d2",
+    "triangles": 189163,
+    "unique_edges": 282077,
+    "vertices": 92908
+  },
+  "output": "examples/fixtures/helios-44-2-rehouse-imagegen-v2/artifacts/helios-44-2-rehouse-imagegen-v2-95mm-assembly-standard.3mf",
+  "python": "3.14.4",
+  "verification": {
+    "bytes": 2271111,
+    "entries": [
+      "3D/3dmodel.model",
+      "3D/_rels/3dmodel.model.rels",
+      "[Content_Types].xml",
+      "_rels/.rels"
+    ],
+    "gcode_bytes": 0,
+    "has_embedded_gcode": false,
+    "model": {
+      "bounds": {
+        "max_mm": [
+          50.099998474,
+          50.099998474,
+          16.600999832
+        ],
+        "min_mm": [
+          -50.099998474,
+          -50.099998474,
+          0.0
+        ],
+        "size_mm": [
+          100.199996948,
+          100.199996948,
+          16.600999832
+        ]
+      },
+      "build_items": 1,
+      "mesh_parts": 1,
+      "objects": 1,
+      "parts": 1,
+      "triangles": 189163,
+      "vertices": 92908
+    },
+    "path": "examples/fixtures/helios-44-2-rehouse-imagegen-v2/artifacts/helios-44-2-rehouse-imagegen-v2-95mm-assembly-standard.3mf",
+    "sha256": "4965586e54a0f4a5e95253d643825cb4ef0d1a7df46de676d94e583b4bfeb6d2"
+  }
+}

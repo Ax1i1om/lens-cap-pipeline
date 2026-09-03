@@ -64,6 +64,19 @@ SHA-256），重复执行不改动未变化文件。检测到用户改动时不�
 `--allow-global`，否则只检查／预览。`bin/lens-cap-skills` 和
 `scripts/sync_skills.py` 是同一入口的便携别名。
 
+如果宿主只会扫描静态 metadata，或你想先独立检查一条自然语言请求是否命中本路由，
+可运行同一份 manifest 驱动的无依赖 resolver：
+
+```sh
+python3 scripts/resolve_skill_route.py \
+  "为适马 28–70mm F2.8 设计圆形镜头盖正面并输出 3MF"
+```
+
+它只判断 `lens-cap-imagegen → lens-cap-production` 的顺序和排他性，不生成图或 CAD；
+明确的镜头盖／正面名词短语无需额外动作词，紧凑的品牌+型号写法（如 `适马2870`）也
+可命中；若镜头身份来自附图／目录而不在文字中，可加 `--named-lens`。这给旧版 Codex/Claude
+宿主一个明确的适配入口，但不能替代宿主最终加载 Skill。
+
 > **分发边界（Alpha）**：只用 `pip install` 安装 CLI wheel 不会带上两个
 > companion Skills、`bin/lens-cap-3mf` 或 `tools/3mf_adapter`。要走完整的
 > “图稿审批 → 3MF”链路，请使用 Git checkout，或先**解压 source distribution
@@ -139,9 +152,45 @@ python3 scripts/smoke_rehouse.py --bambu never --json
 python3 scripts/smoke_rehouse.py \
   --fixture examples/fixtures/mamiya-sekor-c-80-f1-9-rehouse \
   --bambu never --json
+# 新鲜 ImageGen 的 Helios-44-2 REHOUSE 样本（含 77／82／95 mm 三种卡合包络）
+python3 scripts/smoke_rehouse.py \
+  --fixture examples/fixtures/helios-44-2-rehouse-imagegen-v2 \
+  --bambu never --json
 # 完整主机验证（需要 OpenSCAD；若有 A1 mini 配置也会切片）
 python3 scripts/smoke_rehouse.py --bambu auto --require-external --keep-workdir --json
 ```
+
+若还要验收“真人自然语言 → 一次性询问并持久化卡合参数 → 3MF”的交互边界，
+可运行仓库附带的结构化复盘剧本。它不依赖某个 Codex 对话缓存，会先检查专用
+Skill 的顺序和三项 intake，再在隔离临时目录调用同一生产 runner：
+
+```sh
+python3 scripts/rehearse_user_agent.py \
+  examples/rehearsals/helios-44-2-rehouse-clean-room.json \
+  --bambu never --json
+# 独立的 Mamiya-Sekor C + 泡棉／转接壁交互样本
+python3 scripts/rehearse_user_agent.py \
+  examples/rehearsals/mamiya-sekor-c-80-f1-9-rehouse-clean-room.json \
+  --bambu never --json
+```
+
+想一次跑完路由、两个跨品牌 fixture 和两份交互剧本，可在仓库根目录执行
+`make smoke-all`（或 `make acceptance`）。这个便携门禁不要求桌面切片器；有
+OpenSCAD/Bambu 时，再按上面的 `--require-external` 命令做主机级验证。
+
+剧本可复制后替换为其他镜头；`fixture.primary_job` 必须与回答的实际卡合外径、
+泡棉厚度和凸条配置一致。需要保留本次输出时再加
+`--artifact-dir PATH --force-artifacts`。它验证交互和文件链路，不把图像供应商的
+像素级复现或实体卡合测量冒充为通过。
+
+烟测还会拒绝 `generation.approved` 未确认、缺少有来源的品牌文化／REHOUSE
+锚点，或指向 fixture 外部的提示词／图稿路径；这让“已审批图稿 → 3MF”边界
+在没有对话历史时仍可被机器检查。
+
+变焦镜头的 `design-brief.json` 仍保留正数 `lens_identity.focal_length_mm`
+机器锚点，并可选填同级 `focal_length_display`（如 `28–70mm`）；该字符串必须
+同时作为 `display_text[0]`／`allowed_text` 第一项，且范围从数值锚点开始并递增。
+定焦镜头省略它即可保持原有行为。
 
 `--keep-workdir` 会保留隔离输出，`--artifact-dir PATH` 可在明确指定时复制
 生成的 3MF 及 sidecar；脚本不会带入示例目录旧的 `out/`、3MF 或对批准图稿

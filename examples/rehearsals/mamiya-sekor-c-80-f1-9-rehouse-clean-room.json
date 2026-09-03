@@ -1,0 +1,62 @@
+{
+  "schema_version": 1,
+  "scenario_id": "mamiya-sekor-c-80-f1-9-rehouse-clean-room",
+  "workspace": {
+    "conversation_history": "none",
+    "filesystem": "isolated_temp"
+  },
+  "conversation": {
+    "turns": [
+      {
+        "speaker": "user",
+        "text": "这是一个全新的任务，没有历史上下文：请为 Mamiya-Sekor C 80mm F1.9 M645 REHOUSE 镜头设计圆形镜头盖正面浮雕，80 和 F1.9 为主要信息，最后输出可打印 3MF。"
+      },
+      {
+        "speaker": "agent",
+        "text": "我只按顺序使用 $lens-cap-imagegen → $lens-cap-production，不并行调用通用设计 Skill。先核对 Mamiya 的系统文化与 REHOUSE 资料并生成待审批图稿；进入生产前一次性问三项：实际卡合圆柱外径（含转接圈壁）？泡棉/衬垫方案及未压缩厚度？内壁摩擦凸条是否开启、使用哪种轮廓？"
+      },
+      {
+        "speaker": "user",
+        "text": "实际卡合外径是 85 mm（80 mm 名义环加 2.5 mm 径向转接壁）；贴 1.5 mm 未压缩泡棉；摩擦凸条默认开启，用 light_tapered。"
+      },
+      {
+        "speaker": "agent",
+        "text": "已把 85 mm、foam=1.5 mm、light_tapered 摩擦凸条开启持久化到 jobs/85mm/job.toml；保持图稿不可变。批准后运行 ./bin/lens-cap-3mf jobs/85mm/job.toml --force --json，完成同画布审计、原生一体 3MF 和 Core 校验；泡棉压缩与实体卡合仍需 coupon。"
+      }
+    ]
+  },
+  "route": {
+    "skills": ["lens-cap-imagegen", "lens-cap-production"],
+    "sequence": "sequential",
+    "generic_parallel_skills": []
+  },
+  "intake": {
+    "asked_once": true,
+    "persisted_in_job_toml": true,
+    "questions": [
+      "mating_outside_diameter_mm",
+      "foam_liner_plan_and_uncompressed_thickness_mm",
+      "friction_rib_preference"
+    ],
+    "answer_turn_index": 2,
+    "answer": {
+      "mating_outside_diameter_mm": 85,
+      "adapter_nominal_ring_mm": 80,
+      "adapter_radial_wall_mm": 2.5,
+      "foam_liner_status": "foam",
+      "liner_thickness_mm": 1.5,
+      "friction_ribs_enabled": true,
+      "friction_ribs_explicit": false,
+      "friction_rib_profile": "light_tapered"
+    }
+  },
+  "fixture": {
+    "path": "examples/fixtures/mamiya-sekor-c-80-f1-9-rehouse",
+    "primary_job": "jobs/85mm/job.toml"
+  },
+  "production": {
+    "endpoint": "./bin/lens-cap-3mf",
+    "bambu_mode": "never",
+    "artifact_policy": "retain when --artifact-dir is supplied"
+  }
+}

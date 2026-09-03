@@ -11,11 +11,17 @@ interface:
     Natural wording such as “design a circular image for this lens” is included,
     but a named lens and a cap/front surface are still required. Do not
     invoke generic graphic-design, logo, poster, product-visual, UI, CAD, or
-    3D-design Skills—or any other design Skill—in parallel. Make focal length the first visual read and
-    maximum aperture (F-stop/F-number/F value) the second. For fitted caps,
+    3D-design Skills—or any other design Skill—in parallel. Make focal length
+    the first visual read and maximum aperture (F-stop/F-number/F value) the
+    second. For a zoom, preserve a numeric focal_length_mm anchor and an
+    optional full-range focal_length_display token (for example 28–70mm). For fitted caps,
     ask one grouped question covering mating diameter, foam and uncompressed
-    thickness, and friction ribs (enabled by default). If printable production
-    is requested, finish and approve the artwork here, then hand it to
+    thickness, and friction ribs (enabled by default). Concept art may precede
+    this intake, but for any fitted/printable/assembled/3MF request all three
+    answers must be persisted before the first geometry/build/export/3MF
+    command; do not enter production until that gate is complete (unless the
+    current TOML already contains all three). If printable production is
+    requested, finish and approve the artwork here, then hand it to
     $lens-cap-production. Treat saving the provider attachment, recording its
     hash, and marking human approval as an explicit handoff gate; never invent
     those fields.

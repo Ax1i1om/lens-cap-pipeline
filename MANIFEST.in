@@ -1,4 +1,5 @@
 include AGENTS.md LICENSE NOTICE README.md README.en.md CHANGELOG.md CONTRIBUTING.md SECURITY.md THIRD_PARTY.md CODE_OF_CONDUCT.md
+include Makefile
 include uv.lock
 include bin/lens-cap
 include bin/lens-cap-skills
@@ -15,6 +16,8 @@ include examples/*.toml
 include examples/design-brief.template.json
 include examples/job-manifest.template.json
 recursive-include examples/art *.ppm
+recursive-include examples/rehearsals *.json
+recursive-include examples/rehearsals *.md
 recursive-include scripts *.py
 recursive-include tests *.py
 recursive-include tools/3mf_adapter *.py *.md *.scad *.stl *.3mf *.json
@@ -31,12 +34,19 @@ include examples/fixtures/mamiya-sekor-c-80-f1-9-rehouse/design-brief.json
 include examples/fixtures/mamiya-sekor-c-80-f1-9-rehouse/art/master.png
 recursive-include examples/fixtures/mamiya-sekor-c-80-f1-9-rehouse/jobs *.toml
 recursive-include examples/fixtures/mamiya-sekor-c-80-f1-9-rehouse/artifacts *.3mf *.manifest.json
+include examples/fixtures/helios-44-2-rehouse-imagegen-v2/README.md
+include examples/fixtures/helios-44-2-rehouse-imagegen-v2/prompt.txt
+include examples/fixtures/helios-44-2-rehouse-imagegen-v2/design-brief.json
+include examples/fixtures/helios-44-2-rehouse-imagegen-v2/art/master.png
+recursive-include examples/fixtures/helios-44-2-rehouse-imagegen-v2/jobs *.toml
+recursive-include examples/fixtures/helios-44-2-rehouse-imagegen-v2/artifacts *.3mf *.manifest.json
 
 # Never ship local/generated artifacts even when a developer built an example
 # before creating the source archive.
 prune examples/build
 prune examples/fixtures/helios-44-2-rehouse/jobs/*/out
 prune examples/fixtures/mamiya-sekor-c-80-f1-9-rehouse/jobs/*/out
+prune examples/fixtures/helios-44-2-rehouse-imagegen-v2/jobs/*/out
 prune build
 prune dist
 prune .venv

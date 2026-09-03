@@ -19,6 +19,12 @@ a downstream tool redraw it.
 Start with examples/design-brief.template.json. Fill in the canonical lens
 identity and exact display text, then close the semantic sets:
 
+Keep `lens_identity.focal_length_mm` as the positive numeric machine anchor. If
+the lens is a zoom, optionally add the sibling
+`lens_identity.focal_length_display` (for example `28–70mm`) and use that exact
+token as the first `display_text` and `allowed_text` entry. Prime lenses may
+omit the optional field and continue to use the numeric focal token.
+
 - allowed_text and allowed_marks are the only words and marks permitted on
   the image;
 - forbidden_legacy_tokens prevents a previous lens job leaking into a new

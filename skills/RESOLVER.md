@@ -53,6 +53,10 @@ Ask the grouped intake at most once per job and persist it in the job TOML;
 the production stage must read a complete current handoff instead of asking the
 same three questions again, and may ask only for missing, stale, or ambiguous
 values.
+For a fitted, printable, assembled, or 3MF request, this intake is a hard gate
+before the first geometry/build/export/3MF command. Concept art may precede it,
+but no production invocation is allowed until all three answers are persisted
+in the current handoff (unless that handoff already contains all three).
 
 ## Cross-host installation and drift
 
@@ -68,6 +72,18 @@ same files with `scripts/install_skills.py` (or `bin/lens-cap-skills`):
 
 On Windows, use `py -3 scripts/install_skills.py ...` or
 `bin/lens-cap-skills.cmd`.
+
+For legacy/project routers that cannot evaluate the semantic conjunction in
+Skill descriptions, use the dependency-free `scripts/resolve_skill_route.py`
+host shim. It consumes the same `routing_policy.lens_cap_intent` manifest and
+returns a machine-readable route; it requires a named-lens cue plus a
+cap/front/relief/production intent signal. An action verb is accepted, as is a
+terse explicit noun phrase such as `Zeiss 50mm F1.4 lens cap artwork`; compact
+catalog shorthand such as `适马2870` is accepted when a model-like token is
+present. It keeps optical/repair/product-photo exclusions and never schedules
+a generic design Skill. Pass `--named-lens` when an attached image or catalog
+has supplied the identity but the text does not contain it. The shim is
+advisory and does not generate artwork or CAD.
 
 The synchroniser is idempotent and records a version/manifest/file-hash receipt
 at the destination. It defaults to dry-run, protects locally edited files, and

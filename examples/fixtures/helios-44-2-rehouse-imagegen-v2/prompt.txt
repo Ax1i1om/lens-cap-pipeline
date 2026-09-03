@@ -1,0 +1,31 @@
+Create a high-quality square source artwork for a circular camera lens-cap
+medallion inspired by the Soviet Helios-44-2 and the modern IronGlass-style
+cinema rehousing of that vintage optic. This is a flat graphic specification,
+not a product photograph and not a 3D lens rendering.
+
+Exact rendered text, and no other text or digits anywhere: “58” must be the
+largest and first visual read; “F2” must be the second-largest and second visual
+read; secondary text may read only “HELIOS 44-2”, “REHOUSED CINEMA”, and “M42”.
+Spell every character exactly. Do not add T*, T1.6, PL, Zeiss, Mamiya, Sigma,
+Canon, Contax, Olympus, Batman, Dune, logos, trademarks, pseudo-text, or random
+numerals.
+
+Composition: a complete centered circle on a square canvas with a generous
+clean edge. Make 58 and F2 dominant geometric typography, occupying most of
+the face. Use bold condensed sans-serif letterforms, crisp straight edges,
+and strong typographic contrast. Around them use broad connected black,
+charcoal, medium-gray, and warm-ivory fields; continuous engraved/linocut or
+screen-print lines; concentric optical swirls; one narrow radial searchlight
+wedge; desert-like contour bands; and a clean segmented mechanical
+registration grid. These motifs are an original, non-literal translation of
+the qualified Helios-44-2 cinema-rehousing family association and Soviet lens
+identity, not a film still or official film branding.
+
+Palette strictly black, charcoal, gray, and warm ivory. Keep large fills flat
+and production-friendly; allow antialiasing only at shape boundaries. No
+gradients, halftone dots, stippling, paper grain, mottling, photographic
+texture, glossy reflections, realistic shadows, lens barrel, glass, aperture
+iris blades, camera, film strip, actors, spacecraft, film logos, Batman logo,
+Dune logo, clutter, or rectangular crop. The circle must be fully visible and
+suitable for deterministic same-canvas mask tracing. Typography and hierarchy
+are more important than micro-detail.

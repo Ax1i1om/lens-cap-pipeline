@@ -43,9 +43,18 @@ metadata:
     - "lens cap SCAD"
     - "lens cap 3MF"
     - "lens front relief"
+    - "circular lens front"
+    - "lens badge model"
+    - "circular lens badge model"
+    - "lens front medallion model"
     - "lens front 3MF"
     - "lens relief model"
     - "镜头正面浮雕"
+    - "镜头徽章模型"
+    - "圆形镜头徽章模型"
+    - "镜头正面徽章模型"
+    - "镜头正面图案模型"
+    - "圆形镜头正面"
     - "镜头正面 3MF"
     - "镜头浮雕模型"
     - "圆形镜头浮雕"
@@ -84,6 +93,12 @@ metadata:
 遮罩、SVG、参数化 OpenSCAD 和打印交接清单。概念图创作仍由图像生成
 Skill 完成；本 Skill 不在建模阶段重画图稿。
 
+从简报读取已批准的准确文字，不要凭记忆重新输入或改写。
+`lens_identity.focal_length_mm` 始终是正数机器锚点；简报可选填同级的
+`lens_identity.focal_length_display`（例如变焦范围 `28–70mm`），将该准确
+字符串保留为第一项显示文字并校验为正的递增数字／范围，且范围起点必须等于
+数值锚点。定焦简报省略此字段时，继续使用原有数字行为。
+
 ## 卡合式输入
 
 先检查当前 job TOML／交接包；如果三项物理字段都已存在且属于当前任务，直接读取，
@@ -95,6 +110,11 @@ Skill 完成；本 Skill 不在建模阶段重画图稿。
    `friction_ribs_enabled=true`、`friction_ribs_explicit=false`，只有用户明确
    要求光滑内壁时才记录 `friction_ribs_enabled=false`、
    `friction_ribs_explicit=true` 并关闭。
+
+这组三项 intake 是首次 geometry、build、export 或 3MF 命令（包括
+`lens-cap-3mf`）之前的硬门禁，不只是最终导出前的检查。概念图阶段可以先做，
+但在三项回答已写入当前 job TOML／交接包之前必须停在生产入口；只有完整且当前的
+交接包才可以免于再次提问。
 
 已确认的卡合外径同时作为默认正面／浮雕直径，不要再次询问浮雕直径；
 也不要让用户选择结构类型，使用 assembly_mode=auto。贴泡棉但没有提供压缩率时按

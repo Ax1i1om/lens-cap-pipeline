@@ -63,6 +63,19 @@ remove stale files. Use `--environment codex|claude` for host defaults, with
 `--allow-global` required before writing an inferred global directory.
 `bin/lens-cap-skills` is a repository-local alias.
 
+For a host that only scans static metadata (or for a quick preflight of a
+natural-language request), run the dependency-free manifest resolver:
+
+```sh
+python3 scripts/resolve_skill_route.py \
+  "Design a circular lens-cap front for Sigma 28-70mm F2.8 and export a 3MF"
+```
+
+It checks the exclusive `lens-cap-imagegen -> lens-cap-production` order but
+does not generate artwork or CAD. Use `--named-lens` when the lens identity is
+provided by an attachment/catalog rather than text. It is a host shim, not a
+replacement for loading the Skills.
+
 > **Alpha distribution boundary:** installing only the CLI wheel does not
 > include the two companion Skills, `bin/lens-cap-3mf`, or
 > `tools/3mf_adapter`. Use a Git checkout, or unpack the source distribution
@@ -193,9 +206,50 @@ python3 scripts/smoke_rehouse.py --bambu never --json
 python3 scripts/smoke_rehouse.py \
   --fixture examples/fixtures/mamiya-sekor-c-80-f1-9-rehouse \
   --bambu never --json
+# fresh ImageGen Helios-44-2 REHOUSE sample (77/82/95 mm envelopes)
+python3 scripts/smoke_rehouse.py \
+  --fixture examples/fixtures/helios-44-2-rehouse-imagegen-v2 \
+  --bambu never --json
 # host-level verification (requires OpenSCAD; Bambu profiles are optional)
 python3 scripts/smoke_rehouse.py --bambu auto --require-external --keep-workdir --json
 ```
+
+To audit the conversation boundary as well as the files, run the structured
+new-user rehearsal. It checks the exclusive Skill sequence, the one grouped
+diameter/foam/rib intake, and persistence into the job TOML before invoking
+the same production runner in an isolated temporary fixture:
+
+```sh
+python3 scripts/rehearse_user_agent.py \
+  examples/rehearsals/helios-44-2-rehouse-clean-room.json \
+  --bambu never --json
+# independent Mamiya-Sekor C + foam/adapter-wall interaction sample
+python3 scripts/rehearse_user_agent.py \
+  examples/rehearsals/mamiya-sekor-c-80-f1-9-rehouse-clean-room.json \
+  --bambu never --json
+```
+
+For one portable gate covering route resolution, both cross-brand fixtures, and
+both interaction transcripts, run `make smoke-all` (or `make acceptance`) from
+the repository root. It skips desktop slicers; use the documented
+`--require-external` commands when OpenSCAD/Bambu are available.
+
+Copy the JSON scenario for another lens or adapter envelope; its
+`fixture.primary_job` must agree with the answered diameter, liner thickness,
+and rib profile. Add `--artifact-dir PATH --force-artifacts` when a rehearsal's
+3MF snapshots should be retained. This validates the interaction and file
+chain, not pixel-identical provider output or physical fit.
+
+The smoke gate also rejects an unapproved artwork handoff, a missing
+source-backed culture/rehousing anchor, or a prompt/artwork path that escapes
+the fixture. This keeps the approved-artwork → 3MF boundary machine-checkable
+without relying on conversation history.
+
+For a zoom lens, keep the positive numeric
+`lens_identity.focal_length_mm` machine anchor and optionally add the sibling
+`focal_length_display` (for example `28–70mm`). Use that exact string as the
+first `display_text`/`allowed_text` item; a range must start at the numeric
+anchor and increase. Prime briefs may omit it and retain the existing behavior.
 
 Use `--artifact-dir PATH` to explicitly copy generated 3MF files and sidecars,
 or `--keep-workdir` to inspect the isolated run. The runner never reuses old

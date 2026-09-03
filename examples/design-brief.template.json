@@ -5,6 +5,7 @@
     "brand": "REPLACE",
     "model": "REPLACE",
     "focal_length_mm": null,
+    "focal_length_display": null,
     "maximum_aperture": "REPLACE",
     "mount_or_revision": null,
     "era": null

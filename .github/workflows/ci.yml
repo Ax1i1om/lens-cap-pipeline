@@ -34,6 +34,24 @@ jobs:
         run: python scripts/smoke.py
       - name: Run clean-room rehousing smoke test
         run: python scripts/smoke_rehouse.py --bambu never --json
+      - name: Check manifest-driven route shim
+        run: >-
+          python scripts/resolve_skill_route.py
+          "为适马 28–70mm F2.8 设计圆形镜头盖正面并输出 3MF"
+      - name: Run fresh ImageGen rehousing smoke test
+        run: >-
+          python scripts/smoke_rehouse.py
+          --fixture examples/fixtures/helios-44-2-rehouse-imagegen-v2
+          --bambu never --json
+      - name: Run independent Mamiya rehousing smoke test
+        run: >-
+          python scripts/smoke_rehouse.py
+          --fixture examples/fixtures/mamiya-sekor-c-80-f1-9-rehouse
+          --bambu never --json
+      - name: Replay clean-room user-agent transcripts
+        run: |
+          python scripts/rehearse_user_agent.py examples/rehearsals/helios-44-2-rehouse-clean-room.json --bambu never --json
+          python scripts/rehearse_user_agent.py examples/rehearsals/mamiya-sekor-c-80-f1-9-rehouse-clean-room.json --bambu never --json
       - name: Verify bundled 3MF Core fixtures
         run: |
           python tools/3mf_adapter/three_mf_adapter.py verify tools/3mf_adapter/fixtures/fixture-cube-standard.3mf

@@ -49,6 +49,9 @@ def test_cross_context_trigger_and_intake_contract_is_present() -> None:
         "lens cap artwork",
         "lens medallion",
         "lens front graphic",
+        "lens badge",
+        "circular lens badge",
+        "lens front medallion",
         "lens artwork",
         "circular lens graphic",
         "circular lens image",
@@ -64,6 +67,8 @@ def test_cross_context_trigger_and_intake_contract_is_present() -> None:
         "lens cap 3MF",
         "lens cap production",
         "lens front relief",
+        "lens badge model",
+        "circular lens badge model",
         "lens front 3mf",
         "circular lens relief",
         "circular lens image",
@@ -93,6 +98,7 @@ def test_skill_manifest_declares_portable_sync_entrypoint() -> None:
     for token in (
         '"project_version"',
         '"entrypoint": "scripts/install_skills.py"',
+        '"routing_entrypoint": "scripts/resolve_skill_route.py"',
         '"default_mode": "dry-run"',
         '"apply_flag": "--apply"',
         '"drift_exit_code": 1',
@@ -133,6 +139,8 @@ def test_manifest_named_lens_surface_semantic_route_is_scoped() -> None:
         "front graphic",
         "front surface",
         "relief",
+        "lens badge",
+        "circular lens badge",
         "3mf",
         "circular image",
         "circular artwork",
@@ -147,6 +155,9 @@ def test_manifest_named_lens_surface_semantic_route_is_scoped() -> None:
         "镜头闷盖",
         "镜头帽",
         "可打印模型",
+        "镜头徽章",
+        "圆形镜头徽章",
+        "圆形镜头正面",
     } <= set(semantic["surface_terms"])
     assert "circular" not in semantic["surface_terms"]
     assert "圆形" not in semantic["surface_terms"]
@@ -238,6 +249,50 @@ def test_host_metadata_keeps_the_same_exclusive_hierarchy_and_intake() -> None:
     assert "foam" in imagegen_agent and "uncompressed" in imagegen_agent
     assert "mating diameter" in production_agent
     assert "foam" in production_agent and "uncompressed" in production_agent
+
+
+def test_fitted_intake_is_a_persisted_gate_before_first_production_command() -> None:
+    """Keep the clean-room handoff order explicit in every host-facing copy."""
+
+    imagegen = (ROOT / "skills/lens-cap-imagegen/SKILL.md").read_text(encoding="utf-8").lower()
+    production = (ROOT / "skills/lens-cap-production/SKILL.md").read_text(encoding="utf-8").lower()
+    imagegen_zh = (ROOT / "skills/lens-cap-imagegen/SKILL.zh-CN.md").read_text(encoding="utf-8")
+    production_zh = (ROOT / "skills/lens-cap-production/SKILL.zh-CN.md").read_text(encoding="utf-8")
+    resolver = (ROOT / "skills/RESOLVER.md").read_text(encoding="utf-8").lower()
+    agents = (ROOT / "AGENTS.md").read_text(encoding="utf-8").lower()
+    imagegen_agent = (ROOT / "skills/lens-cap-imagegen/agents/openai.yaml").read_text(encoding="utf-8").lower()
+    production_agent = (ROOT / "skills/lens-cap-production/agents/openai.yaml").read_text(encoding="utf-8").lower()
+    # Markdown/YAML wrapping is presentation-only; compare normalized prose so
+    # a harmless line-wrap edit cannot disable this acceptance gate.
+    imagegen_flat = " ".join(imagegen.split())
+    production_flat = " ".join(production.split())
+    resolver_flat = " ".join(resolver.split())
+    agents_flat = " ".join(agents.split())
+    imagegen_agent_flat = " ".join(imagegen_agent.split())
+    production_agent_flat = " ".join(production_agent.split())
+
+    # ImageGen may make concept art first, but its handoff cannot enter the
+    # production route until the grouped physical answers are persisted.
+    assert "first production gate" in imagegen_flat
+    assert "concept art may be generated before it, but do not invoke" in imagegen_flat
+    assert "before the first geometry/build/export/3mf command" in imagegen_agent_flat
+    assert "before the first fitted geometry/build/export/3mf command" in production_agent_flat
+    assert "persist all three answers before entering production" in production_agent_flat
+
+    # The production Skill and the host-level resolver repeat the same gate so
+    # a clean context cannot interpret the intake as an optional late check.
+    assert "hard gate before the first geometry" in production_flat
+    assert "answers are persisted" in production_flat
+    assert "首次 geometry、build、export 或 3mf 命令" in " ".join(production_zh.lower().split())
+    assert "进入生产的第一道门禁" in imagegen_zh
+    assert "before the first geometry/build/export/3mf command" in resolver_flat
+    assert "before the first geometry/build/export/3mf command" in agents_flat
+
+    for document in (imagegen_flat, production_flat, resolver_flat, agents_flat):
+        assert "friction" in document and "default" in document
+    for document in (imagegen_flat, production_flat):
+        assert "do not ask for a second relief" in document
+        assert "do not ask" in document
 
 
 def test_skill_agent_metadata_routes_lens_cap_requests() -> None:

@@ -1,0 +1,125 @@
+{
+  "schema_version": 1,
+  "job_slug": "helios-44-2-rehouse-imagegen-v2",
+  "lens_identity": {
+    "brand": "Helios / Zenit",
+    "model": "Helios-44-2",
+    "focal_length_mm": 58,
+    "maximum_aperture": "F2",
+    "mount_or_revision": "M42 original; modern cinema rehousing may use PL",
+    "era": "Soviet-era still lens, later cinema rehousings"
+  },
+  "display_text": ["58", "F2", "HELIOS 44-2", "REHOUSED CINEMA", "M42"],
+  "allowed_text": ["58", "F2", "HELIOS 44-2", "REHOUSED CINEMA", "M42"],
+  "allowed_marks": [],
+  "forbidden_legacy_tokens": ["T*", "T1.6", "PL", "MAMIYA", "SIGMA", "CONTAX", "ZEISS", "CANON", "OLYMPUS", "BATMAN LOGO", "DUNE LOGO"],
+  "object_mode": "typographic_medallion",
+  "narrative_mode": "balanced",
+  "production_target": "printable_front",
+  "visual_direction": {
+    "aspect_ratio": "1:1",
+    "palette": ["black", "charcoal", "gray", "ivory"],
+    "medium": "linocut / screen print / letterpress",
+    "dominant_hierarchy": ["focal_length", "maximum_aperture"],
+    "omissions": ["lens barrel", "glass", "iris blades", "photographic clutter", "pointillism", "gradients", "mottling"]
+  },
+  "anchors": [
+    {
+      "claim_kind": "lens_specification",
+      "subject_scope": "Helios-44-2 / Zenit system",
+      "evidence_state": "verified",
+      "source_role": "proof",
+      "source": "https://www.zenitcamera.com/mans/zenit-e/zenit-e-eng.html",
+      "summary": "The Zenit-E manual identifies the supplied Helios-44-2 as 58 mm f/2.",
+      "render_role": "exact_text",
+      "anchor_context": "Original Soviet still-lens identity.",
+      "motif_commitment": "structural",
+      "anchor_visual_motif": "concentric optical arcs and segmented registration geometry",
+      "recognition_cue": "swirling arcs and calibration blocks remain legible with lore words hidden",
+      "qualifier": null
+    },
+    {
+      "claim_kind": "manufacturer_culture",
+      "subject_scope": "Zenit / Helios Soviet lens system",
+      "evidence_state": "verified_period_manual",
+      "source_role": "context",
+      "source": "https://www.zenitcamera.com/mans/zenit-e/zenit-e-eng.html",
+      "summary": "The period Zenit manual presents the Helios-44-2 as part of a practical Soviet interchangeable-camera system, grounding the design in utilitarian optical engineering rather than a modern luxury logo.",
+      "render_role": "visual_metaphor",
+      "anchor_context": "Manufacturer/system culture is translated as measured calibration, concentric arcs, and modular registration geometry.",
+      "motif_commitment": "structural",
+      "anchor_visual_motif": "bold calibration blocks and repeated concentric rings",
+      "recognition_cue": "the mechanical grid remains legible with all lore words hidden",
+      "qualifier": "period manual supports the system identity; it does not establish a specific film credit"
+    },
+    {
+      "claim_kind": "rehousing_and_cinema_association",
+      "subject_scope": "rehoused Helios-44-2 family",
+      "evidence_state": "verified_for_family; exact shot scope is limited",
+      "source_role": "proof",
+      "source": "https://theasc.com/article/expanding-view-dune-part-two/",
+      "summary": "The ASC reports IronGlass rehoused Helios-44-2 lenses in testing and production for Dune: Part Two, following The Batman work.",
+      "render_role": "visual_metaphor",
+      "anchor_context": "The source concerns a rehoused cinema-lens family and does not prove that every original still-lens specimen appears in every shot.",
+      "motif_commitment": "symbolic",
+      "anchor_visual_motif": "searchlight wedge, desert contour bands, optical swirl, and modular cinema registration grid",
+      "recognition_cue": "a radial wedge and broad contour bands survive without film titles or character imagery",
+      "qualifier": "family-level cinema association; do not render official film marks"
+    },
+    {
+      "claim_kind": "cinema_rehousing_context",
+      "subject_scope": "IronGlass rehousing practice",
+      "evidence_state": "verified_industry_account",
+      "source_role": "context",
+      "source": "https://theasc.com/article/greig-fraser-batman/",
+      "summary": "The ASC describes Soviet-era lenses rehoused by the Ukrainian IronGlass team for The Batman cinematography context.",
+      "render_role": "visual_metaphor",
+      "anchor_context": "Modern mechanical renewal around vintage optics; no film title or logo is rendered.",
+      "motif_commitment": "symbolic",
+      "anchor_visual_motif": "bold segmented rings and a narrow searchlight beam",
+      "recognition_cue": "mechanical renewal reads through geometry rather than an imported still or branded mark",
+      "qualifier": "production context is a qualified family-level reference"
+    }
+  ],
+  "approved_references": [
+    {"path_or_url": "https://www.zenitcamera.com/mans/zenit-e/zenit-e-eng.html", "role": "style_reference", "notes": "period specification source"},
+    {"path_or_url": "https://theasc.com/article/expanding-view-dune-part-two/", "role": "style_reference", "notes": "qualified rehoused-lens production context"},
+    {"path_or_url": "https://theasc.com/article/greig-fraser-batman/", "role": "style_reference", "notes": "qualified Soviet-rehouse cinema context"}
+  ],
+  "generation": {
+    "provider": "OpenAI built-in image_gen",
+    "mode": "generate",
+    "model": "gpt-image-2",
+    "model_version": "2.0",
+    "prompt": "prompt.txt",
+    "prompt_sha256": "af9f0c8e7332dcfc2f98a8cc2e1bcbc25d8052a1827362a6593bf9205884efb9",
+    "required_prompt_tokens": ["58", "F2", "HELIOS 44-2", "REHOUSED CINEMA", "M42"],
+    "reference_hashes": [],
+    "candidate_path": "art/master.png",
+    "candidate_sha256": "4bf579d6ca36ffbd562cfec669f0a826e469d637f38f6e1c298ce8b3b2283758",
+    "approved": true,
+    "approval_note": "Fresh ImageGen smoke-test master: complete circle; 58 is first read and F2 second; exact secondary labels pass; broad black/charcoal/gray/ivory fields and abstract rehouse motifs pass. Re-review before public branding use."
+  },
+  "physical_fit": {
+    "measured_diameter_mm": null,
+    "face_target_mm": null,
+    "foam_liner_status": "none",
+    "liner_thickness_mm": null,
+    "compression_fraction": 0.0,
+    "friction_ribs_enabled": true,
+    "friction_ribs_explicit": false,
+    "friction_rib_profile": "light_tapered",
+    "friction_rib_count": 12,
+    "friction_rib_protrusion_mm": 0.1,
+    "friction_rib_width_mm": 1.2,
+    "friction_rib_height_mm": 8.0,
+    "friction_rib_start_mm": 1.0,
+    "nozzle_mm": 0.2
+  },
+  "provenance": {
+    "artwork_license": "OpenAI-generated test artwork; verify current provider terms before redistribution",
+    "brand_mark_license": "Helios, Zenit, and IronGlass names are third-party marks; fixture is a non-commercial test",
+    "film_or_history_permissions": "No film stills, logos, actors, spacecraft, or official production marks are included; cinema references are qualified visual context only",
+    "notes": "Third-party sources and marks remain separate from the Apache-2.0 code licence. The retained PNG is the approved ImageGen handoff; production never redraws it."
+  }
+}
