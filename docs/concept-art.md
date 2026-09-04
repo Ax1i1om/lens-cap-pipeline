@@ -148,8 +148,14 @@ On a host without OpenSCAD it may still prove the interaction and deterministic
 preflight, but its top-level production status remains `unverifiable`; that is
 not an actual 3MF success.
 
-For a standalone printable front, ask for the finished face diameter and
-nozzle/minimum-feature limit. For a fitted cap, ask for the actual mating
+Production auditing cannot silently redesign an approved candidate. It does
+not run a nozzle-derived minimum-feature scan. Only a target slicer's actual
+toolpath preview determines whether narrow details survive. If the user
+explicitly requests a simplified print-safe design after that review, create a
+separate candidate, SHA-256, and approval; never overwrite the master.
+
+For a standalone printable front, ask for the finished face diameter; nozzle
+information is needed only for target-slicer review. For a fitted cap, ask for the actual mating
 outside diameter (前口径), the foam plan, and whether to retain the inner-wall
 friction ribs. Ribs default to on; only an explicit smooth-wall request
 disables them. The confirmed diameter also sets the face/relief diameter by
@@ -190,9 +196,9 @@ unapproved or mismatched brief is `FAILED` at the 3MF endpoint, while private
 relief-only experiments may still use the core `process`/`model` commands.
 Treat any `physical_fit` data in the brief as a snapshot from approval time.
 For multi-diameter production, each job TOML is authoritative for measured
-diameter, wall/bottom/side dimensions, bare clearance, liner, ribs, adapter
-envelope, nozzle, and print settings; the strict gate compares every
-geometry-driving snapshot field. Never propagate one size's brief summary over
+diameter, wall/bottom/side dimensions, bare clearance, liner, ribs, and adapter
+envelope. Nozzle and print settings are separate slicer metadata and must not
+change pre-slicer artwork or geometry. Never propagate one size's brief summary over
 another job.
 
 When the user asks for an actual 3MF, neither the concept image nor a generated

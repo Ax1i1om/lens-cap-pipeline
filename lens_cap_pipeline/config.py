@@ -146,9 +146,9 @@ class CircleSpec:
 
 @dataclass(frozen=True)
 class PrefilterSpec:
-    name: str = "median"
-    size: int = 5
-    radius: float = 0.8
+    name: str = "none"
+    size: int = 3
+    radius: float = 0.0
 
     def public(self) -> dict[str, Any]:
         return {"name": self.name, "size": self.size, "radius": self.radius}
@@ -156,7 +156,7 @@ class PrefilterSpec:
 
 @dataclass(frozen=True)
 class CleanupSpec:
-    enabled: bool = True
+    enabled: bool = False
     max_area_px: int = 8
     max_dimension_px: int = 3
     ring_px: int = 2
@@ -191,6 +191,9 @@ class FitSpec:
     wall_thickness_mm: float = 2.4
     bottom_thickness_mm: float = 2.0
     side_height_mm: float = 14.0
+    # Optional 45-degree bevel on the closed front face's outer circumference.
+    # Zero preserves the historical square edge.
+    front_outer_chamfer_mm: float = 0.0
     bare_clearance_mm: float = 0.40
     retention_strategy: str = "auto"
     # Vertical interference ribs are a generic retention aid for fitted caps.
@@ -228,6 +231,7 @@ class FitSpec:
             "wall_thickness_mm": self.wall_thickness_mm,
             "bottom_thickness_mm": self.bottom_thickness_mm,
             "side_height_mm": self.side_height_mm,
+            "front_outer_chamfer_mm": self.front_outer_chamfer_mm,
             "bare_clearance_mm": self.bare_clearance_mm,
             "friction_ribs_enabled": self.friction_ribs_enabled,
             "friction_ribs_explicit": self.friction_ribs_explicit,
@@ -376,12 +380,21 @@ class PipelineConfig:
                     print_payload[key] = Path(value).name
         return payload
 
+    def artifact_public(self) -> dict[str, Any]:
+        """Return only fields that can change artwork or native geometry."""
+
+        payload = self.portable_public()
+        payload.pop("nozzle_mm", None)
+        payload.pop("nozzle_explicit", None)
+        payload.pop("print", None)
+        return payload
+
     def digest(self) -> str:
         # Resolve paths for the human-readable normalized config, but hash
         # paths relative to the config file whenever possible.  This keeps a
         # checked-in job reproducible after cloning the repository elsewhere;
         # the source SHA-256 still binds the run to the actual bytes.
-        payload_obj = self.portable_public()
+        payload_obj = self.artifact_public()
         payload = json.dumps(payload_obj, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
         return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
@@ -611,17 +624,17 @@ def load_config(path: str | Path) -> PipelineConfig:
         pre_raw = {"name": pre_raw}
     if not isinstance(pre_raw, Mapping):
         raise ConfigError("prefilter must be a table/object")
-    pre_name = str(pre_raw.get("name", pre_raw.get("filter", art_section.get("filter", "median")))).lower()
+    pre_name = str(pre_raw.get("name", pre_raw.get("filter", art_section.get("filter", "none")))).lower()
     pre_name = {"median_5": "median", "gaussian_08": "gaussian"}.get(pre_name, pre_name)
     if pre_name not in {"none", "median", "gaussian"}:
         raise ConfigError("prefilter.name must be none, median, or gaussian")
-    pre_size = _number(pre_raw.get("size", 5), "prefilter.size", integer=True)
+    pre_size = _number(pre_raw.get("size", 3), "prefilter.size", integer=True)
     # Median kernels must be odd so Pillow's result is deterministic.  The
     # upper bound avoids accidentally allocating an impractically large
     # neighbourhood from an untrusted config file.
     if pre_size < 3 or pre_size > 15 or pre_size % 2 == 0:
         raise ConfigError("prefilter.size must be an odd integer in [3,15]")
-    pre_radius = _number(pre_raw.get("radius", 0.8), "prefilter.radius")
+    pre_radius = _number(pre_raw.get("radius", 0.0), "prefilter.radius")
     if pre_radius < 0:
         raise ConfigError("prefilter.radius must be >= 0")
     prefilter = PrefilterSpec(pre_name, int(pre_size), float(pre_radius))
@@ -638,7 +651,7 @@ def load_config(path: str | Path) -> PipelineConfig:
     if any(x not in {"base", "relief", "all"} for x in apply_to):
         raise ConfigError("cleanup.apply_to values must be base, relief, or all")
     cleanup = CleanupSpec(
-        _boolean(clean_raw.get("enabled"), "cleanup.enabled", default=True),
+        _boolean(clean_raw.get("enabled"), "cleanup.enabled", default=False),
         int(_number(clean_raw.get("max_area_px", art_section.get("minimum_component_area_px", 8)), "cleanup.max_area_px", integer=True)),
         int(_number(clean_raw.get("max_dimension_px", art_section.get("minimum_component_dimension_px", 3)), "cleanup.max_dimension_px", integer=True)),
         int(_number(clean_raw.get("ring_px", 2), "cleanup.ring_px", integer=True)),
@@ -745,9 +758,22 @@ def load_config(path: str | Path) -> PipelineConfig:
     wall = float(_number(fit_raw.get("wall_thickness_mm", 2.4), "fit.wall_thickness_mm"))
     bottom = float(_number(fit_raw.get("bottom_thickness_mm", 2.0), "fit.bottom_thickness_mm"))
     side = float(_number(fit_raw.get("side_height_mm", 14.0), "fit.side_height_mm"))
+    front_outer_chamfer = float(
+        _number(
+            fit_raw.get("front_outer_chamfer_mm", 0.0),
+            "fit.front_outer_chamfer_mm",
+        )
+    )
     bare_clearance = float(_number(fit_raw.get("bare_clearance_mm", 0.40), "fit.bare_clearance_mm"))
     if wall < 0.4 or bottom < 0.8 or side < 1.0 or bare_clearance < 0:
         raise ConfigError("fit wall/bottom/side/clearance values are outside safe limits")
+    if front_outer_chamfer < 0 or (
+        front_outer_chamfer > 0 and front_outer_chamfer >= min(wall, bottom)
+    ):
+        raise ConfigError(
+            "fit.front_outer_chamfer_mm must be >= 0 and smaller than both "
+            "fit.wall_thickness_mm and fit.bottom_thickness_mm"
+        )
     try:
         rib_profile = normalize_friction_rib_profile(
             fit_raw.get("friction_rib_profile", "light_tapered")
@@ -909,19 +935,6 @@ def load_config(path: str | Path) -> PipelineConfig:
             raise ConfigError("fit.friction_rib_width_mm is too wide for the selected rib count")
         if rib_protrusion >= mating_diameter / 4.0:
             raise ConfigError("fit.friction_rib_protrusion_mm is too large for the mating diameter")
-        rib_angle_deg = min(
-            8.0,
-            360.0 * rib_width / (math.pi * pitch_diameter),
-            180.0 / rib_count,
-        )
-        tip_angle_deg = rib_angle_deg * 0.55
-        tip_radius = pitch_diameter / 2.0 - rib_protrusion
-        tip_chord_mm = 2.0 * tip_radius * math.sin(math.radians(tip_angle_deg / 2.0))
-        if tip_chord_mm < nozzle:
-            raise ConfigError(
-                "fit friction rib contact-tip width must be >= nozzle_mm; "
-                "increase friction_rib_width_mm"
-            )
         if foam_status == "foam":
             assert liner is not None
             compressed_radial_gap = liner * (1.0 - compression)
@@ -940,10 +953,23 @@ def load_config(path: str | Path) -> PipelineConfig:
         )
         derived_outer = derived_cavity + 2.0 * wall
         derived_height = bottom + side
-        if not all(math.isfinite(value) for value in (derived_cavity, derived_outer, derived_height)):
+        if not all(
+            math.isfinite(value)
+            for value in (
+                derived_cavity,
+                derived_outer,
+                derived_height,
+                front_outer_chamfer,
+            )
+        ):
             raise ConfigError("derived fitted-cap dimensions must be finite")
         if derived_outer <= derived_cavity or derived_height <= 0:
             raise ConfigError("derived fitted-cap dimensions are invalid")
+        if face + 2.0 * front_outer_chamfer > derived_outer + 1e-9:
+            raise ConfigError(
+                "fit.front_outer_chamfer_mm leaves the closed front land smaller "
+                "than face_diameter_mm"
+            )
     fit = FitSpec(
         foam_liner_status=foam_status,
         liner_material=(str(fit_raw["liner_material"]) if fit_raw.get("liner_material") is not None else None),
@@ -957,6 +983,7 @@ def load_config(path: str | Path) -> PipelineConfig:
         wall_thickness_mm=wall,
         bottom_thickness_mm=bottom,
         side_height_mm=side,
+        front_outer_chamfer_mm=front_outer_chamfer,
         bare_clearance_mm=bare_clearance,
         friction_ribs_enabled=friction_enabled,
         friction_ribs_explicit=friction_explicit,
@@ -972,8 +999,8 @@ def load_config(path: str | Path) -> PipelineConfig:
     )
 
     layer = float(_number(print_section.get("layer_height_mm", 0.1), "print.layer_height_mm"))
-    if layer <= 0 or layer > nozzle:
-        raise ConfigError("print.layer_height_mm must be > 0 and <= nozzle_mm")
+    if layer <= 0:
+        raise ConfigError("print.layer_height_mm must be > 0")
     slots_raw = print_section.get("filament_slots", ())
     if isinstance(slots_raw, str):
         slots_raw = [slots_raw]
@@ -1087,17 +1114,10 @@ def template_config(
     nozzle_mm: float = 0.2,
 ) -> dict[str, Any]:
     """Return a portable starter config for ``lens-cap init``."""
+    # Artwork sampling is a fidelity setting, not a nozzle calculation.  Keep
+    # a stable high-resolution default and never lower it to make a
+    # printability heuristic pass.
     manufacturing_grid = 1000
-    if face_diameter_mm is not None and face_diameter_mm > 0 and nozzle_mm > 0:
-        # Geometry coordinates need finer sampling than the extrusion width:
-        # equating one raster cell with one nozzle width visibly stair-steps
-        # type and arcs before the slicer sees them. Two deterministic samples
-        # per nozzle retain sub-bead path placement while the independent
-        # minimum-feature gate still rejects unprintable hairlines.
-        manufacturing_grid = max(
-            64,
-            min(1600, int(math.ceil(2.0 * face_diameter_mm / nozzle_mm - 1e-9))),
-        )
     return {
         "schema_version": 1,
         "job_slug": "my-lens-cap",
@@ -1108,8 +1128,8 @@ def template_config(
         "nozzle_mm": nozzle_mm,
         "safe_border_mm": 0.4,
         "circle": {"center_px": None, "radius_px": None, "allow_outside": False},
-        "prefilter": {"name": "median", "size": 5, "radius": 0.8},
-        "cleanup": {"enabled": True, "max_area_px": 8, "max_dimension_px": 3, "ring_px": 2, "dominance": 0.6, "apply_to": ["relief"]},
+        "prefilter": {"name": "none", "size": 3, "radius": 0.0},
+        "cleanup": {"enabled": False, "max_area_px": 8, "max_dimension_px": 3, "ring_px": 2, "dominance": 0.6, "apply_to": ["relief"]},
         "fit": {
             "foam_liner_status": "none",
             "compression_fraction": 0.0,
@@ -1117,6 +1137,7 @@ def template_config(
             "wall_thickness_mm": 2.4,
             "bottom_thickness_mm": 2.0,
             "side_height_mm": 14.0,
+            "front_outer_chamfer_mm": 0.0,
             "bare_clearance_mm": 0.40,
             "friction_ribs_enabled": True,
             "friction_ribs_explicit": False,

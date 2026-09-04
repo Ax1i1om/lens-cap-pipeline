@@ -331,6 +331,9 @@ def export_openscad(
         "schema_version": 1,
         "adapter": "openscad",
         "status": "unverifiable",
+        "production_status": model_report.get(
+            "production_status", model_report.get("status")
+        ),
         "backend": OPENSCAD_BACKEND,
         # Keep the legacy ``model`` key, but make its value relative to the
         # model directory.  An absolute checkout path would make this audit
@@ -522,6 +525,7 @@ def write_bambu_handoff(config: PipelineConfig, model: ModelResult) -> ExternalR
 
     path = model.model_dir / "bambu-handoff.json"
     model_report = model.report if isinstance(model.report, dict) else {}
+    production_status = model_report.get("production_status", model_report.get("status"))
     executable = _resolve_tool(
         config.print.bambu_executable,
         ("BambuStudio", "bambu-studio"),
@@ -722,7 +726,11 @@ def write_bambu_handoff(config: PipelineConfig, model: ModelResult) -> ExternalR
     # top-level status pending until the external export report has verified
     # every selector; this prevents a slicer-installed machine from turning
     # an untracked mesh into an apparent production PASS.
-    handoff_status = "available" if stl_paths and provenance_status == "passed" else "unverifiable"
+    handoff_status = (
+        "available"
+        if stl_paths and provenance_status == "passed"
+        else "unverifiable"
+    )
     payload = {
         "schema_version": 1,
         "adapter": "bambu-handoff",
@@ -730,6 +738,8 @@ def write_bambu_handoff(config: PipelineConfig, model: ModelResult) -> ExternalR
         # installed.  A portable handoff is useful on a second machine even
         # when the originating host has no desktop slicer.
         "status": handoff_status,
+        "production_status": production_status,
+        "slice_allowed": True,
         "tool_status": tool_status,
         "bambu_executable": Path(executable).name if executable else None,
         "bambu_version": bambu_version,

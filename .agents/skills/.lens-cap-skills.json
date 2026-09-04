@@ -1,29 +1,29 @@
 {
-  "manifest_sha256": "115da3cace0fb6a78d25f889cbf2897ae183b5dae4a489653d585be660d20961",
+  "manifest_sha256": "9a4c97dc61fc080d304fa8f827ce4045d15a55d68936d0d5d6d077cc51dbf52e",
   "project": "lens-cap-pipeline",
   "project_version": "0.1.0a2",
   "schema_version": 1,
   "skills": {
     "lens-cap-imagegen": {
       "files": {
-        "SKILL.md": "9d504397391a8534f5f1766b6032641203e3b95a603cced5db9ab020f6394645",
-        "SKILL.zh-CN.md": "06c9a709fca35dca5d4f0c864437f046a52b86274217e2dd3f66a81e7b3fbbf0",
+        "SKILL.md": "cc7a0b85edd5102621f3b8310e70976703ebdfa722f61d3a0f2eab78db94937e",
+        "SKILL.zh-CN.md": "3645a0a0f2c79a6921b5effdf62522bc093c66c4e5ea089c421469c06b7d4373",
         "agents/openai.yaml": "59681dc04959fc1142bba327aca9ad951bead8b7a831c3d363e5bf8827aea13f",
-        "references/design-depth.md": "c3789be9fd9f565aad26f91e9e49bbf7aee5e42a2c8f1e74d4b44dacd004db97",
-        "references/design-depth.zh-CN.md": "7d9a138082111cd7fe8f4b6f19a9d619faa35406766f94f3f2ac343ab8a8288b"
+        "references/design-depth.md": "5e7ec617a0b81280d64450daa3ac7e758f81462a75b3cab71039b8852e23c2bb",
+        "references/design-depth.zh-CN.md": "50ebe8e820686f79d2277521262a499e2cc1a8132e452983562bd2094c260780"
       },
       "source_dir": "skills/lens-cap-imagegen",
-      "tree_sha256": "af1135e18d1689a2b849fdd7963a044cca4de07075d70e1bf5f63eefeb440c8c",
+      "tree_sha256": "67273a60c6aaf7211a9427ed42ac3fbbc3e8f47ef8e17baa229dd60aa2299420",
       "version": "0.1.0a2"
     },
     "lens-cap-production": {
       "files": {
-        "SKILL.md": "1a17709ff0163a58a71d3f228e75df5d0c2992ac4fb970b305137ab628778301",
-        "SKILL.zh-CN.md": "662e0ba2cd5e0bf0ad76809bf9e4c3202bd0fdf135ae2f77d965c4b05d5b7db4",
-        "agents/openai.yaml": "5cb1844c55196134db523dddac28be39c65128b101af634b2fb6b10bfe8472f4"
+        "SKILL.md": "ea3211b9d4b44388dcaddb78bf9b58a734c6ec1590d17f2d2a04441f3a106357",
+        "SKILL.zh-CN.md": "89a436728baf27ea09f77db89341b9e02d5abaea02f69643e2f35ae3ad3c3a3b",
+        "agents/openai.yaml": "7a69060c9877ebb10ab16d067c881ec32570da89a4fa4b9d40bd4544df43e5cc"
       },
       "source_dir": "skills/lens-cap-production",
-      "tree_sha256": "2957967860bb21f111d195144087cfe5ce2c5111e4e7b6e83dc4c27b60dd65c3",
+      "tree_sha256": "da097cac9d23b46c088c2b890e477741d69919292cc6e5e04e574aa6116ecddd",
       "version": "0.1.0a2"
     }
   }

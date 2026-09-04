@@ -22,6 +22,7 @@ from .config import (
 from .external import ExternalToolError, doctor, export_openscad, write_bambu_handoff
 from .model import ModelError, ModelResult, generate_model
 from .process import ProcessError, process, sha256_file
+from .status import process_production_status
 from .validate import validate_job
 
 
@@ -129,7 +130,7 @@ def _write_config(path: Path, data: dict) -> None:
         for key in (
             "liner_material", "liner_thickness_mm", "compression_fraction",
             "compression_is_assumption", "wall_thickness_mm", "bottom_thickness_mm",
-            "side_height_mm", "bare_clearance_mm", "friction_ribs_enabled",
+            "side_height_mm", "front_outer_chamfer_mm", "bare_clearance_mm", "friction_ribs_enabled",
             "friction_ribs_explicit", "friction_rib_profile", "friction_rib_count", "friction_rib_protrusion_mm",
             "friction_rib_width_mm", "friction_rib_height_mm", "friction_rib_start_mm",
             "friction_rib_profile_derived", "friction_rib_profile_reference_cavity_mm",
@@ -224,6 +225,12 @@ def _parser() -> argparse.ArgumentParser:
         help="optional radial adapter-wall thickness; requires --adapter-nominal-ring",
     )
     init_parser.add_argument("--foam-thickness", type=float, default=None, help="uncompressed foam liner thickness in mm")
+    init_parser.add_argument(
+        "--front-outer-chamfer",
+        type=float,
+        default=None,
+        help="optional 45-degree bevel on the closed front outer edge, in mm",
+    )
     init_parser.add_argument(
         "--friction-ribs",
         action=argparse.BooleanOptionalAction,
@@ -377,7 +384,8 @@ def _process_for_stage(config, *, force: bool) -> dict:
             raise ProcessError(f"cannot read existing process report {report_path}: {exc}; use --force") from exc
         if not isinstance(report, dict):
             raise ProcessError(f"existing process report is not a JSON object: {report_path}; use --force")
-        if report.get("status") == "passed" and report.get("config_sha256") == config.digest():
+        report_production_status = process_production_status(report)
+        if report_production_status is not None and report.get("config_sha256") == config.digest():
             # A config digest alone does not bind the report to the current
             # artwork bytes: users can replace a source file without editing
             # the TOML/JSON.  Require the immutable source hash and a core
@@ -413,8 +421,12 @@ def _model_for_stage(config, report: dict, *, force: bool) -> ModelResult:
         except (OSError, json.JSONDecodeError) as exc:
             raise ModelError(f"cannot read existing geometry report {geometry_path}: {exc}; use --force") from exc
         current_scad_hash = _sha256_path(scad)
+        process_status = process_production_status(report)
         if (
+            process_status is not None
+            and
             geometry.get("status") == "passed"
+            and geometry.get("production_status", geometry.get("status")) == process_status
             and geometry.get("process_report_sha256") == _sha256_path(config.output_dir / "process-report.json")
             and geometry.get("scad_sha256") == current_scad_hash
         ):
@@ -442,6 +454,15 @@ def main(argv: list[str] | None = None) -> int:
                 raise ConfigError("init needs --face-diameter, or --measured-diameter for a fitted cap")
             if args.foam_thickness is not None and args.measured_diameter is None:
                 raise ConfigError("--foam-thickness requires --measured-diameter for a fitted cap")
+            if args.front_outer_chamfer is not None and (
+                not math.isfinite(args.front_outer_chamfer)
+                or args.front_outer_chamfer < 0
+                or args.front_outer_chamfer >= 2.0
+            ):
+                raise ConfigError(
+                    "--front-outer-chamfer must be >= 0 and smaller than the "
+                    "starter wall/bottom thickness (2.0 mm)"
+                )
             if (args.lens_identity is None) != (args.display_text is None):
                 raise ConfigError(
                     "--lens-identity and --display-text must be supplied together for a bound release job"
@@ -513,6 +534,8 @@ def main(argv: list[str] | None = None) -> int:
             # ``init --friction-rib-profile ...`` without ``--foam-thickness``
             # raised UnboundLocalError before it could write a starter job.
             fit_data = data.setdefault("fit", {})
+            if args.front_outer_chamfer is not None:
+                fit_data["front_outer_chamfer_mm"] = args.front_outer_chamfer
             if args.measured_diameter is not None:
                 data["measured_diameter_mm"] = args.measured_diameter
                 if args.face_diameter is None:
@@ -681,7 +704,7 @@ def main(argv: list[str] | None = None) -> int:
                 strict_external=args.strict_external,
             )
             _emit(report, as_json=args.json)
-            return 0 if report["status"] == "passed" else 1
+            return 0 if report["status"] in {"passed", "unverifiable"} else 1
 
         if args.command == "process":
             report = process(config, force=args.force)
@@ -692,12 +715,16 @@ def main(argv: list[str] | None = None) -> int:
                 },
                 as_json=args.json,
             )
-            return 0 if report["status"] == "passed" else 1
+            return 0 if report["status"] in {"passed", "unverifiable"} else 1
 
         if args.command in {"model", "generate-scad"}:
             report = _process_for_stage(config, force=args.force)
             model = _model_for_stage(config, report, force=args.force)
-            payload = {"status": "passed", "scad": str(model.scad_path), "report": str(model.geometry_report_path)}
+            payload = {
+                "status": model.report.get("production_status", model.report.get("status")),
+                "scad": str(model.scad_path),
+                "report": str(model.geometry_report_path),
+            }
             _emit(payload, as_json=args.json)
             return 0
 
@@ -705,7 +732,7 @@ def main(argv: list[str] | None = None) -> int:
         report = _process_for_stage(config, force=args.force)
         model = _model_for_stage(config, report, force=args.force)
         payload: dict[str, object] = {
-            "status": "passed",
+            "status": model.report.get("production_status", model.report.get("status")),
             "process_master": str(config.output_dir / "process-master.png"),
             "scad": str(model.scad_path),
             "report": str(model.geometry_report_path),

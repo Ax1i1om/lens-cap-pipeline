@@ -77,11 +77,22 @@ Use this checklist for each tagged release and for each published lens job.
       approved face area; the safe border contains no positive relief.
 - [ ] A second run from the same config produces identical hashes.
 - [ ] The original artwork file is unchanged and its hash matches the manifest.
+- [ ] No upstream nozzle-width/minimum-feature scan was run. Printer/profile
+      values did not lower the grid, change filters/cleanup/palette thresholds,
+      edit masks, redraw the candidate, or stale native geometry.
 
 ## Geometry and printing
 
+- [ ] The user-facing file is the release report's `primary_3mf`. For a Bambu
+      destination it is a verified `--bambu export`/`--bambu slice` project,
+      not the internal `native_3mf` Core geometry master. The Bambu project
+      contains both `Metadata/project_settings.config` and
+      `Metadata/model_settings.config`; neither file was fabricated by hand.
+
 - [ ] Face diameter equals the current measured gripping diameter unless an
       explicit override is documented.
+- [ ] The measured diameter and foam decision came from the current job. A
+      fixture's `95 mm` or no-foam value was not treated as a universal default.
 - [ ] Foam thickness/compression or bare-plastic retention is documented;
       compression assumptions are labelled provisional.
 - [ ] Inner-wall friction-rib choice is recorded. Ribs are enabled by default;
@@ -114,6 +125,9 @@ Use this checklist for each tagged release and for each published lens job.
       assignments for every required current-job palette colour and no used
       colour outside that palette; a single object/mesh may still be
       multi-material through per-triangle assignments.
+- [ ] Named material surfaces match their same-canvas masks, and visible top
+      areas match the fresh hash-bound post-Boolean assembly. Independent SVG
+      layer areas remain pre-Boolean diagnostics only.
 - [ ] For a claimed Bambu project, record the exact machine/process/filament
       profile input and post-run SHA-256 values, every resolved inheritance
       file and hash, and a passed `effective_profile_audit` showing the project
@@ -126,6 +140,9 @@ Use this checklist for each tagged release and for each published lens job.
       and the extrusion path has non-degenerate XY range/diversity plausible for
       the model bounds. G-code presence or byte count alone is not release
       evidence.
+- [ ] A `print-ready` claim includes a target-profile toolpath preview showing
+      that critical focal/aperture text, fine lines, and material islands have
+      actual extrusion paths. Upstream raster-width estimates are not evidence.
 - [ ] STL projection/geometry audit passes, or the job is clearly marked
       `UNVERIFIABLE` with the reason.
 
@@ -135,8 +152,8 @@ model/validation PASS without this footprint check is not a claim that the
 manifest-declared artwork text or marks stayed in place.
 For the canonical anti-jag contour, confirm that the process report names the
 directed pixel-union algorithm, preserves `evenodd` compound-path holes,
-records vector footprint/source-area delta, and keeps maximum deviation below
-one nozzle. Projection tolerance must be derived from that recorded budget,
+records vector footprint/source-area delta, and keeps maximum deviation within
+the declared source-space budget. Projection tolerance must be derived from it,
 not hand-raised after a failure.
 
 ## Publication

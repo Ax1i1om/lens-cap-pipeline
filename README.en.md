@@ -193,12 +193,26 @@ preflight is not a successful 3MF delivery:
 
 ```sh
 ./bin/lens-cap-3mf jobs/my-lens/job.toml --force --json
-# Optional printer-project output (requires local Bambu profiles):
+# Primary Bambu deliverable: editable project without embedded G-code.
+./bin/lens-cap-3mf jobs/my-lens/job.toml --force --bambu export \
+  --machine-profile /path/to/machine.json \
+  --process-profile /path/to/process.json \
+  --filament-profile /path/to/filament.json --json
+# Use slice only when toolpaths for this exact printer/material are requested.
 ./bin/lens-cap-3mf jobs/my-lens/job.toml --force --bambu slice \
   --machine-profile /path/to/machine.json \
   --process-profile /path/to/process.json \
   --filament-profile /path/to/filament.json --json
 ```
+
+Use the release report's `primary_3mf` as the user-facing file. The default
+`native_3mf` is a standards-compliant 3MF Core geometry/audit master; it does
+not contain Bambu printer, process, filament, plate, or object/extruder
+metadata. Some Bambu Studio versions describe that absence as `invalid
+config`, even when the geometry is valid. For a Bambu destination, run
+`--bambu export` and deliver the project referenced by `primary_3mf`. Let the
+official Bambu exporter create its metadata instead of patching a Core ZIP by
+hand.
 
 The `lens-cap-3mf` bridge is a release endpoint and validates the current
 schema-v2 `design-brief.json` before creating any derivative. The brief must
@@ -450,6 +464,11 @@ configuration. User-supplied SCAD/3MF archives and MakerWorld pages are
 reference observations only: record their provenance and licence, but regenerate
 current geometry from measured inputs instead of copying meshes or assets.
 
+For a subtle bevel on the closed front face's outer circumference, set
+`front_outer_chamfer_mm = 0.30` in `[fit]`. This is a 45-degree bevel with the
+same axial and radial distance. It does not scale, move, or redraw the artwork;
+`0.0` remains the backward-compatible square-edge default.
+
 If the user also knows the adapter's nominal diameter and one-side radial wall,
 record the optional `--adapter-nominal-ring` and `--adapter-radial-wall` pair.
 Both must be present and satisfy
@@ -463,19 +482,19 @@ mechanical value.
 Colour-distance arithmetic is fixed at `int32` deltas and `int64` accumulation;
 `int16` squaring is forbidden. The report must show `overflow_guard=true` and a
 raw-source polarity check. Only nearest-neighbour label scaling, explicit
-circle/alpha exclusion, a declared base-only border, and declared isolated
-sub-nozzle cleanup are allowed. Text, motifs, positions, and orientation are
+circle/alpha exclusion, a declared base-only border, and explicitly enabled
+isolated-component cleanup are allowed. Text, motifs, positions, and orientation are
 never silently retyped, recentered, mirrored, or cropped. Masks share one
 `viewBox`, do not overlap, and must partition the process master’s alpha area.
 
 Missing external tools produce `unverifiable`, not a false pass. Physical fit
 is always reported separately from file and mesh validation.
 
-For archive portability, `config.normalized.json` reduces absolute OpenSCAD
-and Bambu executable settings to their basenames so the core config digest is
-not tied to one machine. The original TOML remains the runtime source, while
-the adapter report records the resolved tool basename, version, and output
-hashes.
+For archive portability, `config.normalized.json` contains only fields that
+can change artwork or native geometry. Nozzle, layer, printer, filament-slot,
+and executable settings remain in the original TOML and are recorded only by
+the slicer/external-adapter reports. Changing them does not stale masks, SVGs,
+SCAD, or native geometry.
 
 Native 3MF publication also removes OpenSCAD's volatile creation timestamp,
 replaces generated UUID attributes with content-derived UUIDv5 values, and

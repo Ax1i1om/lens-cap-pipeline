@@ -37,4 +37,7 @@ interface:
     reference-role arrays; production must not fill or self-attest structural,
     completion, or quality-reference evidence. For an actual-3MF request, success requires a
     passing canonical bridge and an existing verified .3mf; SCAD, STL, handoff
-    JSON, or an UNVERIFIABLE preflight is not completion.
+    JSON, or an UNVERIFIABLE preflight is not completion. Deliver the report's
+    primary_3mf. A native/Core 3MF is the portable geometry-audit master, not a
+    Bambu project; for a Bambu destination use --bambu export with explicit
+    machine/process/filament profiles and deliver that verified project.

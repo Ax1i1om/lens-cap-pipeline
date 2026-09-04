@@ -15,6 +15,11 @@ The adapter must reject a missing or mismatched source hash, a changed canvas,
 or a palette file not named in the report. It must never load a neighbouring
 job's asset by filename convention.
 
+The adapter must not downsample, smooth, redraw, simplify by an undeclared
+budget, or otherwise reshape the masks. It does not run a nozzle-derived
+minimum-feature scan; only the target slicer/toolpath preview decides feature
+survival.
+
 ## Geometry rules
 
 * Import every mask with one common canvas origin and viewBox.
@@ -77,6 +82,16 @@ width, height, or start explicitly. Select it with
 profile name in the normalized config and geometry report so a rebuild cannot
 silently switch shape.
 
+A user request to match an attached ribbed generator/model is an explicit
+geometry transfer, not merely a preset choice. Audit the delivered mesh as the
+authority (source defaults may differ): record its hash, rib count/spacing,
+base and tip angle/width, radial protrusion, axial span/gaps, and diameter
+semantics. When the reference diameter is measured at rib tips, a no-foam
+target uses `cavity_diameter = measured_diameter + 2 * protrusion`; translate
+the radial profile to the target diameter rather than scaling the whole cap.
+Persist transferred dimensions as explicit values with
+`friction_rib_profile_derived=false` and validate a new fit coupon.
+
 The `light_tapered` profile's default protrusion is 0.10 mm radially (it removes
 about 0.20 mm from the nominal cavity diameter at each rib). It is not
 automatically a 0.20 mm interference fit: the resulting clearance/interference
@@ -102,11 +117,12 @@ When ribs are enabled, the current guards require:
 * 3--128 evenly spaced ribs;
 * positive radial protrusion, tangential width, and axial height;
 * `friction_rib_start_mm + friction_rib_height_mm <= side_height_mm`;
-* tangential width at least the declared nozzle diameter and below 90% of the
-  circumferential pitch; and
+* tangential width below 90% of the circumferential pitch; and
 * protrusion below one quarter of the measured mating diameter.
 
-These are validity/printability guards, not a universal fit recipe. The
+These are geometry-validity guards, not a universal fit or printability recipe.
+A tip narrower than the declared nozzle is recorded as a slicer advisory, not
+a model rejection. The
 MakerWorld reference implementation linked below uses a different naming
 scheme (its `inner_rib_height` is radial intrusion). Its published parameter
 comments suggest 3--12 ribs and a 1 mm height, with evenly spaced ribs and an
@@ -118,6 +134,15 @@ parameter at a time in a short fit coupon, using the same material, nozzle,
 layer height, wall and orientation as the final cap. Inspect first-layer
 elephant-foot expansion and anisotropy, deburr the opening, and measure the
 actual mating surface at several angular positions.
+
+The optional `front_outer_chamfer_mm` applies a 45-degree bevel only to the
+outer circumference of the closed front face. `0.0` preserves the historical
+square edge; a value such as `0.30` means 0.30 mm axial height and 0.30 mm
+radial inset. It never changes the face diameter, relief coordinates, relief
+heights, cavity, ribs, or fit-ring coupon. The parser rejects a bevel that is
+negative, reaches the full wall/bottom thickness, or leaves the artwork face
+unsupported. This is mechanical geometry, so it is not derived from nozzle
+width and still requires target-slicer inspection.
 
 If a foam liner is present, calculate the compressed liner stack-up before
 adding rib intrusion. Ribs can locally over-compress or cut the foam even when
@@ -169,6 +194,11 @@ also record slicer version, printer/nozzle, layer height, orientation, support,
 purge tower and color preview. If an external tool is unavailable, write
 `UNVERIFIABLE` rather than a guessed pass.
 
+A native 3MF report separates `artifact_status` from `slicer_status`. Package,
+geometry, mask, and material checks may pass while the slicer remains
+`not_requested`. Printer/profile metadata does not create a second native
+artifact class or stale the masks, vectors, SCAD, or native geometry.
+
 When the OpenSCAD adapter writes a binary STL, it validates the byte-level
 triangle records and deterministically sorts those complete records before
 hashing/handing off the file. This preserves geometry, normals, and attribute
@@ -189,8 +219,9 @@ Before a printable release, run the public
 scripts/audit_stl_projection.py (or an equivalent recorded adapter) once for
 each positive-relief STL. The manual `1` below is for an unsimplified contour;
 the canonical 3MF bridge derives the exact raster allowance from the bounded
-vectorisation fields in `process-report.json` (normally `2` with the canonical
-anti-jag contour), and rejects a vector budget of one nozzle or more:
+source-space vectorisation fields in `process-report.json` (normally `2` with
+the canonical anti-jag contour). Nozzle diameter is not part of this fidelity
+budget:
 
 ~~~sh
 ./bin/audit-stl-projection \

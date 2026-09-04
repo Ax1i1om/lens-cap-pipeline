@@ -72,8 +72,11 @@ When the user explicitly asks to end at a 3MF, the production route must call
 brief has not been scaffolded, run `lens-cap handoff-init JOB.toml` and review
 all placeholders first; `lens-cap handoff-check JOB.toml` is the preflight. This bridge
 is the single documented endpoint for build, projection audit, native integrated
-3MF export, and Core-package verification; `--bambu slice` is optional only
-with named local profiles. Missing desktop tools remain `UNVERIFIABLE`.
+3MF export, and Core-package verification. Deliver its `primary_3mf`: native/Core
+is the portable geometry-audit master, not a Bambu project. For a Bambu
+destination use `--bambu export` with named local machine/process/filament
+profiles; reserve `--bambu slice` for an explicit embedded-toolpath request.
+Missing desktop tools remain `UNVERIFIABLE`.
 
 If intent is ambiguous, ask one focused clarification rather than falling back
 to a generic design Skill. An explicit request for a separate unrelated

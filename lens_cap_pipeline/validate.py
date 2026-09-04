@@ -18,8 +18,9 @@ from PIL import Image
 
 from .config import PipelineConfig
 from .external import OPENSCAD_BACKEND
+from .status import process_production_status
 
-VALIDATE_VERSION = "0.1.0"
+VALIDATE_VERSION = "0.2.0"
 
 
 def _object(value: Any) -> dict[str, Any]:
@@ -584,16 +585,19 @@ def validate_job(
     report_config_hash = process_report.get("config_sha256")
     report_config_hash_matches = isinstance(report_config_hash, str) and report_config_hash == config.digest()
     report_schema_ok = process_report.get("schema_version") == 1
+    process_status = process_production_status(process_report)
+    process_report_ok = bool(
+        process_status is not None and report_schema_ok and report_config_hash_matches
+    )
     checks["process_report"] = {
-        "status": "passed"
-        if process_report.get("status") == "passed" and report_schema_ok and report_config_hash_matches
-        else "failed",
+        "status": "passed" if process_report_ok else "failed",
+        "production_status": process_status,
         "sha256": _sha256(process_report_path),
         "schema_version_ok": report_schema_ok,
         "config_sha256_present": isinstance(report_config_hash, str),
         "config_sha256_matches": report_config_hash_matches,
     }
-    if checks["process_report"]["status"] != "passed":
+    if not process_report_ok:
         report["status"] = "failed"
 
     try:
@@ -714,7 +718,7 @@ def validate_job(
             manifest_source = _object(manifest.get("source"))
             manifest_ok = (
                 manifest.get("schema_version") == 1
-                and manifest.get("status") == "passed"
+                and manifest.get("status") == process_status
                 and manifest.get("job_slug") == config.job_slug
                 and manifest.get("config_sha256") == config.digest()
                 and manifest_source.get("sha256") == source_actual
@@ -806,6 +810,12 @@ def validate_job(
                     "wall_thickness_mm": config.fit.wall_thickness_mm,
                     "bottom_thickness_mm": config.fit.bottom_thickness_mm,
                     "side_height_mm": config.fit.side_height_mm,
+                    "front_outer_chamfer_mm": config.fit.front_outer_chamfer_mm,
+                    "front_outer_top_diameter_mm": (
+                        config.cavity_diameter_mm
+                        + 2.0 * config.fit.wall_thickness_mm
+                        - 2.0 * config.fit.front_outer_chamfer_mm
+                    ),
                     "friction_rib_profile": config.fit.friction_rib_profile,
                     "friction_ribs_enabled": config.fit.friction_ribs_enabled,
                     "friction_ribs_explicit": config.fit.friction_ribs_explicit,
@@ -906,6 +916,8 @@ def validate_job(
                 cavity_ok
                 and mechanical_ok
                 and geometry.get("status") == "passed"
+                and geometry.get("production_status", geometry.get("status"))
+                == process_status
                 and scad_hash_ok
                 and process_link_ok
                 and face_ok
@@ -945,6 +957,10 @@ def validate_job(
             model_manifest_ok = (
                 model_manifest.get("schema_version") == 1
                 and model_manifest.get("status") == "passed"
+                and model_manifest.get(
+                    "production_status", model_manifest.get("status")
+                )
+                == process_status
                 and model_manifest.get("job_slug") == config.job_slug
                 and model_manifest.get("config_sha256") == config.digest()
                 and model_manifest.get("process_report_sha256") == _sha256(process_report_path)

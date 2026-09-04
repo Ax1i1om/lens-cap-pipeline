@@ -35,8 +35,11 @@ When the deliverable is an actual 3MF, the public one-command bridge is:
 ```
 
 It requires a local OpenSCAD with the Manifold backend for the integrated
-one-piece package. Add `--bambu slice` and explicit machine/process/filament
-profiles only when a printer-specific 3MF with embedded G-code is wanted.
+one-piece package. For Bambu Studio, add `--bambu export` plus explicit
+machine/process/filament profiles to produce an editable project with verified
+vendor configuration; this becomes the report's `primary_3mf`. Use
+`--bambu slice` only when embedded G-code is explicitly wanted for that exact
+printer/material setup.
 The bridge prefers explicit --openscad / --bambu-path, then the job's
 [print] executable fields (path-like relative values are relative to the job
 file; bare command names use PATH), then host discovery. Explicit values are
@@ -284,7 +287,9 @@ requires a passing `design-brief.json` (approved flag, current raster hash,
 identity/text hierarchy, sourced anchor, and licence fields), then chains
 these gates, exports the integrated native 3MF, and verifies its Core package;
 missing, unapproved, or mismatched briefs return `FAILED` rather than creating a
-publishable release. Never redraw or retype artwork in a CAD script. Keep the
+publishable release. When a Bambu adapter is requested, deliver the verified
+`primary_3mf`; the native/Core file remains the portable geometry-audit master.
+Never redraw or retype artwork in a CAD script. Keep the
 mechanical body parameterized by the current measured diameter and liner plan.
 Generate and measure a short fit ring before a full multicolour print. The
 bundled `wide_tapered` profile is mechanical geometry only and must not alter

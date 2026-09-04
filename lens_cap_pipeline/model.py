@@ -23,10 +23,11 @@ from .config import (
     friction_rib_profile_defaults,
     normalize_friction_rib_profile,
 )
+from .status import process_production_status
 
-# Geometry contract version: the 0.3 series adds named, generic retention
-# profiles while keeping the resolved numeric fields backwards compatible.
-MODEL_VERSION = "0.3.0"
+# Geometry contract version: the 0.5 series adds a parameterised 45-degree
+# chamfer on the closed front face's outer circumference.
+MODEL_VERSION = "0.5.0"
 
 
 class ModelError(RuntimeError):
@@ -168,8 +169,17 @@ def _mechanical_values(config: PipelineConfig) -> dict[str, Any]:
     wall = number_value("wall_thickness_mm", fit_value("wall_thickness_mm", 2.4))
     bottom = number_value("bottom_thickness_mm", fit_value("bottom_thickness_mm", 2.0))
     side = number_value("side_height_mm", fit_value("side_height_mm", 14.0))
+    front_outer_chamfer = number_value(
+        "front_outer_chamfer_mm", fit_value("front_outer_chamfer_mm", 0.0)
+    )
     if wall < 0.4 or bottom <= 0 or side <= 0:
         raise ModelError("wall, bottom, and side dimensions are invalid")
+    if front_outer_chamfer < 0 or (
+        front_outer_chamfer > 0 and front_outer_chamfer >= min(wall, bottom)
+    ):
+        raise ModelError(
+            "front_outer_chamfer_mm must be >= 0 and smaller than both wall and bottom thickness"
+        )
     try:
         rib_profile = normalize_friction_rib_profile(
             fit_value("friction_rib_profile", "light_tapered")
@@ -197,9 +207,6 @@ def _mechanical_values(config: PipelineConfig) -> dict[str, Any]:
     rib_width = number_value("friction_rib_width_mm", rib_value("friction_rib_width_mm"))
     rib_height = number_value("friction_rib_height_mm", rib_value("friction_rib_height_mm"))
     rib_start = number_value("friction_rib_start_mm", rib_value("friction_rib_start_mm"))
-    nozzle = number_value("nozzle_mm", getattr(config, "nozzle_mm", 0.2))
-    if nozzle <= 0:
-        raise ModelError("nozzle_mm must be positive")
     if friction_enabled:
         if rib_count_float != rib_count or rib_count < 3 or rib_count > 128:
             raise ModelError("friction_rib_count must be an integer in [3,128]")
@@ -216,21 +223,6 @@ def _mechanical_values(config: PipelineConfig) -> dict[str, Any]:
             raise ModelError("friction_rib_width_mm is too wide for the selected rib count")
         if rib_protrusion >= measured / 4.0:
             raise ModelError("friction_rib_protrusion_mm is too large for the mating diameter")
-        audit_angle_deg = min(
-            8.0,
-            360.0 * rib_width / (math.pi * cavity),
-            180.0 / rib_count,
-        )
-        audit_tip_angle_deg = audit_angle_deg * 0.55
-        audit_tip_radius = cavity / 2.0 - rib_protrusion
-        audit_tip_chord_mm = 2.0 * audit_tip_radius * math.sin(
-            math.radians(audit_tip_angle_deg / 2.0)
-        )
-        if audit_tip_chord_mm < nozzle:
-            raise ModelError(
-                "friction rib contact-tip width must be >= nozzle_mm; "
-                "increase friction_rib_width_mm"
-            )
         if foam_status == "foam":
             # A rib may add local compression, but it must not consume the
             # entire already-compressed foam gap.  This hard floor prevents a
@@ -261,8 +253,24 @@ def _mechanical_values(config: PipelineConfig) -> dict[str, Any]:
     else:
         rib_angle_deg = 0.0
         rib_tip_angle_deg = 0.0
+    rib_tip_width = (
+        2.0
+        * (cavity / 2.0 - rib_protrusion)
+        * math.sin(math.radians(rib_tip_angle_deg / 2.0))
+        if friction_enabled
+        else 0.0
+    )
     total = bottom + side
     outer = cavity + 2.0 * wall
+    front_outer_top_diameter = outer - 2.0 * front_outer_chamfer
+    face_target = getattr(config, "face_diameter_mm", None)
+    if face_target is not None:
+        face_target = number_value("face_diameter_mm", face_target)
+        if face_target > front_outer_top_diameter + 1e-9:
+            raise ModelError(
+                "front_outer_chamfer_mm leaves the closed front land smaller "
+                "than face_diameter_mm"
+            )
     if (
         not math.isfinite(cavity)
         or not math.isfinite(total)
@@ -315,6 +323,8 @@ def _mechanical_values(config: PipelineConfig) -> dict[str, Any]:
         "bottom_thickness_mm": bottom,
         "side_height_mm": side,
         "total_height_mm": total,
+        "front_outer_chamfer_mm": front_outer_chamfer,
+        "front_outer_top_diameter_mm": front_outer_top_diameter,
         "friction_rib_profile": rib_profile,
         "friction_ribs_enabled": friction_enabled,
         "friction_ribs_explicit": bool_value("friction_ribs_explicit", False),
@@ -326,14 +336,7 @@ def _mechanical_values(config: PipelineConfig) -> dict[str, Any]:
         "friction_rib_wall_overlap_mm": rib_wall_overlap,
         "friction_rib_angle_deg": rib_angle_deg,
         "friction_rib_tip_angle_deg": rib_tip_angle_deg,
-        "friction_rib_tip_width_mm": (
-            2.0
-            * (cavity / 2.0 - rib_protrusion)
-            * math.sin(math.radians(rib_tip_angle_deg / 2.0))
-            if friction_enabled
-            else 0.0
-        ),
-        "nozzle_mm": nozzle,
+        "friction_rib_tip_width_mm": rib_tip_width,
         "friction_rib_tip_diameter_mm": rib_tip_diameter,
         "friction_rib_bare_interference_mm": bare_interference,
         "friction_rib_retention_status": retention_status,
@@ -469,8 +472,9 @@ def generate_model(
         process_report = getattr(process_result, "report", {}) or {}
     if not isinstance(process_report, dict):
         raise ModelError("process report must be a JSON object; rerun the process stage")
-    if process_report.get("status") != "passed":
-        raise ModelError("art process report is not passed; refusing to generate geometry")
+    production_status = process_production_status(process_report)
+    if production_status is None:
+        raise ModelError("art process report failed an integrity gate")
     requested_assembly = str(getattr(config, "assembly_mode", "auto")).lower()
     if requested_assembly not in {"auto", "integrated_part"}:
         # This canonical adapter emits one connected, integrated cap.  Do not
@@ -564,6 +568,7 @@ def generate_model(
     base_hex = "#%02X%02X%02X" % base.rgb
     text = f'''// Generated by lens-cap-pipeline model {MODEL_VERSION}
 // Job: {config.job_slug}
+// Production status: {production_status}
 // Artwork is imported from process-stage shared SVG masks.  No brand/model
 // text is retyped here.  Build and test a fit ring before a full print.
 
@@ -579,6 +584,9 @@ wall_thickness = {fit["wall_thickness_mm"]:.6g};
 bottom_thickness = {fit["bottom_thickness_mm"]:.6g};
 side_height = {fit["side_height_mm"]:.6g};
 total_height = {fit["total_height_mm"]:.6g};
+outer_diameter = cavity_diameter + 2 * wall_thickness;
+front_outer_chamfer_mm = {fit["front_outer_chamfer_mm"]:.6g};
+front_outer_top_diameter = {fit["front_outer_top_diameter_mm"]:.6g};
 panel_diameter = face_target_mm;
 panel_base_thickness = 0.80;
 segments = 360;
@@ -597,11 +605,34 @@ friction_rib_angle_deg = {fit["friction_rib_angle_deg"]:.6g};
 friction_rib_tip_angle_deg = {fit["friction_rib_tip_angle_deg"]:.6g};
 render_part = "assembly";
 
+// The optional 45-degree bevel affects only the closed front face's outer
+// circumference.  It does not move, scale, or redraw the artwork canvas.
+module cap_outer_envelope() {{
+    if (front_outer_chamfer_mm > 0) {{
+        union() {{
+            cylinder(
+                d=outer_diameter,
+                h=total_height - front_outer_chamfer_mm,
+                $fn=segments
+            );
+            translate([0, 0, total_height - front_outer_chamfer_mm])
+                cylinder(
+                    d1=outer_diameter,
+                    d2=front_outer_top_diameter,
+                    h=front_outer_chamfer_mm,
+                    $fn=segments
+                );
+        }}
+    }} else {{
+        cylinder(d=outer_diameter, h=total_height, $fn=segments);
+    }}
+}}
+
 // The cavity opens downward (z=0); the closed floor/front face is at z=total_height.
 module cap_body() {{
     union() {{
         difference() {{
-            cylinder(d=cavity_diameter + 2 * wall_thickness, h=total_height, $fn=segments);
+            cap_outer_envelope();
             cylinder(d=cavity_diameter, h=side_height + eps, $fn=segments);
         }}
         friction_rib_set(cavity_diameter, side_height);
@@ -723,6 +754,7 @@ else
         "schema_version": 1,
         "model_version": MODEL_VERSION,
         "status": "passed",
+        "production_status": production_status,
         "job_slug": config.job_slug,
         # Paths in committed/audited reports are relative to the report's
         # directory.  ModelResult still exposes the resolved Path for callers
@@ -756,6 +788,7 @@ else
         "geometry_report_sha256": _sha256(report_path),
         "scad_sha256": _sha256(scad_path),
         "status": "passed",
+        "production_status": production_status,
         "selectors": geometry["render_part_selectors"],
     }
     _atomic_text(model_dir / "model-manifest.json", json.dumps(model_manifest, ensure_ascii=False, indent=2) + "\n")

@@ -103,6 +103,59 @@ def test_cross_context_trigger_and_intake_contract_is_present() -> None:
     assert "不要并行调用任何其他设计 Skill" in production_zh
 
 
+def test_production_skill_never_presents_core_3mf_as_a_bambu_project() -> None:
+    production = (ROOT / "skills/lens-cap-production/SKILL.md").read_text(
+        encoding="utf-8"
+    )
+    production_zh = (
+        ROOT / "skills/lens-cap-production/SKILL.zh-CN.md"
+    ).read_text(encoding="utf-8")
+    for token in (
+        "primary_3mf",
+        "--bambu export",
+        "Metadata/project_settings.config",
+        "Metadata/model_settings.config",
+        "Core geometry/audit master",
+    ):
+        assert token in production
+    for token in (
+        "primary_3mf",
+        "--bambu export",
+        "Metadata/project_settings.config",
+        "Metadata/model_settings.config",
+        "Core 几何／审计母本",
+    ):
+        assert token in production_zh
+    assert "Never give\nthe native/Core file as the primary Bambu deliverable" in production
+    assert "不得把原生／Core 文件当作 Bambu 主交付件" in production_zh
+
+
+def test_reference_rib_transfer_preserves_effective_tip_diameter_semantics() -> None:
+    production = (ROOT / "skills/lens-cap-production/SKILL.md").read_text(
+        encoding="utf-8"
+    )
+    production_zh = (
+        ROOT / "skills/lens-cap-production/SKILL.zh-CN.md"
+    ).read_text(encoding="utf-8")
+    production_flat = " ".join(production.split())
+    production_zh_flat = " ".join(production_zh.split())
+
+    for token in (
+        "rib-tip effective fit diameter",
+        "measured diameter + 2 × rib",
+        "Move the profile radially",
+        "friction_rib_profile_derived=false",
+    ):
+        assert token in production_flat
+    for token in (
+        "凸条端到端有效卡合直径",
+        "实测直径 + 2 × 凸条径向凸出",
+        "只沿径向移动轮廓",
+        "friction_rib_profile_derived=false",
+    ):
+        assert token in production_zh_flat
+
+
 def test_pure_artwork_triggers_do_not_overlap_production_metadata() -> None:
     """Static host metadata must not race imagegen for an image-only request."""
 
@@ -158,6 +211,16 @@ def test_skill_manifest_declares_portable_sync_entrypoint() -> None:
         '"claude": "$CLAUDE_HOME/skills"',
     ):
         assert token in manifest
+
+    import json
+
+    data = json.loads(manifest)
+    assert data["distribution"]["delivery_contract"] == {
+        "user_facing_pointer": "primary_3mf",
+        "native_kind": "core_geometry_only",
+        "bambu_default_mode": "export",
+        "bambu_slice_requires_explicit_toolpath_request": True,
+    }
 
 
 def test_manifest_records_artwork_hierarchy_and_fitted_cap_intake() -> None:
@@ -348,6 +411,9 @@ def test_host_metadata_keeps_the_same_exclusive_hierarchy_and_intake() -> None:
     assert "foam" in imagegen_agent and "uncompressed" in imagegen_agent
     assert "mating diameter" in production_agent
     assert "foam" in production_agent and "uncompressed" in production_agent
+    assert "primary_3mf" in production_agent
+    assert "native/core 3mf" in production_agent
+    assert "--bambu export" in production_agent
 
 
 def test_fitted_intake_is_a_persisted_gate_before_first_production_command() -> None:

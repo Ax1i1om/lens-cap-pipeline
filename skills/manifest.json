@@ -17,6 +17,12 @@
       "project": ".agents/skills",
       "codex": "$CODEX_HOME/skills",
       "claude": "$CLAUDE_HOME/skills"
+    },
+    "delivery_contract": {
+      "user_facing_pointer": "primary_3mf",
+      "native_kind": "core_geometry_only",
+      "bambu_default_mode": "export",
+      "bambu_slice_requires_explicit_toolpath_request": true
     }
   },
   "routing_policy": {

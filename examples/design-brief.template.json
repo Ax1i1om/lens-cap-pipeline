@@ -89,6 +89,7 @@
     "wall_thickness_mm": null,
     "bottom_thickness_mm": null,
     "side_height_mm": null,
+    "front_outer_chamfer_mm": null,
     "bare_clearance_mm": null,
     "friction_ribs_enabled": true,
     "friction_ribs_explicit": false,

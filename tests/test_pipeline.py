@@ -2,15 +2,15 @@ from __future__ import annotations
 
 import hashlib
 import json
+from dataclasses import replace
 from pathlib import Path
 
 import numpy as np
 from PIL import Image, ImageDraw
 
-from lens_cap_pipeline.config import ConfigError, PaletteSpec, load_config, template_config
+from lens_cap_pipeline.config import ConfigError, load_config, template_config
 from lens_cap_pipeline.process import (
     ProcessError,
-    _minimum_relief_feature_audit,
     _polygon_area,
     _simplify_closed_contour,
     _trace_mask_contours,
@@ -86,9 +86,71 @@ def _sha(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def test_default_grid_uses_two_geometry_samples_per_nozzle() -> None:
-    config = template_config("master.png", 95.0, nozzle_mm=0.2)
-    assert config["grid_size"] == 950
+def test_default_grid_is_stable_and_independent_of_nozzle() -> None:
+    fine = template_config("master.png", 95.0, nozzle_mm=0.2)
+    coarse = template_config("master.png", 95.0, nozzle_mm=0.8)
+    assert fine["grid_size"] == coarse["grid_size"] == 1000
+    assert fine["prefilter"]["name"] == "none"
+    assert fine["cleanup"]["enabled"] is False
+
+
+def test_print_and_runtime_settings_do_not_change_artifact_config_digest(
+    tmp_path: Path,
+) -> None:
+    config = load_config(_job(tmp_path))
+    overridden = replace(
+        config,
+        nozzle_mm=0.4,
+        nozzle_explicit=True,
+        print=replace(
+            config.print,
+            nozzle_mm=0.4,
+            layer_height_mm=0.2,
+            printer="Bambu Lab A1 mini",
+            openscad_executable="/Applications/OpenSCAD.app/Contents/MacOS/OpenSCAD",
+            bambu_executable="/Applications/BambuStudio.app/Contents/MacOS/BambuStudio",
+            filament_slots=("PLA black", "PLA ivory"),
+        ),
+    )
+
+    assert overridden.digest() == config.digest()
+
+
+def test_nozzle_change_cannot_change_pre_slicer_artwork_or_vectors(
+    tmp_path: Path,
+) -> None:
+    original = _job(tmp_path).read_text(encoding="utf-8")
+    fine_path = tmp_path / "fine.toml"
+    coarse_path = tmp_path / "coarse.toml"
+    fine_path.write_text(
+        original.replace('output_dir = "build"', 'output_dir = "fine-build"'),
+        encoding="utf-8",
+    )
+    coarse_path.write_text(
+        original.replace('output_dir = "build"', 'output_dir = "coarse-build"')
+        .replace("nozzle_mm = 0.2", "nozzle_mm = 0.4"),
+        encoding="utf-8",
+    )
+
+    fine = load_config(fine_path)
+    coarse = load_config(coarse_path)
+    fine_report = process(fine)
+    coarse_report = process(coarse)
+
+    relative_outputs = [
+        "process-master.png",
+        "masks/black.png",
+        "masks/ivory.png",
+        "vector/black.svg",
+        "vector/ivory.svg",
+    ]
+    for relative in relative_outputs:
+        assert _sha(fine.output_dir / relative) == _sha(coarse.output_dir / relative)
+    assert fine.digest() == replace(coarse, output_dir=fine.output_dir).digest()
+    assert "minimum_relief_feature_audit" not in fine_report
+    assert "minimum_relief_feature_audit" not in coarse_report
+    assert "nozzle_mm" not in fine_report["face"]
+    assert "nozzle_mm" not in coarse_report["face"]
 
 
 def test_pixel_union_contours_keep_holes_and_split_diagonal_contacts() -> None:
@@ -147,7 +209,7 @@ def test_svg_vectorization_uses_smooth_contours_not_pixel_rectangles(
     mask = np.hypot(xx - 47.5, yy - 47.5) <= 34.0
     target = tmp_path / "circle.svg"
 
-    stats = _write_svg(mask, target, 19.2, "#F2E7D3", nozzle_mm=0.2)
+    stats = _write_svg(mask, target, 19.2, "#F2E7D3")
     payload = target.read_text(encoding="utf-8")
 
     assert stats["algorithm"] == "directed-pixel-union-quarter-chamfer-rdp"
@@ -161,94 +223,17 @@ def test_svg_vectorization_uses_smooth_contours_not_pixel_rectangles(
     assert stats["diagonal_segments"] > 0
 
 
-def test_minimum_feature_gate_rejects_hairline_below_nozzle() -> None:
-    palettes = (
-        PaletteSpec("black", 0, (0, 0, 0), "base", 0.0, True),
-        PaletteSpec("gray", 1, (116, 116, 113), "relief", 0.4, True),
+def test_normalized_artifact_config_excludes_print_settings(tmp_path: Path) -> None:
+    config_path = _job(tmp_path)
+
+    config = load_config(config_path)
+    report = process(config)
+    assert report["status"] == "passed"
+    normalized = json.loads(
+        (config.output_dir / "config.normalized.json").read_text(encoding="utf-8")
     )
-    inside = np.ones((64, 64), dtype=bool)
-    labels = np.zeros((64, 64), dtype=np.int32)
-    labels[8:24, 8:24] = 1
-    labels[30:55, 40] = 1
-    failed = _minimum_relief_feature_audit(
-        labels,
-        inside,
-        palettes,
-        face_diameter_mm=9.5,
-        grid_size=64,
-        nozzle_mm=0.2,
-        allowed_area_px=8,
-        allowed_dimension_px=3,
-    )
-    assert 1.0 < failed["minimum_feature_px"] < 2.0
-    assert failed["support_kernel_px"] == 2
-    assert failed["status"] == "failed"
-    assert failed["colors"]["gray"]["largest_violation_dimension_px"] == 25
-
-    labels[30:55, 41] = 1
-    passed = _minimum_relief_feature_audit(
-        labels,
-        inside,
-        palettes,
-        face_diameter_mm=9.5,
-        grid_size=64,
-        nozzle_mm=0.2,
-        allowed_area_px=8,
-        allowed_dimension_px=3,
-    )
-    assert passed["status"] == "passed"
-
-
-def test_minimum_feature_gate_rejects_long_sub_nozzle_negative_channel() -> None:
-    palettes = (
-        PaletteSpec("black", 0, (0, 0, 0), "base", 0.0, True),
-        PaletteSpec("gray", 1, (116, 116, 113), "relief", 0.4, True),
-    )
-    inside = np.ones((100, 100), dtype=bool)
-    labels = np.ones((100, 100), dtype=np.int32)
-    labels[10:90, 50] = 0
-
-    report = _minimum_relief_feature_audit(
-        labels,
-        inside,
-        palettes,
-        face_diameter_mm=10.0,
-        grid_size=100,
-        nozzle_mm=0.2,
-        allowed_area_px=8,
-        allowed_dimension_px=3,
-    )
-
-    assert report["status"] == "failed"
-    assert report["colors"]["black"]["role"] == "base"
-    assert report["colors"]["black"]["largest_violation_dimension_px"] == 80
-
-
-def test_minimum_feature_gate_rejects_many_sub_nozzle_negative_dots() -> None:
-    palettes = (
-        PaletteSpec("black", 0, (0, 0, 0), "base", 0.0, True),
-        PaletteSpec("gray", 1, (116, 116, 113), "relief", 0.4, True),
-    )
-    inside = np.ones((100, 100), dtype=bool)
-    labels = np.ones((100, 100), dtype=np.int32)
-    for y in range(10, 95, 5):
-        for x in range(10, 95, 5):
-            labels[y, x] = 0
-
-    report = _minimum_relief_feature_audit(
-        labels,
-        inside,
-        palettes,
-        face_diameter_mm=10.0,
-        grid_size=100,
-        nozzle_mm=0.2,
-        allowed_area_px=8,
-        allowed_dimension_px=3,
-    )
-
-    assert report["status"] == "failed"
-    assert report["colors"]["black"]["unsupported_components"] == 289
-    assert report["colors"]["black"]["aggregate_cleanup_budget_exceeded"] is True
+    assert "nozzle_mm" not in normalized
+    assert "print" not in normalized
 
 
 def test_process_emits_safe_partition_and_report(tmp_path: Path) -> None:

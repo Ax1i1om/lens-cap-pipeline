@@ -804,7 +804,6 @@ def test_handoff_check_binds_all_body_geometry_dimensions(
         "bottom_thickness_mm": approved["physical_fit"]["bottom_thickness_mm"] + 0.5,
         "side_height_mm": approved["physical_fit"]["side_height_mm"] + 0.5,
         "bare_clearance_mm": approved["physical_fit"]["bare_clearance_mm"] + 0.5,
-        "nozzle_mm": approved["physical_fit"]["nozzle_mm"] + 0.1,
         "friction_rib_count": approved["physical_fit"]["friction_rib_count"] + 1,
         "liner_material": "foam",
         "compression_is_assumption": not approved["physical_fit"][
@@ -872,11 +871,11 @@ def test_handoff_check_rejects_circle_palette_and_artwork_process_job_drift(
     assert approved["job_binding"]["circle"]["allow_outside"] is False
     assert approved["job_binding"]["palette"]["gray"]["height_mm"] == 0.4
     assert approved["job_binding"]["artwork_process"] == {
-        "grid_size": 520,
+        "grid_size": 1000,
         "safe_border_mm": 0.4,
-        "prefilter": {"name": "median", "size": 5, "radius": 0.8},
+        "prefilter": {"name": "none", "size": 3, "radius": 0.0},
         "cleanup": {
-            "enabled": True,
+            "enabled": False,
             "max_area_px": 8,
             "max_dimension_px": 3,
             "ring_px": 2,
@@ -893,12 +892,12 @@ def test_handoff_check_rejects_circle_palette_and_artwork_process_job_drift(
     mutations = (
         ("allow_outside = false", "allow_outside = true", "job_binding.circle"),
         ("height_mm = 0.4", "height_mm = 0.9", "job_binding.palette"),
-        ("grid_size = 520", "grid_size = 512", "job_binding.artwork_process"),
+        ("grid_size = 1000", "grid_size = 512", "job_binding.artwork_process"),
         ("safe_border_mm = 0.4", "safe_border_mm = 0.9", "job_binding.artwork_process"),
-        ('name = "median"', 'name = "none"', "job_binding.artwork_process"),
+        ('name = "none"', 'name = "median"', "job_binding.artwork_process"),
         (
-            "[cleanup]\nenabled = true",
             "[cleanup]\nenabled = false",
+            "[cleanup]\nenabled = true",
             "job_binding.artwork_process",
         ),
         (
@@ -1312,6 +1311,29 @@ def test_init_derives_face_from_measured_diameter(tmp_path: Path) -> None:
     # The generated TOML intentionally omits a duplicate face field when it is
     # derived from the measured mating diameter.
     assert "face_diameter_mm =" not in config_path.read_text(encoding="utf-8")
+
+
+def test_init_can_persist_a_front_outer_chamfer(tmp_path: Path) -> None:
+    source = tmp_path / "master.png"
+    Image.new("RGB", (64, 64), (17, 18, 17)).save(source)
+    config_path = tmp_path / "jobs" / "chamfer.toml"
+
+    assert main(
+        [
+            "init",
+            str(config_path),
+            "--source",
+            str(source),
+            "--measured-diameter",
+            "95",
+            "--front-outer-chamfer",
+            "0.30",
+        ]
+    ) == 0
+
+    config = load_config(config_path)
+    assert config.fit.front_outer_chamfer_mm == pytest.approx(0.30)
+    assert "front_outer_chamfer_mm = 0.3" in config_path.read_text(encoding="utf-8")
 
 
 def test_init_persists_and_checks_optional_adapter_envelope(tmp_path: Path) -> None:

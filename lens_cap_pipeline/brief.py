@@ -1157,7 +1157,8 @@ def validate_design_brief(
 
     # Bind every geometry-driving fit value. Null diameter fields remain the
     # explicit escape hatch for a brief shared by several size variants; all
-    # other body, liner, rib, nozzle, and adapter fields are strict snapshots.
+    # other body, liner, rib, and adapter fields are strict snapshots. Printer
+    # profile values are verified only when a slicer project is requested.
     physical_fit = brief.get("physical_fit")
     if not isinstance(physical_fit, Mapping):
         raise BriefError("design brief physical_fit must be an object")
@@ -1166,11 +1167,19 @@ def validate_design_brief(
         "measured_diameter_mm",
         "face_target_mm",
         *active_fit,
-        "nozzle_mm",
         "adapter_nominal_ring_mm",
         "adapter_radial_wall_mm",
         "adapter_derived_mating_diameter_mm",
     }
+    # Briefs created before model 0.5 did not contain the optional front-edge
+    # chamfer.  Preserve those square-edge jobs when the active value is still
+    # zero; any non-zero chamfer is geometry-driving and must be explicitly
+    # present in the approval snapshot.
+    if (
+        "front_outer_chamfer_mm" not in physical_fit
+        and active_fit.get("front_outer_chamfer_mm") == 0.0
+    ):
+        required_physical_fields.discard("front_outer_chamfer_mm")
     missing_physical = sorted(required_physical_fields.difference(physical_fit))
     if missing_physical:
         raise BriefError(
@@ -1181,7 +1190,6 @@ def validate_design_brief(
         "measured_diameter_mm": config.measured_diameter_mm,
         "face_target_mm": config.face_diameter_mm,
         **active_fit,
-        "nozzle_mm": config.nozzle_mm,
         "adapter_nominal_ring_mm": metadata.get("adapter_nominal_ring_mm"),
         "adapter_radial_wall_mm": metadata.get("adapter_radial_wall_mm"),
         "adapter_derived_mating_diameter_mm": metadata.get(
@@ -1202,7 +1210,7 @@ def validate_design_brief(
     # Optional values are nullable only when the active job also resolves them
     # to null. Shared artwork may additionally wildcard its size identity and
     # the all-or-none adapter triplet so one approved face can drive several
-    # ring diameters. Liner, rib profile, nozzle, and process values remain
+    # ring diameters. Liner, rib profile, and artwork-process values remain
     # strict snapshots.
     nullable_fields = {
         field for field, actual in active_physical.items() if actual is None
@@ -1508,7 +1516,6 @@ def create_design_brief_scaffold(
         "measured_diameter_mm": config.measured_diameter_mm,
         "face_target_mm": config.face_diameter_mm,
         **fit,
-        "nozzle_mm": config.nozzle_mm,
         "adapter_nominal_ring_mm": metadata.get("adapter_nominal_ring_mm"),
         "adapter_radial_wall_mm": metadata.get("adapter_radial_wall_mm"),
         "adapter_derived_mating_diameter_mm": metadata.get(

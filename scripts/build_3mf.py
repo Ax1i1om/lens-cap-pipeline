@@ -44,6 +44,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from lens_cap_pipeline.brief import resolve_brief_path, validate_design_brief  # noqa: E402
+from lens_cap_pipeline.status import process_production_status  # noqa: E402
 
 
 class ReleaseError(RuntimeError):
@@ -96,8 +97,12 @@ def _audit_build_source_binding(config: Any, brief_report: dict[str, Any]) -> di
         process_report = json.loads(report_path.read_text(encoding="utf-8"))
     except (OSError, UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise ReleaseError(f"cannot read current process report: {report_path}") from exc
-    if not isinstance(process_report, dict) or process_report.get("status") != "passed":
-        raise ReleaseError("current process report is not passed")
+    process_status = process_production_status(process_report)
+    if process_status is None:
+        raise ReleaseError("current process report failed an artwork-integrity gate")
+    in_progress = config.output_dir / ".process-in-progress"
+    if in_progress.exists():
+        raise ReleaseError("current process transaction is incomplete")
     source_record = process_report.get("source")
     process_hash = source_record.get("sha256") if isinstance(source_record, dict) else None
     approved_hash = brief_report.get("candidate_sha256")
@@ -117,6 +122,7 @@ def _audit_build_source_binding(config: Any, brief_report: dict[str, Any]) -> di
         "current_source_sha256": current_hash.lower(),
         "process_report": _portable(report_path, config.config_path.parent),
         "process_report_sha256": _sha256(report_path),
+        "process_status": process_status,
         "scope": "post_build_and_prepublication_approved_source_binding",
     }
 
@@ -326,7 +332,12 @@ def _read_adapter_manifest(output: Path) -> dict[str, Any]:
     return payload
 
 
-def _retarget_adapter_manifest(staged_output: Path, final_output: Path) -> Path:
+def _retarget_adapter_manifest(
+    staged_output: Path,
+    final_output: Path,
+    *,
+    release_context: dict[str, Any] | None = None,
+) -> Path:
     """Rewrite the adapter sidecar so its path fields describe publication."""
 
     manifest = Path(f"{staged_output}.manifest.json")
@@ -336,6 +347,8 @@ def _retarget_adapter_manifest(staged_output: Path, final_output: Path) -> Path:
     verification = payload.get("verification")
     if isinstance(verification, dict):
         verification["path"] = portable_final
+    if release_context is not None:
+        payload["release_context"] = release_context
     manifest.write_text(
         json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
@@ -446,22 +459,17 @@ def _audit_integrated_ribs(path: Path, mechanical: dict[str, Any]) -> dict[str, 
         start = float(mechanical["friction_rib_start_mm"])
         end = start + float(mechanical["friction_rib_height_mm"])
         tip_angle = float(mechanical["friction_rib_tip_angle_deg"])
-        nozzle_mm = float(mechanical["nozzle_mm"])
     except (KeyError, TypeError, ValueError, OverflowError) as exc:
         raise ReleaseError("geometry report lacks valid friction-rib audit fields") from exc
     if count < 3 or not all(
         math.isfinite(value)
-        for value in (cavity_radius, protrusion, start, end, tip_angle, nozzle_mm)
+        for value in (cavity_radius, protrusion, start, end, tip_angle)
     ):
         raise ReleaseError("geometry report has invalid friction-rib audit fields")
     tip_radius = cavity_radius - protrusion
     declared_tip_width = 2.0 * tip_radius * math.sin(math.radians(tip_angle / 2.0))
-    if tip_radius <= 0 or end <= start or nozzle_mm <= 0:
+    if tip_radius <= 0 or end <= start:
         raise ReleaseError("geometry report has invalid friction-rib tip geometry")
-    if declared_tip_width < nozzle_mm:
-        raise ReleaseError(
-            "declared friction-rib contact tip is narrower than the configured nozzle"
-        )
 
     try:
         with zipfile.ZipFile(path) as archive:
@@ -615,7 +623,7 @@ def _audit_integrated_ribs(path: Path, mechanical: dict[str, Any]) -> dict[str, 
         """Require the actual continuous contact face of an extruded rib.
 
         Point samples, even across the entire z span, can be spoofed by a comb
-        of sub-nozzle axial knives placed exactly at the public XY samples.
+        of arbitrarily thin axial knives placed exactly at the public XY samples.
         The generated tapered rib instead has one two-triangle quadrilateral
         at its innermost contact chord.  Proving that full-width face exists
         makes gaps between comb teeth impossible without failing topology.
@@ -912,7 +920,7 @@ def _audit_integrated_ribs(path: Path, mechanical: dict[str, Any]) -> dict[str, 
     def uninterrupted_axial_coverage(
         point: tuple[float, float]
     ) -> tuple[bool, float, int]:
-        required_tolerance = max(1e-5, nozzle_mm * 0.001)
+        required_tolerance = max(1e-5, declared_tip_width * 0.0001)
         best_span = 0.0
         maximum_intersections = 0
         for mesh in meshes:
@@ -1004,7 +1012,7 @@ def _audit_integrated_ribs(path: Path, mechanical: dict[str, Any]) -> dict[str, 
     observed_full_height_tip_face_widths: list[float] = []
     cross_section_sample_hits: list[dict[str, Any]] = []
     axial_continuity_sample_hits: list[dict[str, Any]] = []
-    minimum_observed_width = max(nozzle_mm, declared_tip_width) * 0.90
+    minimum_observed_width = declared_tip_width * 0.90
     for position in range(count):
         expected_angle = position * 360.0 / count
         position_pairs: list[tuple[int, int, int, tuple[int, ...], tuple[int, ...]]] = []
@@ -1154,7 +1162,6 @@ def _audit_integrated_ribs(path: Path, mechanical: dict[str, Any]) -> dict[str, 
         "cross_section_sample_hits": cross_section_sample_hits,
         "axial_continuity_samples_per_rib": 15,
         "axial_continuity_sample_hits": axial_continuity_sample_hits,
-        "nozzle_mm": nozzle_mm,
         "axial_span_mm": [start, end],
         "radial_tolerance_mm": radial_tolerance,
         "angular_tolerance_deg": angular_tolerance,
@@ -1174,6 +1181,7 @@ def _audit_material_assignments(
     expected_top_z_mm: dict[str, float] | None = None,
     canvas_size_mm: float | None = None,
     tolerance_pixels: int = 1,
+    expected_visible_top_area_reference: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Require every used 3MF triangle colour to come from the active job.
 
@@ -1376,6 +1384,7 @@ def _audit_material_assignments(
     # intentionally excluded: it covers the mechanical body as well as the
     # artwork background, whereas each relief colour has a one-to-one mask.
     spatial: dict[str, Any] = {}
+    visible_top_area_by_name: dict[str, float] = {}
     if expected_masks is not None:
         if expected_top_z_mm is None:
             raise ReleaseError("material spatial audit requires expected relief top Z values")
@@ -1489,6 +1498,18 @@ def _audit_material_assignments(
                         f"required relief colour {name}"
                     )
                 triangles = triangles.reshape((-1, 3, 2))
+                observed_visible_area = float(
+                    sum(
+                        (
+                            (triangle[1][0] - triangle[0][0])
+                            * (triangle[2][1] - triangle[0][1])
+                            - (triangle[1][1] - triangle[0][1])
+                            * (triangle[2][0] - triangle[0][0])
+                        )
+                        / 2.0
+                        for triangle in top_faces
+                    )
+                )
                 projected_mask = rasterize(
                     triangles,
                     expected_mask.shape[0],
@@ -1508,15 +1529,17 @@ def _audit_material_assignments(
             union = int((projected_mask | expected_mask).sum())
             raw_iou = 1.0 if union == 0 else intersection / union
             expected_area = float(expected_footprint_mm2.get(name, 0.0))
-            observed_area = float(projected_area.get(color, 0.0))
+            observed_area = (
+                observed_visible_area
+                if expected_visible_top_area_reference is not None
+                else float(projected_area.get(color, 0.0))
+            )
             pixel_area = (float(canvas_size_mm) / expected_mask.shape[0]) ** 2
             area_tolerance = max(pixel_area * 8.0, expected_area * 0.005)
-            if abs(observed_area - expected_area) > area_tolerance:
-                raise ReleaseError(
-                    "native 3MF relief material projected area disagrees with its process vector "
-                    f"for {name}: {observed_area:g} != {expected_area:g} mm2"
-                )
-            spatial[name] = {
+            area_delta = observed_area - expected_area
+            direct_area_match = abs(area_delta) <= area_tolerance
+            visible_top_area_by_name[name] = observed_visible_area
+            spatial_record = {
                 "mask": Path(expected_masks[name]).name,
                 "mask_sha256": _sha256(Path(expected_masks[name])),
                 "resolution_px": int(expected_mask.shape[0]),
@@ -1525,7 +1548,6 @@ def _audit_material_assignments(
                 "out_of_z_envelope_triangles": out_of_z_faces,
                 "out_of_xy_envelope_triangles": out_of_xy_faces,
                 "projected_triangle_area_mm2": observed_area,
-                "projected_area_tolerance_mm2": area_tolerance,
                 "top_triangle_count": len(top_faces),
                 "expected_pixels": int(expected_mask.sum()),
                 "projected_pixels": int(projected_mask.sum()),
@@ -1534,12 +1556,141 @@ def _audit_material_assignments(
                 "raw_iou": raw_iou,
                 "tolerance_pixels": tolerance_pixels,
             }
+            if expected_visible_top_area_reference is None:
+                spatial_record["projected_area_tolerance_mm2"] = area_tolerance
+            else:
+                spatial_record.update(
+                    {
+                        "independent_pre_boolean_vector_area_mm2": expected_area,
+                        "visible_area_delta_from_independent_vector_mm2": area_delta,
+                        "legacy_pre_boolean_area_tolerance_mm2": area_tolerance,
+                        "legacy_pre_boolean_direct_area_match": direct_area_match,
+                        "area_comparison_basis": (
+                            "final_visible_material_surface_vs_independent_pre_boolean_vector_layer"
+                        ),
+                        "area_comparison_disposition": (
+                            "diagnostic_only_post_boolean_assembly_reference_is_authoritative"
+                        ),
+                    }
+                )
+            spatial[name] = spatial_record
             if missing_pixels or extra_pixels:
                 raise ReleaseError(
                     "native 3MF material spatial audit disagrees with the named mask for "
                     f"{name}: missing={missing_pixels}, extra={extra_pixels}, iou={raw_iou:.6f}"
                 )
-    return {
+            # The process report records each colour's independent SVG area,
+            # before the relief layers are combined.  Bounded contour
+            # simplification can make adjacent, otherwise disjoint palette
+            # regions overlap by a small amount.  In the one-piece Boolean
+            # assembly the taller/later relief owns that shared surface, so a
+            # lower colour's *visible* material area is legitimately smaller
+            # than its independent SVG area.  The named-mask spatial gate
+            # above is the stronger proof: every intended pixel must be
+            # covered within the declared vector/raster tolerance, and every
+            # final material face must stay inside that same envelope.  Keep
+            # the incomparable aggregate areas as diagnostics, but do not
+            # reject a spatially bound material assignment because of this
+            # pre-/post-Boolean basis mismatch.
+            if not direct_area_match and expected_visible_top_area_reference is None:
+                raise ReleaseError(
+                    "native 3MF relief material projected area disagrees with its process vector "
+                    f"for {name}: {observed_area:g} != {expected_area:g} mm2"
+                )
+
+    visible_top_area_binding: dict[str, Any] = {"status": "not_requested"}
+    if expected_visible_top_area_reference is not None:
+        if expected_masks is None or expected_top_z_mm is None:
+            raise ReleaseError(
+                "post-Boolean visible-area binding requires the named-mask spatial audit"
+            )
+        reference = expected_visible_top_area_reference
+        if not isinstance(reference, dict):
+            raise ReleaseError("post-Boolean visible-area reference is not passed")
+        groups = reference.get("groups")
+        if reference.get("status") != "passed" or not isinstance(groups, list):
+            raise ReleaseError("post-Boolean visible-area reference is not passed")
+        expected_names = set(expected_top_z_mm)
+        grouped_names: list[str] = []
+        binding_groups: list[dict[str, Any]] = []
+        try:
+            z_tolerance = float(reference["z_tolerance_mm"])
+        except (KeyError, TypeError, ValueError, OverflowError) as exc:
+            raise ReleaseError("post-Boolean visible-area reference has no valid Z tolerance") from exc
+        for group in groups:
+            if not isinstance(group, dict):
+                raise ReleaseError("post-Boolean visible-area reference has an invalid group")
+            names = group.get("palette_names")
+            if (
+                not isinstance(names, list)
+                or not names
+                or any(not isinstance(name, str) or not name for name in names)
+                or len(set(names)) != len(names)
+            ):
+                raise ReleaseError("post-Boolean visible-area reference has invalid palette names")
+            try:
+                top_z = float(group["top_z_mm"])
+                expected_visible_area = float(group["expected_visible_top_area_mm2"])
+            except (KeyError, TypeError, ValueError, OverflowError) as exc:
+                raise ReleaseError("post-Boolean visible-area reference has invalid dimensions") from exc
+            if (
+                not math.isfinite(top_z)
+                or not math.isfinite(expected_visible_area)
+                or expected_visible_area <= 0
+            ):
+                raise ReleaseError("post-Boolean visible-area reference has invalid dimensions")
+            for name in names:
+                if name not in expected_names or name not in visible_top_area_by_name:
+                    raise ReleaseError(
+                        f"post-Boolean visible-area reference names unknown palette {name!r}"
+                    )
+                if not math.isclose(
+                    float(expected_top_z_mm[name]),
+                    top_z,
+                    rel_tol=0.0,
+                    abs_tol=z_tolerance,
+                ):
+                    raise ReleaseError(
+                        f"post-Boolean visible-area reference has the wrong top Z for {name}"
+                    )
+            grouped_names.extend(names)
+            observed_visible_area = sum(visible_top_area_by_name[name] for name in names)
+            area_tolerance = max(0.001, expected_visible_area * 0.00001)
+            area_delta = observed_visible_area - expected_visible_area
+            if abs(area_delta) > area_tolerance:
+                raise ReleaseError(
+                    "native 3MF visible relief material area disagrees with the hash-bound "
+                    f"post-Boolean assembly for {', '.join(names)}: "
+                    f"{observed_visible_area:g} != {expected_visible_area:g} mm2"
+                )
+            binding_groups.append(
+                {
+                    "palette_names": list(names),
+                    "top_z_mm": top_z,
+                    "expected_assembly_visible_top_area_mm2": expected_visible_area,
+                    "observed_native_material_top_area_mm2": observed_visible_area,
+                    "delta_mm2": area_delta,
+                    "tolerance_mm2": area_tolerance,
+                    "status": "passed",
+                }
+            )
+        if len(grouped_names) != len(set(grouped_names)) or set(grouped_names) != expected_names:
+            raise ReleaseError(
+                "post-Boolean visible-area reference does not partition the active relief palette"
+            )
+        visible_top_area_binding = {
+            "status": "passed",
+            "reference_source": reference.get("source"),
+            "reference_source_sha256": reference.get("source_sha256"),
+            "external_openscad_report": reference.get("external_openscad_report"),
+            "external_openscad_report_sha256": reference.get(
+                "external_openscad_report_sha256"
+            ),
+            "scad_sha256": reference.get("scad_sha256"),
+            "groups": binding_groups,
+            "scope": "native_material_top_surfaces_vs_hash_bound_post_boolean_assembly",
+        }
+    result = {
         "status": "passed",
         "colors": {
             details["name"]: {
@@ -1564,6 +1715,13 @@ def _audit_material_assignments(
         "spatial_mask_binding": spatial,
         "scope": "final_3mf_triangle_material_assignments_and_named_relief_masks",
     }
+    if expected_visible_top_area_reference is not None:
+        result["visible_top_area_binding"] = visible_top_area_binding
+        result["scope"] = (
+            "final_3mf_triangle_material_assignments_named_relief_masks_"
+            "and_hash_bound_post_boolean_visible_top_areas"
+        )
+    return result
 
 
 def _expected_palette_footprints(config: Any) -> dict[str, float]:
@@ -1606,10 +1764,10 @@ def _expected_palette_footprints(config: Any) -> dict[str, float]:
 def _projection_tolerance(config: Any) -> dict[str, float | int]:
     """Derive raster audit tolerance from the bounded vectorisation budget.
 
-    Triangle rasterisation already needs one inclusive edge pixel.  A contour
+    Triangle rasterisation already needs one inclusive edge pixel. A contour
     deliberately simplified by at most half a source cell can touch the next
-    raster cell despite remaining less than one nozzle from the binary mask,
-    so that declared budget adds one—not an arbitrary relaxation—to the gate.
+    raster cell, so that recorded source-space budget adds one. Printer nozzle
+    size is intentionally irrelevant to this fidelity check.
     """
 
     report_path = config.output_dir / "process-report.json"
@@ -1647,7 +1805,7 @@ def _projection_tolerance(config: Any) -> dict[str, float | int]:
             or deviation_px < 0
             or deviation_px > 0.5 + 1e-9
             or deviation_mm < 0
-            or deviation_mm >= float(config.nozzle_mm)
+            or deviation_mm > 0.10 + 1e-9
         ):
             raise ReleaseError(
                 f"process mask_stats.{name}.svg_vectorization exceeds the bounded contour budget"
@@ -1759,6 +1917,231 @@ def _expected_relief_top_z(geometry_report: dict[str, Any]) -> dict[str, float]:
             raise ReleaseError("geometry report has an invalid relief name/height")
         result[name] = total_height + height + 0.001
     return result
+
+
+def _assembly_visible_top_area_reference(
+    config: Any,
+    geometry_report: dict[str, Any],
+    expected_top_z_mm: dict[str, float],
+    *,
+    z_tolerance_mm: float = 0.005,
+) -> dict[str, Any]:
+    """Measure post-Boolean relief top areas from the fresh assembly STL.
+
+    Each process SVG is an independent pre-Boolean layer. Adjacent palette
+    regions can overlap slightly after bounded contour simplification, and
+    the one-piece CSG correctly gives that shared surface to one of the
+    layers. The assembly STL is therefore the exact uncoloured geometry
+    reference for the *visible* top area later assigned materials in the
+    native 3MF. Its path and hash are rebound to the current OpenSCAD report
+    before any triangle is trusted.
+    """
+
+    if (
+        not math.isfinite(float(z_tolerance_mm))
+        or z_tolerance_mm <= 0
+        or z_tolerance_mm > 0.05
+    ):
+        raise ReleaseError("assembly visible-area Z tolerance is invalid")
+    if not expected_top_z_mm:
+        raise ReleaseError("assembly visible-area audit has no relief top planes")
+
+    model_dir = (config.output_dir / "model").resolve()
+    report_path = model_dir / "external-openscad-report.json"
+    try:
+        external = json.loads(report_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ReleaseError(
+            f"cannot read OpenSCAD provenance for assembly visible-area audit: {report_path}"
+        ) from exc
+    if (
+        not isinstance(external, dict)
+        or external.get("schema_version") != 1
+        or external.get("adapter") != "openscad"
+        or external.get("status") != "passed"
+        or external.get("backend") != "Manifold"
+    ):
+        raise ReleaseError("assembly visible-area audit requires a passed OpenSCAD report")
+    geometry_production_status = geometry_report.get("production_status")
+    external_production_status = external.get("production_status")
+    if (
+        geometry_production_status is not None
+        and external_production_status != geometry_production_status
+    ):
+        raise ReleaseError(
+            "OpenSCAD assembly report does not inherit the current production status"
+        )
+
+    scad_name = geometry_report.get("scad_path")
+    scad_sha256 = geometry_report.get("scad_sha256")
+    if not isinstance(scad_name, str) or not isinstance(scad_sha256, str):
+        raise ReleaseError("geometry report lacks the current SCAD provenance")
+    scad_path = (model_dir / scad_name).resolve()
+    try:
+        scad_path.relative_to(model_dir)
+    except ValueError as exc:
+        raise ReleaseError("geometry report SCAD path leaves the current model directory") from exc
+    if (
+        not scad_path.is_file()
+        or _sha256(scad_path).lower() != scad_sha256.lower()
+        or external.get("model") != scad_path.name
+        or str(external.get("model_sha256", "")).lower() != scad_sha256.lower()
+    ):
+        raise ReleaseError("OpenSCAD assembly provenance does not match the current geometry")
+
+    parts = external.get("parts")
+    assembly_record = parts.get("assembly") if isinstance(parts, dict) else None
+    if (
+        not isinstance(assembly_record, dict)
+        or assembly_record.get("status") != "passed"
+        or assembly_record.get("returncode") != 0
+    ):
+        raise ReleaseError("OpenSCAD report has no passed assembly selector")
+    declared_path = assembly_record.get("path")
+    declared_hash = assembly_record.get("sha256")
+    if not isinstance(declared_path, str) or not isinstance(declared_hash, str):
+        raise ReleaseError("OpenSCAD assembly selector lacks a path or hash")
+    relative_assembly = Path(declared_path)
+    if relative_assembly.is_absolute():
+        raise ReleaseError("OpenSCAD assembly selector path must be model-relative")
+    assembly_path = (model_dir / relative_assembly).resolve()
+    expected_path = (
+        model_dir / "mesh" / f"{config.job_slug}-assembly.stl"
+    ).resolve()
+    try:
+        assembly_path.relative_to(model_dir)
+    except ValueError as exc:
+        raise ReleaseError("OpenSCAD assembly selector leaves the current model directory") from exc
+    if assembly_path != expected_path:
+        raise ReleaseError("OpenSCAD assembly selector is not the current job assembly")
+    if not assembly_path.is_file() or _sha256(assembly_path).lower() != declared_hash.lower():
+        raise ReleaseError("OpenSCAD assembly STL differs from its passed provenance record")
+    format_check = assembly_record.get("format_check")
+    canonicalization = (
+        format_check.get("canonicalization") if isinstance(format_check, dict) else None
+    )
+    relief_check = (
+        format_check.get("assembly_relief_check") if isinstance(format_check, dict) else None
+    )
+    if (
+        not isinstance(format_check, dict)
+        or format_check.get("size_exact") is not True
+        or not isinstance(canonicalization, dict)
+        or canonicalization.get("status") != "passed"
+        or not isinstance(relief_check, dict)
+        or relief_check.get("status") != "passed"
+    ):
+        raise ReleaseError("OpenSCAD assembly selector lacks passed canonical format checks")
+
+    try:
+        data = assembly_path.read_bytes()
+        if len(data) < 84:
+            raise ReleaseError("OpenSCAD assembly STL is truncated")
+        triangle_count = struct.unpack_from("<I", data, 80)[0]
+    except (OSError, struct.error) as exc:
+        raise ReleaseError(f"cannot read OpenSCAD assembly STL: {assembly_path}") from exc
+    if (
+        triangle_count <= 0
+        or triangle_count > 2_000_000
+        or len(data) != 84 + triangle_count * 50
+        or format_check.get("binary_triangle_count") != triangle_count
+        or canonicalization.get("binary_triangle_count") != triangle_count
+    ):
+        raise ReleaseError("OpenSCAD assembly STL is not a bounded canonical binary STL")
+
+    groups: list[dict[str, Any]] = []
+    for name, raw_z in sorted(expected_top_z_mm.items(), key=lambda item: (item[1], item[0])):
+        try:
+            top_z = float(raw_z)
+        except (TypeError, ValueError, OverflowError) as exc:
+            raise ReleaseError("assembly visible-area audit has an invalid relief top Z") from exc
+        if not name or not math.isfinite(top_z):
+            raise ReleaseError("assembly visible-area audit has an invalid relief top Z")
+        matching = next(
+            (
+                group
+                for group in groups
+                if math.isclose(group["top_z_mm"], top_z, rel_tol=0.0, abs_tol=1e-9)
+            ),
+            None,
+        )
+        if matching is None:
+            groups.append(
+                {
+                    "top_z_mm": top_z,
+                    "palette_names": [name],
+                    "upward_horizontal_triangle_count": 0,
+                    "expected_visible_top_area_mm2": 0.0,
+                }
+            )
+        else:
+            matching["palette_names"].append(name)
+    for left, right in zip(groups, groups[1:]):
+        if right["top_z_mm"] - left["top_z_mm"] <= 2.0 * z_tolerance_mm:
+            raise ReleaseError(
+                "distinct relief top planes are too close for the assembly visible-area audit"
+            )
+
+    for index in range(triangle_count):
+        offset = 84 + index * 50
+        try:
+            values = struct.unpack_from("<12f", data, offset)
+        except struct.error as exc:  # pragma: no cover - exact length checked above
+            raise ReleaseError("OpenSCAD assembly STL has a malformed triangle") from exc
+        a = values[3:6]
+        b = values[6:9]
+        c = values[9:12]
+        coordinates = (*a, *b, *c)
+        if any(not math.isfinite(float(value)) for value in coordinates):
+            raise ReleaseError("OpenSCAD assembly STL has a non-finite vertex")
+        z_values = (float(a[2]), float(b[2]), float(c[2]))
+        if max(z_values) - min(z_values) > 1e-5:
+            continue
+        matching_groups = [
+            group
+            for group in groups
+            if all(
+                abs(float(vertex[2]) - float(group["top_z_mm"])) <= z_tolerance_mm
+                for vertex in (a, b, c)
+            )
+        ]
+        if len(matching_groups) > 1:
+            raise ReleaseError("one assembly face ambiguously matches multiple relief top planes")
+        if not matching_groups:
+            continue
+        cross_z = (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (
+            c[0] - a[0]
+        )
+        if cross_z <= 1e-12:
+            continue
+        group = matching_groups[0]
+        group["upward_horizontal_triangle_count"] += 1
+        group["expected_visible_top_area_mm2"] += cross_z / 2.0
+
+    for group in groups:
+        if (
+            group["upward_horizontal_triangle_count"] <= 0
+            or not math.isfinite(group["expected_visible_top_area_mm2"])
+            or group["expected_visible_top_area_mm2"] <= 0
+        ):
+            raise ReleaseError(
+                "OpenSCAD assembly STL has no positive visible top area for relief plane "
+                f"{group['top_z_mm']:g} mm"
+            )
+        group["palette_names"].sort()
+
+    return {
+        "status": "passed",
+        "source": _portable(assembly_path, config.config_path.parent),
+        "source_sha256": declared_hash.lower(),
+        "external_openscad_report": _portable(report_path, config.config_path.parent),
+        "external_openscad_report_sha256": _sha256(report_path),
+        "scad_sha256": scad_sha256.lower(),
+        "triangle_count": triangle_count,
+        "z_tolerance_mm": float(z_tolerance_mm),
+        "groups": groups,
+        "scope": "hash_bound_post_boolean_assembly_upward_relief_top_surfaces",
+    }
 
 
 def _write_mask_voxel_relief(
@@ -2797,8 +3180,11 @@ def _parser() -> argparse.ArgumentParser:
 
 
 def _human(report: dict[str, Any]) -> str:
+    primary = report.get("primary_3mf") or {}
     lines = [
         f"status: {report['status']}",
+        f"primary 3MF: {primary.get('output', 'UNVERIFIABLE')}",
+        f"primary 3MF kind: {primary.get('kind', 'UNVERIFIABLE')}",
         f"native 3MF: {report.get('native_3mf', {}).get('output', 'UNVERIFIABLE')}",
     ]
     sliced = report.get("bambu_3mf")
@@ -2809,6 +3195,7 @@ def _human(report: dict[str, Any]) -> str:
     warning = report.get("retention_warning")
     if warning:
         lines.append(f"retention warning: {warning}")
+    lines.append(f"slicer: {report.get('slicer_status', 'not_requested')}")
     lines.append("fit: UNVERIFIABLE until a physical coupon is printed and measured")
     return "\n".join(lines)
 
@@ -2971,6 +3358,8 @@ def main(argv: list[str] | None = None) -> int:
         if _sha256(config) != initial_job_sha256:
             raise ReleaseError("job config changed during the release build")
         source_binding_audit = _audit_build_source_binding(loaded, brief_report)
+        if build_payload.get("status") != source_binding_audit["process_status"]:
+            raise ReleaseError("build status does not match the validated process status")
         scad = model_dir / f"{loaded.job_slug}.scad"
         if not scad.is_file():
             raise ReleaseError(f"build did not produce the expected SCAD: {scad}")
@@ -2984,6 +3373,18 @@ def main(argv: list[str] | None = None) -> int:
                 raise ReleaseError(f"cannot read geometry report: {geometry_report_path}") from exc
             if isinstance(geometry_payload, dict) and isinstance(geometry_payload.get("mechanical"), dict):
                 geometry_mechanical = geometry_payload["mechanical"]
+        if geometry_payload.get("production_status") != source_binding_audit["process_status"]:
+            raise ReleaseError("geometry report did not inherit the process production status")
+        if (
+            geometry_payload.get("process_report_sha256")
+            != source_binding_audit["process_report_sha256"]
+        ):
+            raise ReleaseError("geometry report is bound to a different process report")
+        if (
+            str(geometry_payload.get("art_source_sha256", "")).lower()
+            != str(source_binding_audit["current_source_sha256"]).lower()
+        ):
+            raise ReleaseError("geometry report is bound to a different approved artwork")
         projection = _projection_audit(loaded, timeout=args.timeout)
         stage_native = _stage_path(native, stage_dirs)
         stage_bambu = (
@@ -3008,11 +3409,18 @@ def main(argv: list[str] | None = None) -> int:
             require_closed=True,
             require_single_volume=True,
         )
+        if native_report["verification"].get("has_embedded_gcode") is not False:
+            raise ReleaseError("native 3MF must be unsliced and contain no embedded G-code")
         native_bounds_audit = _audit_native_bounds(
             native_report["verification"], geometry_payload
         )
         rib_mesh_audit = _audit_integrated_ribs(stage_native, geometry_mechanical)
         expected_relief_top_z = _expected_relief_top_z(geometry_payload)
+        visible_top_area_reference = _assembly_visible_top_area_reference(
+            loaded,
+            geometry_payload,
+            expected_relief_top_z,
+        )
         material_audit = _audit_material_assignments(
             stage_native,
             loaded.palette,
@@ -3026,6 +3434,7 @@ def main(argv: list[str] | None = None) -> int:
             tolerance_pixels=int(
                 projection.get("tolerance", {}).get("tolerance_pixels", 1)
             ),
+            expected_visible_top_area_reference=visible_top_area_reference,
         )
         public_native_command = [
             str(native) if item == str(stage_native) else item for item in native_command
@@ -3033,6 +3442,11 @@ def main(argv: list[str] | None = None) -> int:
         result: dict[str, Any] = {
             "schema_version": 1,
             "status": "passed",
+            "artifact_status": "passed",
+            "release_class": "native_model_verified",
+            "publishable": True,
+            "slice_policy": "explicit_only",
+            "slicer_status": "not_requested",
             "runner": "scripts/build_3mf.py",
             "job": _portable(config, config.parent),
             "job_sha256": initial_job_sha256,
@@ -3044,15 +3458,38 @@ def main(argv: list[str] | None = None) -> int:
             },
             "openscad": _tool_label(openscad),
             "native_3mf": {
+                "status": "passed",
                 "output": _portable(native, config.parent),
                 "manifest": _portable(Path(f"{native}.manifest.json"), config.parent),
                 "sha256": native_report["verification"].get("sha256"),
                 "bytes": native_report["verification"].get("bytes"),
                 "model": native_report["verification"].get("model"),
+                "package_verification": {
+                    "status": "passed",
+                    **native_report["verification"],
+                },
                 "command": [
                     _portable(item, config.parent) if Path(item).is_absolute() else item
                     for item in public_native_command
                 ],
+            },
+            # The native Core package is the deterministic geometry/audit
+            # master.  It is not a Bambu Studio project because it does not
+            # carry printer/process/filament metadata.  Keep an explicit
+            # primary-delivery pointer so callers cannot accidentally present
+            # the internal Core package as a Bambu-ready project.
+            "primary_3mf": {
+                "status": "passed",
+                "kind": "core_geometry_only",
+                "output": _portable(native, config.parent),
+                "sha256": native_report["verification"].get("sha256"),
+                "bytes": native_report["verification"].get("bytes"),
+                "bambu_project_config": False,
+                "user_notice": (
+                    "Portable 3MF Core geometry only; Bambu Studio may report "
+                    "missing/invalid project config. Request --bambu export for "
+                    "a Bambu project deliverable."
+                ),
             },
             "design_brief": {
                 "path": _portable(brief_report["path"], config.parent),
@@ -3094,7 +3531,8 @@ def main(argv: list[str] | None = None) -> int:
             "retention_warning": geometry_mechanical.get("friction_rib_fit_warning"),
             "notes": [
                 "Artwork, mask, and relief projection gates are executed by the public build path.",
-                "Native 3MF is unsliced; a printer-profiled 3MF requires the explicit Bambu stage.",
+                "Native 3MF passed artifact checks but is unsliced; inspect a target-profile toolpath before claiming print readiness.",
+                "Feature survival is evaluated only from the target slicer's actual toolpaths.",
                 "A valid package does not prove physical fit; print and measure a same-material coupon.",
             ],
         }
@@ -3196,14 +3634,55 @@ def main(argv: list[str] | None = None) -> int:
                     for part in bambu_parts
                 ],
             }
-        native_manifest = _retarget_adapter_manifest(stage_native, native)
+            result["slicer_status"] = (
+                "sliced_profile_verified"
+                if args.bambu == "slice"
+                else "project_export_verified"
+            )
+            result["release_class"] = (
+                "sliced_model_verified"
+                if args.bambu == "slice"
+                else "slicer_project_verified"
+            )
+            result["primary_3mf"] = {
+                "status": "passed",
+                "kind": (
+                    "bambu_sliced_project"
+                    if args.bambu == "slice"
+                    else "bambu_project"
+                ),
+                "output": _portable(slice_output, config.parent),
+                "sha256": sliced_report["verification"].get("sha256"),
+                "bytes": sliced_report["verification"].get("bytes"),
+                "bambu_project_config": True,
+                "user_notice": (
+                    "Primary Bambu Studio deliverable; native_3mf remains the "
+                    "portable internal geometry/audit master."
+                ),
+            }
+        release_context = {
+            "release_status": result["status"],
+            "reason": None,
+            "slice_allowed": True,
+            "publishable": True,
+            "slicer_status": result["slicer_status"],
+        }
+        native_manifest = _retarget_adapter_manifest(
+            stage_native,
+            native,
+            release_context=release_context,
+        )
         staged_publications: list[tuple[Path, Path]] = [
             (stage_native, native),
             (native_manifest, Path(f"{native}.manifest.json")),
         ]
         if args.bambu != "never":
             assert stage_bambu is not None
-            bambu_manifest = _retarget_adapter_manifest(stage_bambu, slice_output)
+            bambu_manifest = _retarget_adapter_manifest(
+                stage_bambu,
+                slice_output,
+                release_context=release_context,
+            )
             staged_publications.extend(
                 (
                     (stage_bambu, slice_output),
@@ -3230,10 +3709,18 @@ def main(argv: list[str] | None = None) -> int:
         if _sha256(Path(brief_report["path"])) != brief_report["sha256"]:
             raise ReleaseError("approved design brief changed before release publication")
         final_source_binding = _audit_build_source_binding(loaded, brief_report)
-        if final_source_binding["current_source_sha256"] != source_binding_audit[
-            "current_source_sha256"
-        ]:
-            raise ReleaseError("source artwork changed before release publication")
+        binding_fields = (
+            "current_source_sha256",
+            "process_report_sha256",
+            "process_status",
+        )
+        if any(
+            final_source_binding.get(field) != source_binding_audit.get(field)
+            for field in binding_fields
+        ):
+            raise ReleaseError(
+                "source artwork or process classification changed before release publication"
+            )
         if _sha256(stage_native) != native_report["verification"].get("sha256"):
             raise ReleaseError("native 3MF changed after final verification")
         if args.bambu != "never":
@@ -3243,6 +3730,19 @@ def main(argv: list[str] | None = None) -> int:
                 raise ReleaseError("Bambu 3MF changed after final verification")
         for staged, target in staged_publications:
             os.replace(staged, target)
+        # Alpha migration: a successful current release supersedes the former
+        # alternate prototype branch. Remove only its three deterministic,
+        # generated filenames so the output directory exposes one 3MF path.
+        for legacy_output in (
+            loaded.output_dir / "model" / "3mf-prototype-unverified.json",
+            loaded.output_dir
+            / "model"
+            / f"{loaded.job_slug}-prototype-unverified-native.3mf",
+            loaded.output_dir
+            / "model"
+            / f"{loaded.job_slug}-prototype-unverified-native.3mf.manifest.json",
+        ):
+            legacy_output.unlink(missing_ok=True)
         for directory in stage_dirs:
             shutil.rmtree(directory, ignore_errors=True)
         stage_dirs.clear()

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import json
 from pathlib import Path
 from types import SimpleNamespace
@@ -49,6 +50,98 @@ side_height_mm = 14.0
     assert validation["checks"]["geometry"]["mechanical_parameter_checks"]["friction_rib_angle_deg"] is True
 
 
+def test_nozzle_change_does_not_change_generated_scad(tmp_path: Path) -> None:
+    original = _job(tmp_path).read_text(encoding="utf-8").replace(
+        "face_diameter_mm = 52.0",
+        "face_diameter_mm = 52.0\nmeasured_diameter_mm = 52.0",
+    )
+    fine_path = tmp_path / "fine.toml"
+    coarse_path = tmp_path / "coarse.toml"
+    fine_path.write_text(
+        original.replace('output_dir = "build"', 'output_dir = "fine-build"'),
+        encoding="utf-8",
+    )
+    coarse_path.write_text(
+        original.replace('output_dir = "build"', 'output_dir = "coarse-build"')
+        .replace("nozzle_mm = 0.2", "nozzle_mm = 0.4"),
+        encoding="utf-8",
+    )
+
+    fine = load_config(fine_path)
+    coarse = load_config(coarse_path)
+    fine_model = generate_model(fine, process(fine))
+    coarse_model = generate_model(coarse, process(coarse))
+
+    assert fine_model.scad_path.read_bytes() == coarse_model.scad_path.read_bytes()
+
+
+def test_native_geometry_accepts_declared_narrow_rib_without_nozzle_logic(
+    tmp_path: Path,
+) -> None:
+    config_path = _job(tmp_path)
+    text = config_path.read_text(encoding="utf-8").replace(
+        "face_diameter_mm = 52.0",
+        "face_diameter_mm = 52.0\nmeasured_diameter_mm = 52.0",
+    )
+    text += '''
+[fit]
+foam_liner_status = "none"
+friction_ribs_enabled = true
+friction_rib_width_mm = 0.2
+'''
+    config_path.write_text(text, encoding="utf-8")
+    config = load_config(config_path)
+
+    model = generate_model(config, process(config))
+
+    assert model.report["mechanical"]["friction_rib_tip_width_mm"] < 0.2
+    assert "friction_rib_width_advisory" not in model.report["mechanical"]
+    assert "nozzle_mm" not in model.report["mechanical"]
+
+
+def test_model_accepts_integrity_pass_and_rejects_tampered_checks(tmp_path: Path) -> None:
+    config_path = _job(tmp_path)
+    source = Image.new("RGB", (64, 64), (17, 18, 17))
+    source_draw = ImageDraw.Draw(source)
+    source_draw.ellipse((4, 4, 59, 59), fill=(242, 231, 211))
+    source_draw.rectangle((20, 20, 43, 43), fill=(17, 18, 17))
+    source_draw.line((24, 31, 39, 31), fill=(242, 231, 211), width=1)
+    source.save(tmp_path / "master.png")
+    text = config_path.read_text(encoding="utf-8")
+    text = text.replace(
+        "face_diameter_mm = 52.0",
+        "face_diameter_mm = 6.4\nmeasured_diameter_mm = 6.4",
+    )
+    text = text.replace("grid_size = 128", "grid_size = 64")
+    text = text.replace('name = "median"', 'name = "none"')
+    text = text.replace("[cleanup]\nenabled = true", "[cleanup]\nenabled = false")
+    text += '''
+[fit]
+foam_liner_status = "none"
+friction_ribs_enabled = true
+friction_ribs_explicit = false
+'''
+    config_path.write_text(text, encoding="utf-8")
+    config = load_config(config_path)
+    process_report = process(config)
+    assert process_report["status"] == "passed"
+    assert "minimum_relief_feature_audit" not in process_report
+
+    tampered = copy.deepcopy(process_report)
+    tampered["checks"]["role_partition"] = False
+    with pytest.raises(ModelError, match="integrity gate"):
+        generate_model(config, tampered)
+
+    model = generate_model(config, process_report)
+    assert model.report["status"] == "passed"
+    assert model.report["production_status"] == "passed"
+    validation = validate_job(config)
+    assert validation["status"] == "passed"
+    assert validation["checks"]["process_report"]["status"] == "passed"
+    assert validation["checks"]["geometry"]["status"] == "passed"
+    assert validation["checks"]["model_manifest"]["status"] == "passed"
+
+
 def test_model_includes_default_inner_friction_ribs_in_body_and_coupon(tmp_path: Path) -> None:
     config_path = _job(tmp_path)
     text = config_path.read_text(encoding="utf-8").replace(
@@ -92,6 +185,75 @@ def test_bare_wall_omits_foam_compression_assumption(tmp_path: Path) -> None:
     assert mechanical["compression_fraction"] == 0.0
     assert mechanical["compression_is_assumption"] is False
     assert mechanical["foam_local_compression_fraction"] is None
+
+
+def test_model_adds_parameterised_front_outer_chamfer_without_moving_artwork(
+    tmp_path: Path,
+) -> None:
+    config_path = _job(tmp_path)
+    text = config_path.read_text(encoding="utf-8").replace(
+        "face_diameter_mm = 52.0",
+        "face_diameter_mm = 95.0\nmeasured_diameter_mm = 95.0",
+    )
+    text += '''
+[fit]
+foam_liner_status = "none"
+front_outer_chamfer_mm = 0.30
+'''
+    config_path.write_text(text, encoding="utf-8")
+    config = load_config(config_path)
+
+    result = generate_model(config, process(config))
+    mechanical = result.report["mechanical"]
+    scad = result.scad_path.read_text(encoding="utf-8")
+
+    assert mechanical["front_outer_chamfer_mm"] == pytest.approx(0.30)
+    assert mechanical["front_outer_top_diameter_mm"] == pytest.approx(99.6)
+    assert "front_outer_chamfer_mm = 0.3;" in scad
+    assert "module cap_outer_envelope()" in scad
+    assert "d2=front_outer_top_diameter" in scad
+    # The artwork remains on the original shared canvas and Z datum.
+    assert "panel_diameter = face_target_mm;" in scad
+    assert "translate([-panel_diameter / 2, -panel_diameter / 2, total_height])" in scad
+
+
+@pytest.mark.parametrize("value", [-0.1, 2.0, 2.4])
+def test_front_outer_chamfer_must_fit_within_wall_and_floor(
+    tmp_path: Path, value: float
+) -> None:
+    config_path = _job(tmp_path)
+    text = config_path.read_text(encoding="utf-8").replace(
+        "face_diameter_mm = 52.0",
+        "face_diameter_mm = 95.0\nmeasured_diameter_mm = 95.0",
+    )
+    text += f'''
+[fit]
+foam_liner_status = "none"
+front_outer_chamfer_mm = {value}
+'''
+    config_path.write_text(text, encoding="utf-8")
+
+    with pytest.raises(ConfigError, match="front_outer_chamfer_mm"):
+        load_config(config_path)
+
+
+def test_front_outer_chamfer_must_leave_the_artwork_face_supported(
+    tmp_path: Path,
+) -> None:
+    config_path = _job(tmp_path)
+    text = config_path.read_text(encoding="utf-8").replace(
+        "face_diameter_mm = 52.0",
+        "face_diameter_mm = 99.8\nmeasured_diameter_mm = 95.0",
+    )
+    text += '''
+[fit]
+foam_liner_status = "none"
+front_outer_chamfer_mm = 0.30
+'''
+    config_path.write_text(text, encoding="utf-8")
+
+    with pytest.raises(ConfigError, match="front_outer_chamfer_mm"):
+        load_config(config_path)
 
 
 def test_wide_tapered_profile_matches_reference_proportions(tmp_path: Path) -> None:

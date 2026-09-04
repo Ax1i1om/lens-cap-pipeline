@@ -35,8 +35,9 @@ for each size variant, so a brief's physical summary never overrides its
 measured diameter, liner, rib, body geometry, or print values. The strict
 `physical_fit` snapshot includes wall thickness, bottom thickness, side height,
 bare clearance, liner/compression, every resolved rib dimension, adapter
-decomposition, face/measurement values, and nozzle; every declared value must
-match the active job. Only the documented size-dependent diameter fields may
+decomposition and face/measurement values; every declared value must match the
+active job. Nozzle is separate slicer metadata and must not change pre-slicer
+artwork or geometry. Only the documented size-dependent diameter fields may
 be null when one approved artwork is intentionally shared across sizes.
 The init metadata owns the complete ordered closed text set. `handoff-init`
 copies every entry into both brief `display_text` and `allowed_text`, validates
@@ -83,8 +84,8 @@ rejected rather than silently relabelled as an F-number.
 | `output_dir` | no | generated derivatives, default `build` |
 | `face_diameter_mm` | process/model | finished circular face/relief diameter; derived from `measured_diameter_mm` when omitted |
 | `measured_diameter_mm` | model/fitted cap | actual outside diameter of the surface the cap grips |
-| `grid_size` | no | square output grid, 64–4096; a hand-authored omission loads as 1000, while `lens-cap init` writes two geometry samples per nozzle width, capped at 1600 (95/0.2 → 950); printability remains governed by `nozzle_mm`, not by treating one pixel as one extrusion line |
-| `nozzle_mm` | no | minimum feature reference, default 0.2; record whether explicit |
+| `grid_size` | no | square output grid, 64–4096; default 1000 and independent of printer/profile settings |
+| `nozzle_mm` | no | downstream slicer metadata, default 0.2; changing it does not change or stale masks, SVGs, SCAD, or native geometry |
 | `safe_border_mm` | no | base-only outer border; a hand-authored omission loads as 0, while `lens-cap init` explicitly writes the safer 0.4 mm starter value |
 | `source_sha256` | no | expected SHA-256 for the immutable source (the process writes its own lock) |
 | `assembly_mode` | no | `auto`, `integrated_part`, `separate_parts`, or `inlay`; model-stage hint |
@@ -124,12 +125,11 @@ positive, ascend from its first number, and start at `focal_length_mm` (the
 machine anchor is the wide-end value). Omitting it keeps the prime-lens
 behavior: the numeric focal length is rendered and checked.
 
-In that normalized file, absolute OpenSCAD/Bambu executable settings are
-reduced to their basenames so the core config digest remains clone-portable;
-the original TOML is still used to locate the tool, and the external adapter
-report records its basename, version and output hashes. Other provenance
-metadata should avoid machine-specific absolute paths when a cross-machine
-digest is required.
+That normalized file contains only artwork/native-geometry inputs. Printer,
+nozzle, layer, filament-slot, and executable settings remain in the original
+TOML; the slicer/external-adapter reports record the values actually used.
+Other provenance metadata should avoid machine-specific absolute paths when a
+cross-machine digest is required.
 
 In `[print]`, a path-like executable value (one containing a separator, an
 explicit relative marker, or a filename extension) is resolved relative to the
@@ -165,12 +165,12 @@ radius_px = 619              # required for an opaque master; alpha may infer it
 allow_outside = false        # keep false unless clipping is intentional
 
 [prefilter]
-name = "median"              # none, median, or gaussian
-size = 5                     # odd integer, 3–15
-radius = 0.8
+name = "none"                # none, median, or gaussian
+size = 3                     # odd integer, 3–15
+radius = 0.0
 
 [cleanup]
-enabled = true
+enabled = false
 max_area_px = 8
 max_dimension_px = 3
 ring_px = 2
@@ -189,6 +189,11 @@ reviewed. `center_px` is `[x, y]` in the source pixel coordinate system and
 inside the source bounds. The source image itself is never resized or
 overwritten. Cleanup only changes isolated components meeting all declared
 limits.
+
+The process/model/native-3MF stages do not run a nozzle-derived minimum-feature
+scan. Only the target slicer's actual toolpaths decide feature survival. A
+user-requested print-safe redesign is a new candidate, hash, brief binding, and
+approval; it never overwrites the approved master.
 
 ## Palette and geometry roles
 
@@ -243,7 +248,9 @@ surface configuration parse errors before generating a release.
 If the requested deliverable is an actual 3MF, no stage above is terminal.
 Completion requires an existing `.3mf` emitted through the canonical bridge
 and passing its package and projection checks. A generated SCAD/STL/handoff or
-a passed deterministic preflight must not be reported as a successful 3MF.
+a passed deterministic preflight must not be reported as a successful 3MF. A
+native 3MF can pass artifact checks with `slicer_status=not_requested`; claiming
+print readiness additionally requires target-profile toolpath inspection.
 
 ## Fitted-cap metadata
 
@@ -264,6 +271,7 @@ compression_is_assumption = true
 wall_thickness_mm = 2.4
 bottom_thickness_mm = 2.0
 side_height_mm = 14.0
+front_outer_chamfer_mm = 0.30       # optional 45° front-edge bevel; 0 disables it
 bare_clearance_mm = 0.40            # used when no foam
 friction_ribs_enabled = true        # default; set false for a smooth inner wall
 friction_ribs_explicit = false      # true when the user answered this choice
@@ -287,6 +295,15 @@ The fitted-cap intake asks for the actual mating outside diameter, whether/how
 thick the foam liner is, and whether to keep the inner-wall friction ribs. The
 rib choice defaults to enabled and is recorded in `friction_ribs_explicit` when
 the user answers it; `--no-friction-ribs` produces a smooth wall.
+The `95.0` diameter and foam values above are examples, not schema defaults.
+Release jobs must record the current user's diameter and foam decision; only
+the default-on rib preference is portable across jobs.
+`front_outer_chamfer_mm` is a single-distance 45-degree bevel on the closed
+front face's outer circumference: the same value is removed axially and
+radially. It does not resize or move the artwork canvas. The value defaults to
+`0.0` for backward compatibility and, when enabled, must be smaller than both
+the wall and bottom thickness while leaving the complete face diameter
+supported by the remaining front land.
 The optional adapter nominal/radial-wall pair may be recorded when the user
 knows it, but it is not a fourth required question because the actual measured
 diameter is sufficient and authoritative.

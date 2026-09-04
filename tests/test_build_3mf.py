@@ -6,6 +6,7 @@ import hashlib
 import json
 import math
 import shutil
+import struct
 import sys
 import xml.etree.ElementTree as ET
 import zipfile
@@ -33,6 +34,28 @@ def test_bridge_parser_defaults_to_native_only() -> None:
     assert args.bambu == "never"
     assert args.force is False
     assert args.brief is None
+
+
+def test_human_report_leads_with_explicit_primary_delivery() -> None:
+    text = bridge._human(
+        {
+            "status": "passed",
+            "primary_3mf": {
+                "output": "cap-bambu-project.3mf",
+                "kind": "bambu_project",
+            },
+            "native_3mf": {"output": "cap-native.3mf"},
+            "bambu_3mf": {
+                "mode": "export",
+                "output": "cap-bambu-project.3mf",
+            },
+            "slicer_status": "project_export_verified",
+        }
+    )
+    lines = text.splitlines()
+    assert lines[1] == "primary 3MF: cap-bambu-project.3mf"
+    assert lines[2] == "primary 3MF kind: bambu_project"
+    assert "native 3MF: cap-native.3mf" in lines
 
 
 def test_material_footprint_uses_post_vectorisation_area(tmp_path: Path) -> None:
@@ -165,11 +188,22 @@ def test_retarget_manifest_records_final_not_staging_path(tmp_path: Path) -> Non
         encoding="utf-8",
     )
     final = tmp_path / "release" / "cap.3mf"
-    returned = bridge._retarget_adapter_manifest(staging, final)
+    release_context = {
+        "release_status": "passed",
+        "slice_allowed": True,
+        "publishable": True,
+        "slicer_status": "not_requested",
+    }
+    returned = bridge._retarget_adapter_manifest(
+        staging,
+        final,
+        release_context=release_context,
+    )
     payload = json.loads(returned.read_text(encoding="utf-8"))
     assert payload["output"] == "<external>/cap.3mf"
     assert payload["verification"]["path"] == payload["output"]
     assert ".stage" not in payload["output"]
+    assert payload["release_context"] == release_context
 
 
 def _write_minimal_bambu_project(
@@ -481,6 +515,15 @@ def test_post_build_source_binding_rejects_artwork_swap(tmp_path: Path) -> None:
             {
                 "status": "passed",
                 "source": {"sha256": approved_hash},
+                "checks": {
+                    "overflow_guard": True,
+                    "source_polarity": True,
+                    "role_partition": True,
+                    "color_partition": True,
+                    "safe_border_base_only": True,
+                    "outside_alpha_zero": True,
+                    "required_palette_outputs": True,
+                },
             }
         ),
         encoding="utf-8",
@@ -703,9 +746,9 @@ def test_missing_openscad_is_an_explicit_unverifiable_result(tmp_path: Path, cap
                         "artwork_process": {
                             "grid_size": 64,
                             "safe_border_mm": 0.0,
-                            "prefilter": {"name": "median", "size": 5, "radius": 0.8},
-                            "cleanup": {
-                                "enabled": True,
+                                "prefilter": {"name": "none", "size": 3, "radius": 0.0},
+                                "cleanup": {
+                                    "enabled": False,
                                 "max_area_px": 8,
                                 "max_dimension_px": 3,
                                 "ring_px": 2,
@@ -1166,6 +1209,242 @@ def test_material_spatial_audit_rejects_relief_color_on_body_bottom(
             },
             expected_top_z_mm=top_z,
             canvas_size_mm=config.face_diameter_mm,
+        )
+
+
+def _write_binary_top_surfaces(
+    path: Path,
+    surfaces: list[tuple[float, float, float, float, float]],
+) -> list[tuple[float, list[tuple[tuple[float, float, float], ...]]]]:
+    records: list[bytes] = []
+    described: list[tuple[float, list[tuple[tuple[float, float, float], ...]]]] = []
+    for z, x0, x1, y0, y1 in surfaces:
+        triangles = [
+            ((x0, y0, z), (x1, y0, z), (x1, y1, z)),
+            ((x0, y0, z), (x1, y1, z), (x0, y1, z)),
+        ]
+        described.append((z, triangles))
+        for triangle in triangles:
+            records.append(
+                struct.pack(
+                    "<12fH",
+                    0.0,
+                    0.0,
+                    1.0,
+                    *(value for vertex in triangle for value in vertex),
+                    0,
+                )
+            )
+    path.write_bytes(
+        b"material CSG overlap fixture".ljust(80, b"\0")
+        + struct.pack("<I", len(records))
+        + b"".join(records)
+    )
+    return described
+
+
+def _write_overlap_material_fixture(tmp_path: Path) -> dict[str, object]:
+    from PIL import Image
+
+    output_dir = tmp_path / "out"
+    model_dir = output_dir / "model"
+    mesh_dir = model_dir / "mesh"
+    masks_dir = output_dir / "masks"
+    mesh_dir.mkdir(parents=True)
+    masks_dir.mkdir(parents=True)
+    (tmp_path / "job.toml").write_text("# synthetic audit fixture\n", encoding="utf-8")
+    scad = model_dir / "material-overlap.scad"
+    scad.write_text("// synthetic hash-bound CSG overlap fixture\n", encoding="utf-8")
+    scad_hash = hashlib.sha256(scad.read_bytes()).hexdigest()
+
+    # Independent lower and upper vectors each have 49 mm² of area, but their
+    # bounded 0.1 mm boundary excursions overlap by 1.96 mm². The assembly and
+    # native material surface therefore expose 47.04 mm² of graphite and
+    # 49.00 mm² of ivory without deleting any intended mask region.
+    surfaces = [
+        (16.401, -4.9, -0.1, -4.9, 4.9),
+        (16.601, -0.1, 4.9, -4.9, 4.9),
+    ]
+    assembly = mesh_dir / "material-overlap-assembly.stl"
+    described = _write_binary_top_surfaces(assembly, surfaces)
+    assembly_hash = hashlib.sha256(assembly.read_bytes()).hexdigest()
+    assembly_triangles = sum(len(triangles) for _, triangles in described)
+    external = {
+        "schema_version": 1,
+        "adapter": "openscad",
+        "status": "passed",
+        "production_status": "unverifiable",
+        "backend": "Manifold",
+        # Version probing may be unverifiable even though the hash-bound
+        # geometry export itself passed.
+        "tool_status": "unverifiable",
+        "model": scad.name,
+        "model_sha256": scad_hash,
+        "parts": {
+            "assembly": {
+                "status": "passed",
+                "returncode": 0,
+                "path": f"mesh/{assembly.name}",
+                "sha256": assembly_hash,
+                "format_check": {
+                    "size_exact": True,
+                    "binary_triangle_count": assembly_triangles,
+                    "canonicalization": {
+                        "status": "passed",
+                        "binary_triangle_count": assembly_triangles,
+                    },
+                    "assembly_relief_check": {"status": "passed"},
+                },
+            }
+        },
+    }
+    (model_dir / "external-openscad-report.json").write_text(
+        json.dumps(external), encoding="utf-8"
+    )
+    geometry = {
+        "production_status": "unverifiable",
+        "scad_path": scad.name,
+        "scad_sha256": scad_hash,
+        "mechanical": {"total_height_mm": 16.0},
+        "relief_entries": [
+            {"name": "graphite", "height_mm": 0.4},
+            {"name": "ivory", "height_mm": 0.6},
+        ],
+    }
+    config = SimpleNamespace(
+        output_dir=output_dir,
+        config_path=tmp_path / "job.toml",
+        job_slug="material-overlap",
+    )
+
+    for name, columns in (("graphite", range(0, 50)), ("ivory", range(50, 100))):
+        mask = Image.new("L", (100, 100), 0)
+        for y in range(100):
+            for x in columns:
+                mask.putpixel((x, y), 255)
+        mask.save(masks_dir / f"{name}.png")
+
+    core_ns = "http://schemas.microsoft.com/3dmanufacturing/core/2015/02"
+    root = ET.Element(f"{{{core_ns}}}model", {"unit": "millimeter"})
+    resources = ET.SubElement(root, f"{{{core_ns}}}resources")
+    materials = ET.SubElement(resources, f"{{{core_ns}}}basematerials", {"id": "1"})
+    for name, color in (("graphite", "#5E564BFF"), ("ivory", "#DEC8A9FF")):
+        ET.SubElement(materials, f"{{{core_ns}}}base", {"name": name, "displaycolor": color})
+    obj = ET.SubElement(
+        resources,
+        f"{{{core_ns}}}object",
+        {"id": "2", "type": "model", "pid": "1", "pindex": "0"},
+    )
+    mesh = ET.SubElement(obj, f"{{{core_ns}}}mesh")
+    vertices_node = ET.SubElement(mesh, f"{{{core_ns}}}vertices")
+    triangles_node = ET.SubElement(mesh, f"{{{core_ns}}}triangles")
+    vertex_index = 0
+    for material_index, (_, triangles) in enumerate(described):
+        for triangle in triangles:
+            for x, y, z in triangle:
+                ET.SubElement(
+                    vertices_node,
+                    f"{{{core_ns}}}vertex",
+                    {"x": str(x), "y": str(y), "z": str(z)},
+                )
+            ET.SubElement(
+                triangles_node,
+                f"{{{core_ns}}}triangle",
+                {
+                    "v1": str(vertex_index),
+                    "v2": str(vertex_index + 1),
+                    "v3": str(vertex_index + 2),
+                    "pid": "1",
+                    "p1": str(material_index),
+                    "p2": str(material_index),
+                    "p3": str(material_index),
+                },
+            )
+            vertex_index += 3
+    build = ET.SubElement(root, f"{{{core_ns}}}build")
+    ET.SubElement(build, f"{{{core_ns}}}item", {"objectid": "2"})
+    package = tmp_path / "material-overlap-native.3mf"
+    with zipfile.ZipFile(package, "w") as archive:
+        archive.writestr(
+            "3D/3dmodel.model",
+            ET.tostring(root, encoding="utf-8", xml_declaration=True),
+        )
+
+    palette = (
+        SimpleNamespace(
+            name="graphite",
+            rgb=(94, 86, 75),
+            role="relief",
+            height_mm=0.4,
+            required=True,
+        ),
+        SimpleNamespace(
+            name="ivory",
+            rgb=(222, 200, 169),
+            role="relief",
+            height_mm=0.6,
+            required=True,
+        ),
+    )
+    return {
+        "config": config,
+        "geometry": geometry,
+        "package": package,
+        "palette": palette,
+        "masks": {
+            name: masks_dir / f"{name}.png" for name in ("graphite", "ivory")
+        },
+        "footprints": {"graphite": 49.0, "ivory": 49.0},
+    }
+
+
+def test_material_area_uses_hash_bound_post_boolean_assembly_reference(
+    tmp_path: Path,
+) -> None:
+    fixture = _write_overlap_material_fixture(tmp_path)
+    geometry = fixture["geometry"]
+    assert isinstance(geometry, dict)
+    top_z = bridge._expected_relief_top_z(geometry)
+    reference = bridge._assembly_visible_top_area_reference(
+        fixture["config"], geometry, top_z
+    )
+    assert [group["expected_visible_top_area_mm2"] for group in reference["groups"]] == pytest.approx(
+        [47.04, 49.0]
+    )
+
+    audit = bridge._audit_material_assignments(
+        fixture["package"],
+        fixture["palette"],
+        expected_footprint_mm2=fixture["footprints"],
+        expected_masks=fixture["masks"],
+        expected_top_z_mm=top_z,
+        canvas_size_mm=10.0,
+        tolerance_pixels=1,
+        expected_visible_top_area_reference=reference,
+    )
+    assert audit["status"] == "passed"
+    graphite = audit["spatial_mask_binding"]["graphite"]
+    assert graphite["legacy_pre_boolean_direct_area_match"] is False
+    assert graphite["visible_area_delta_from_independent_vector_mm2"] == pytest.approx(-1.96)
+    assert graphite["missing_pixels_outside_tolerance"] == 0
+    assert graphite["extra_pixels_outside_tolerance"] == 0
+    assert all(
+        group["status"] == "passed"
+        for group in audit["visible_top_area_binding"]["groups"]
+    )
+
+    wrong_reference = json.loads(json.dumps(reference))
+    wrong_reference["groups"][0]["expected_visible_top_area_mm2"] += 1.0
+    with pytest.raises(bridge.ReleaseError, match="hash-bound post-Boolean assembly"):
+        bridge._audit_material_assignments(
+            fixture["package"],
+            fixture["palette"],
+            expected_footprint_mm2=fixture["footprints"],
+            expected_masks=fixture["masks"],
+            expected_top_z_mm=top_z,
+            canvas_size_mm=10.0,
+            tolerance_pixels=1,
+            expected_visible_top_area_reference=wrong_reference,
         )
 
 

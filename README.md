@@ -5,7 +5,7 @@
 > **ALPHA · v0.1.0-alpha.2**：这是首个公开预览版的路由修订版。配置 schema、模型适配器和
 > CLI 仍可能发生不兼容变化；文件检查不等于实体卡合或 Bambu 3MF 切片验证。
 
-本项目的核心原则是：**批准的图稿只读，模型化不重新绘图**。图像阶段的“高质量”验收是镜头规格、文字层级和视觉风格等价，而不是要求生成像素一致；用户批准的栅格及其哈希才是后续确定性生产的精确边界。当前稳定核心负责在同一坐标画布上按声明的 palette 生成索引处理稿、材料遮罩和 SVG，并输出可复核 JSON 报告；OpenSCAD／3MF 是显式的后续适配层，不会隐藏在图像处理里。SVG 使用保留字体直角的有向像素并集轮廓，不再把像素／行程矩形原样挤出；曲线与斜线只在报告记录的亚喷嘴偏差内简化。
+本项目的核心原则是：**批准的图稿只读，模型化不重新绘图**。图像阶段的“高质量”验收是镜头规格、文字层级和视觉风格等价，而不是要求生成像素一致；用户批准的栅格及其哈希才是后续确定性生产的精确边界。当前稳定核心负责在同一坐标画布上按声明的 palette 生成索引处理稿、材料遮罩和 SVG，并输出可复核 JSON 报告；OpenSCAD／3MF 是显式的后续适配层，不会隐藏在图像处理里。SVG 使用保留字体直角的有向像素并集轮廓，不再把像素／行程矩形原样挤出；曲线与斜线只在报告记录的源空间偏差内简化。上游不计算所谓“0.2 mm 最小特征”；喷嘴和切片配置只在目标切片器阶段核对实际刀路，绝不反向修改图稿。
 
 ## 快速开始
 
@@ -149,12 +149,24 @@ STL、handoff JSON、命令说明或预检通过都不是 3MF 交付成功。
 
 ```sh
 ./bin/lens-cap-3mf jobs/my-lens/job.toml --force --json
-# 可选：在明确提供本机 Bambu 配置后同时生成含 G-code 的切片 3MF
+# Bambu Studio 主交付：生成可编辑项目 3MF，不预埋 G-code
+./bin/lens-cap-3mf jobs/my-lens/job.toml --force --bambu export \
+  --machine-profile /path/to/machine.json \
+  --process-profile /path/to/process.json \
+  --filament-profile /path/to/filament.json --json
+# 只有明确要固定机器／材料的刀路时才生成含 G-code 的切片 3MF
 ./bin/lens-cap-3mf jobs/my-lens/job.toml --force --bambu slice \
   --machine-profile /path/to/machine.json \
   --process-profile /path/to/process.json \
   --filament-profile /path/to/filament.json --json
 ```
+
+报告中的 `primary_3mf` 是应交给用户的文件指针。默认命令生成的
+`native_3mf` 是标准 3MF Core 几何／审计母本，不含 Bambu 的打印机、工艺、耗材和
+对象／挤出机映射；Bambu Studio 某些版本会因此显示 `invalid config`，这不等同于
+几何损坏。面向 Bambu Studio 时必须使用 `--bambu export`，并交付
+`primary_3mf` 指向的项目文件；项目应由 Bambu 官方导出器生成，不能手工向 ZIP
+塞入伪配置。
 
 `lens-cap-3mf` 是发布级端点，默认会在生成任何派生物前验证当前任务的
 schema-v2 `design-brief.json`：必须明确标记 `generation.approved=true`，锁定当前
@@ -392,6 +404,7 @@ base／relief STL）；`fit_coupon` 只用于先打印试配环。不要把一�
 尺寸来源，不增加第四个必答问题；实测卡合外径仍是唯一必需的机械值。
 
 成品正面／浮雕直径从实测卡合外径派生，除非明确写入 `face_diameter_mm` 覆盖。贴泡棉且未提供压缩率时模型暂按 20% 并标为假设；不贴泡棉时默认压缩率为 0。内壁凸条有两个中性预设：`light_tapered`（默认，12 条窄而浅的渐缩凸条，径向侵入 0.10 mm）用于兼容性和轻微增摩，`wide_tapered`（6 条宽楔形、8° 基部角／4.4° 端部角、接近全侧壁高度）用于接近参考图中粗壮凸起的视觉与机械轮廓。两者都不是品牌元素；可用 `--friction-rib-profile wide_tapered` 或在 `[fit]` 写入 `friction_rib_profile` 选择，显式填写的数量、侵入量、宽度和高度优先于预设。带泡棉时凸条仍可能局部增加压缩，必须先打印试配环，不能把文件检查当成实物配合证明。
+需要轻微软化正面最外缘时，可在 `[fit]` 设置 `front_outer_chamfer_mm = 0.30`。它表示轴向与径向各 0.30 mm 的 45° 倒角，只改变盖体最外圆周，不缩放、移动或重绘图稿；`0.0` 为兼容旧配置的锐边默认值。
 以 95 mm 卡合外径、1.5 mm 泡棉、20% 临时压缩的参考测试为例，`wide_tapered` **显式覆盖**为约 0.55 mm 径向侵入、6.8 mm 宽度和 12.5 mm 高度（该预设本身默认侵入量为 0.30 mm），局部线性压缩估算约 56.7%；这只是试配起点，不能替代同材料、同喷嘴的 coupon 实测。不贴泡棉时，报告还会给出带符号的裸壁名义干涉量（正值为过盈、负值为余隙）。
 旧版未声明凸条的配置在重建时会继承这一新默认；若要复现旧的光滑内壁，请显式写入 `friction_ribs_enabled = false`，并重新跑 process/model，不能继续使用旧模型文件冒充当前配置。
 
@@ -402,9 +415,9 @@ base／relief STL）；`fit_coupon` 只用于先打印试配环。不要把一�
 * 每种材料使用同一个 SVG `viewBox`。遮罩必须互不重叠，并且并集与 process master 的 Alpha 内区一致。
 * 外部工具缺失时状态为 `unverifiable`，而不是假装通过；物理卡合永远单独报告。
 
-归档的 `config.normalized.json` 会把绝对 OpenSCAD／Bambu 路径规范化为程序名，
-避免换机器后核心配置哈希漂移；原始 TOML 仍保留本机执行路径，适配器报告会记录
-工具版本和输出哈希。
+归档的 `config.normalized.json` 只保存会改变图稿或原生几何的字段；喷嘴、层高、
+打印机、耗材槽与 OpenSCAD／Bambu 路径仍保留在原始 TOML，并只由切片／外部适配器
+报告记录。更换这些执行参数不会使遮罩、SVG、SCAD 或原生几何失效。
 
 原生 3MF 发布还会删除 OpenSCAD 的易变创建时间，把随机 UUID 替换为内容派生的
 UUIDv5，并以固定元数据和顺序重写 ZIP 项。因此同一 OpenSCAD／Python／zlib

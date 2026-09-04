@@ -118,8 +118,10 @@ The expected agent behaviour is deterministic and short:
 
    The bridge reruns the public build, exports current relief STLs, runs the
    same-canvas projection audit, exports one integrated OpenSCAD Manifold 3MF,
-   and verifies the 3MF Core package. A printer-specific file is a separate,
-   explicit `--bambu slice` request with three local profiles.
+   and verifies the 3MF Core package. For an editable Bambu Studio deliverable,
+   add `--bambu export` with three explicit local profiles and deliver the
+   report's `primary_3mf`. Reserve `--bambu slice` for an explicit request for
+   embedded G-code tied to that exact printer/material setup.
 
 If any required external program is unavailable, the response must say
 `UNVERIFIABLE` and stop at the last verified stage. A SCAD file or handoff JSON
