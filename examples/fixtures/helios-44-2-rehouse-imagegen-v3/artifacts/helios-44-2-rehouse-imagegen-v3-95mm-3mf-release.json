@@ -229,7 +229,7 @@
     "gcode_bytes": 0,
     "manifest": "<external>/helios-44-2-rehouse-imagegen-v3-95mm-bambu-project.3mf.manifest.json",
     "mesh_audit": {
-      "absolute_volume_mm3": 27360.519358456946,
+      "absolute_volume_mm3": 27360.519358457,
       "boundary_edges": 0,
       "duplicate_triangles": 0,
       "inconsistent_orientation_edges": 0,

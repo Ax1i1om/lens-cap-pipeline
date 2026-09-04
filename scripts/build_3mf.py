@@ -2639,7 +2639,13 @@ def _audit_bambu_mesh_report(verification: dict[str, Any]) -> dict[str, Any]:
         "scope": "all_bambu_part_meshes_closed_oriented_and_positive_volume",
         **{field: 0 for field in zero_fields},
         "positive_volume_components": int(model["volume_components"]),
-        "absolute_volume_mm3": float(model.get("absolute_volume_mm3", 0.0)),
+        # Volume is a diagnostic after the positive-volume gate above. The
+        # summation order inside Python's mesh verifier can differ by a few
+        # ULPs across interpreter/platform builds, so publish fixed precision
+        # far below any geometry tolerance without weakening the mesh checks.
+        "absolute_volume_mm3": round(
+            float(model.get("absolute_volume_mm3", 0.0)), 9
+        ),
     }
 
 
