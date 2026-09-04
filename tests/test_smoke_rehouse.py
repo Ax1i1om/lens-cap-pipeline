@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import copy
 import hashlib
 import json
 import sys
@@ -374,7 +375,24 @@ def test_current_imagegen_rehouse_fixture_and_retained_3mf_are_self_contained(tm
     assert material_audit["unassigned_triangle_count"] == 0
     assert material_audit["unexpected_used_colors"] == []
     assert all(entry["triangle_count"] > 0 for entry in material_audit["colors"].values())
-    assert release_report["material_assignment_audit"] == material_audit
+    retained_material_audit = copy.deepcopy(
+        release_report["material_assignment_audit"]
+    )
+    current_material_audit = copy.deepcopy(material_audit)
+    for name in expected_top:
+        retained_mask_hash = retained_material_audit["spatial_mask_binding"][name].pop(
+            "mask_sha256"
+        )
+        current_mask_hash = current_material_audit["spatial_mask_binding"][name].pop(
+            "mask_sha256"
+        )
+        # PNG compression bytes can vary with the platform zlib build even
+        # when every decoded mask pixel is identical. Each audit still binds
+        # its own local file; the cross-host fixture comparison below uses the
+        # geometry, pixel counts, and zero-difference spatial proof instead.
+        assert len(retained_mask_hash) == 64
+        assert len(current_mask_hash) == 64
+    assert retained_material_audit == current_material_audit
     current_bounds = bridge._audit_native_bounds(native_verification, geometry)
     assert release_report["native_bounds_audit"] == current_bounds
     assert release_report["mechanical"]["friction_ribs_enabled"] is True
