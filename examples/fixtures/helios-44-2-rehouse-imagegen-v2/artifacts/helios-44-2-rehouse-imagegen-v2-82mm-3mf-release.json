@@ -19,9 +19,14 @@
     "stderr_tail": ""
   },
   "design_brief": {
+    "anchor_consequence_systems": [
+      "container_or_perimeter",
+      "typography_or_counterform"
+    ],
     "anchor_count": 4,
     "candidate_path": "<external>/master.png",
     "candidate_sha256": "4bf579d6ca36ffbd562cfec669f0a826e469d637f38f6e1c298ce8b3b2283758",
+    "completion_quality_checked": true,
     "culture_anchor_count": 1,
     "display_text": [
       "58",
@@ -30,6 +35,8 @@
       "REHOUSED CINEMA",
       "M42"
     ],
+    "hero_anchor_id": "helios-rehouse-cinema-wedge-swirl",
+    "hero_anchor_index": 2,
     "identity": {
       "brand": "Helios / Zenit",
       "focal_length_display": "58",
@@ -60,7 +67,8 @@
       "side_height_mm",
       "wall_thickness_mm"
     ],
-    "sha256": "01c367cbba1484ebb287d32f54941e33c3f051dcc389fd6ab873a7f4abf8f26a",
+    "quality_reference_count": 0,
+    "sha256": "b9c99d62dcb3c77a0f6e64afe38052674740d2c48813c1f6bec17e5a0a6f42e8",
     "status": "passed"
   },
   "fit_status": "unverifiable_until_coupon_measurement",
@@ -281,7 +289,7 @@
       7.056
     ],
     "main_component_vertices": [
-      27917
+      26490
     ],
     "mesh_component_counts": [
       1
@@ -292,7 +300,7 @@
     "minimum_observed_wall_attachment_width_mm": 0.7370869242117943,
     "nozzle_mm": 0.2,
     "radial_tolerance_mm": 0.03,
-    "referenced_vertices": 27917,
+    "referenced_vertices": 26490,
     "scope": "referenced_connected_full_width_tip_faces_full_height_axial_contact_columns_and_start_interior_end_wall_cross_sections_physical_fit_requires_coupon",
     "status": "passed",
     "tip_radius_mm": 41.1,
@@ -306,32 +314,32 @@
       "black": {
         "active_in_process_mask": true,
         "displaycolor": "#111211FF",
-        "expected_mask_footprint_mm2": 3149.540199021757,
+        "expected_vector_footprint_mm2": 3142.311813965255,
         "minimum_projected_area_ratio": 0.2,
-        "projected_triangle_area_mm2": 9844.275752870095,
+        "projected_triangle_area_mm2": 9852.99353007531,
         "required": true,
         "role": "base",
-        "triangle_count": 16629
+        "triangle_count": 16764
       },
       "gray": {
         "active_in_process_mask": true,
         "displaycolor": "#747471FF",
-        "expected_mask_footprint_mm2": 1158.8551458930679,
+        "expected_vector_footprint_mm2": 1152.1626167987856,
         "minimum_projected_area_ratio": 0.2,
-        "projected_triangle_area_mm2": 1158.855297415754,
+        "projected_triangle_area_mm2": 1151.4360366134542,
         "required": true,
         "role": "relief",
-        "triangle_count": 22374
+        "triangle_count": 21009
       },
       "ivory": {
         "active_in_process_mask": true,
         "displaycolor": "#F2E7D3FF",
-        "expected_mask_footprint_mm2": 942.0177702816662,
+        "expected_vector_footprint_mm2": 940.7192410187214,
         "minimum_projected_area_ratio": 0.2,
-        "projected_triangle_area_mm2": 942.0177718414467,
+        "projected_triangle_area_mm2": 940.7192529779279,
         "required": true,
         "role": "relief",
-        "triangle_count": 16827
+        "triangle_count": 15203
       }
     },
     "scope": "final_3mf_triangle_material_assignments_and_named_relief_masks",
@@ -346,13 +354,13 @@
         "missing_pixels_outside_tolerance": 0,
         "out_of_xy_envelope_triangles": 0,
         "out_of_z_envelope_triangles": 0,
-        "projected_area_tolerance_mm2": 5.7942757294653395,
-        "projected_pixels": 35723,
-        "projected_triangle_area_mm2": 1158.855297415754,
-        "raw_iou": 0.715113512302998,
+        "projected_area_tolerance_mm2": 5.760813083993928,
+        "projected_pixels": 35225,
+        "projected_triangle_area_mm2": 1151.4360366134542,
+        "raw_iou": 0.7235110606920022,
         "resolution_px": 385,
-        "tolerance_pixels": 1,
-        "top_triangle_count": 7088
+        "tolerance_pixels": 2,
+        "top_triangle_count": 6449
       },
       "ivory": {
         "expected_base_z_mm": 16.0,
@@ -364,13 +372,13 @@
         "missing_pixels_outside_tolerance": 0,
         "out_of_xy_envelope_triangles": 0,
         "out_of_z_envelope_triangles": 0,
-        "projected_area_tolerance_mm2": 4.710088851408331,
-        "projected_pixels": 26495,
-        "projected_triangle_area_mm2": 942.0177718414467,
-        "raw_iou": 0.7837705227401397,
+        "projected_area_tolerance_mm2": 4.703596205093607,
+        "projected_pixels": 26242,
+        "projected_triangle_area_mm2": 940.7192529779279,
+        "raw_iou": 0.7890089815801492,
         "resolution_px": 385,
-        "tolerance_pixels": 1,
-        "top_triangle_count": 4586
+        "tolerance_pixels": 2,
+        "top_triangle_count": 3964
       }
     },
     "status": "passed",
@@ -411,7 +419,7 @@
     "wall_thickness_mm": 2.4
   },
   "native_3mf": {
-    "bytes": 510027,
+    "bytes": 490619,
     "command": [
       "<external>/python3.11",
       "<external>/three_mf_adapter.py",
@@ -426,7 +434,7 @@
     ],
     "manifest": "<external>/helios-44-2-rehouse-imagegen-v2-82mm-native.3mf.manifest.json",
     "model": {
-      "absolute_volume_mm3": 21929.682061705007,
+      "absolute_volume_mm3": 21925.935229419316,
       "boundary_edges": 0,
       "bounds": {
         "max_mm": [
@@ -456,15 +464,15 @@
       "parts": 1,
       "transformed_build_items": 0,
       "transformed_components": 0,
-      "triangles": 55830,
+      "triangles": 52976,
       "unreferenced_vertices": 0,
-      "vertices": 27917,
+      "vertices": 26490,
       "volume_components": 1,
       "zero_area_triangles": 0,
       "zero_volume_components": 0
     },
     "output": "<external>/helios-44-2-rehouse-imagegen-v2-82mm-native.3mf",
-    "sha256": "63ca8ef029aa5fdec77b0a4543a4c992d9e0fd878d5c3e9bd375822471e4b24e"
+    "sha256": "e1edcc8a6b35b05a9e4409d9f7d11788edbd4ffe38900a733392064eae55d90a"
   },
   "native_bounds_audit": {
     "expected": {
@@ -516,17 +524,23 @@
       "gray": {
         "extra_outside_tolerance": 0,
         "missing_outside_tolerance": 0,
-        "raw_iou": 0.72641965
+        "raw_iou": 0.73167937
       },
       "ivory": {
         "extra_outside_tolerance": 0,
         "missing_outside_tolerance": 0,
-        "raw_iou": 0.79712871
+        "raw_iou": 0.80174544
       }
     },
     "diff_dir": "out/model/projection-diff",
     "report": "out/model/projection-report.json",
-    "status": "passed"
+    "status": "passed",
+    "tolerance": {
+      "tolerance_pixels": 2,
+      "triangle_rasterization_pixels": 1,
+      "vectorization_budget_mm": 0.1,
+      "vectorization_budget_pixels": 0.46951219512195125
+    }
   },
   "retention_status": "guide_only_clearance",
   "retention_warning": "configured ribs leave nominal bare-plastic clearance; print a fit coupon and tune protrusion/profile before relying on retention",
@@ -536,7 +550,7 @@
     "approved_candidate_sha256": "4bf579d6ca36ffbd562cfec669f0a826e469d637f38f6e1c298ce8b3b2283758",
     "current_source_sha256": "4bf579d6ca36ffbd562cfec669f0a826e469d637f38f6e1c298ce8b3b2283758",
     "process_report": "out/process-report.json",
-    "process_report_sha256": "a4564a0fe90a6b9d34abf208b84c097c486412e19fe27087e5177530e0d84990",
+    "process_report_sha256": "5a6302debb2b43f4724ef9d75971fc97fb2e304b02ee0caf6e4c77c0da32f48f",
     "process_source_sha256": "4bf579d6ca36ffbd562cfec669f0a826e469d637f38f6e1c298ce8b3b2283758",
     "scope": "post_build_and_prepublication_approved_source_binding",
     "status": "passed"

@@ -10,6 +10,7 @@ import sys
 import xml.etree.ElementTree as ET
 import zipfile
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -32,6 +33,86 @@ def test_bridge_parser_defaults_to_native_only() -> None:
     assert args.bambu == "never"
     assert args.force is False
     assert args.brief is None
+
+
+def test_material_footprint_uses_post_vectorisation_area(tmp_path: Path) -> None:
+    (tmp_path / "process-report.json").write_text(
+        json.dumps(
+            {
+                "mask_stats": {
+                    "ivory": {
+                        "pixels": 999,
+                        "svg_vectorization": {"filled_area_mm2": 12.375},
+                    }
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    assert bridge._expected_palette_footprints(
+        SimpleNamespace(output_dir=tmp_path)
+    ) == {"ivory": 12.375}
+
+
+def test_projection_tolerance_is_derived_from_bounded_vectorisation(
+    tmp_path: Path,
+) -> None:
+    (tmp_path / "process-report.json").write_text(
+        json.dumps(
+            {
+                "mask_stats": {
+                    "ivory": {
+                        "svg_vectorization": {
+                            "simplification_tolerance_px": 0.5,
+                            "maximum_deviation_mm": 0.1,
+                        }
+                    }
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    assert bridge._projection_tolerance(
+        SimpleNamespace(output_dir=tmp_path, nozzle_mm=0.2)
+    ) == {
+        "tolerance_pixels": 2,
+        "triangle_rasterization_pixels": 1,
+        "vectorization_budget_pixels": 0.5,
+        "vectorization_budget_mm": 0.1,
+    }
+
+
+@pytest.mark.parametrize(
+    ("deviation_px", "deviation_mm"),
+    ((0.5001, 0.1), (0.5, 0.2)),
+)
+def test_projection_tolerance_rejects_an_unbounded_vectorisation_budget(
+    tmp_path: Path,
+    deviation_px: float,
+    deviation_mm: float,
+) -> None:
+    (tmp_path / "process-report.json").write_text(
+        json.dumps(
+            {
+                "mask_stats": {
+                    "ivory": {
+                        "svg_vectorization": {
+                            "simplification_tolerance_px": deviation_px,
+                            "maximum_deviation_mm": deviation_mm,
+                        }
+                    }
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(bridge.ReleaseError, match="bounded contour budget"):
+        bridge._projection_tolerance(
+            SimpleNamespace(output_dir=tmp_path, nozzle_mm=0.2)
+        )
 
 
 def test_release_paths_reject_collisions_and_protected_intermediates(
@@ -485,9 +566,10 @@ def test_missing_openscad_is_an_explicit_unverifiable_result(tmp_path: Path, cap
     (tmp_path / "design-brief.json").write_text(
         json.dumps(
                 {
-                    "schema_version": 1,
+                    "schema_version": 2,
                     "binding_mode": "single_job",
                     "job_slug": "bridge-test",
+                    "production_target": "printable_front",
                 "lens_identity": {
                     "brand": "Example",
                     "model": "Prime 50",
@@ -496,8 +578,10 @@ def test_missing_openscad_is_an_explicit_unverifiable_result(tmp_path: Path, cap
                 },
                 "display_text": ["50", "F1.4"],
                 "allowed_text": ["50", "F1.4"],
+                "approved_references": [],
                 "anchors": [
                         {
+                            "anchor_id": "example-registration-grid",
                             "claim_kind": "manufacturer_culture",
                             "subject_scope": "Example Prime lens system",
                             "identity_binding": {
@@ -520,8 +604,51 @@ def test_missing_openscad_is_an_explicit_unverifiable_result(tmp_path: Path, cap
                     "mode": "generate",
                     "candidate_path": "master.png",
                     "candidate_sha256": candidate_hash,
+                    "reference_hashes": [],
                     "approved": True,
+                    "approval_note": (
+                        "A human reviewer approved this exact raster for the printable front."
+                    ),
                 },
+                    "design_review": {
+                        "reviewed_candidate_sha256": candidate_hash,
+                        "hero_anchor_index": 0,
+                        "hero_anchor_id": "example-registration-grid",
+                        "anchor_system_consequences": [
+                            {
+                                "anchor_id": "example-registration-grid",
+                                "system": "typography_or_counterform",
+                                "effect": "Registration geometry controls the focal counterform.",
+                            },
+                            {
+                                "anchor_id": "example-registration-grid",
+                                "system": "container_or_perimeter",
+                                "effect": "Registration geometry continues into the perimeter rhythm.",
+                            },
+                        ],
+                        "full_resolution_reviewed": True,
+                        "text_off_anchor_recognizable": True,
+                        "identity_swap_requires_redesign": True,
+                        "anchor_drives_primary_composition": True,
+                        "composition_resolved": True,
+                        "visual_grammar_consistent": True,
+                        "finish_target_met": True,
+                        "production_reduction_preserves_authorship": True,
+                        "structural_thesis": (
+                            "The catalog registration field controls the whole circle, locks "
+                            "into the focal-length counterform, and reaches the perimeter."
+                        ),
+                        "finish_target_note": (
+                            "The finish target requires resolved negative space, consistent "
+                            "weights and alignments, and no arbitrary filler panels."
+                        ),
+                        "quality_reference_checks": [],
+                        "reviewer_note": (
+                            "At full resolution the test catalog field controls type and "
+                            "perimeter, keeps its topology after printable reduction, and a "
+                            "neighbouring identity requires a different primary structure."
+                        ),
+                    },
                     "physical_fit": {
                             "measured_diameter_mm": 52.0,
                             "face_target_mm": 52.0,

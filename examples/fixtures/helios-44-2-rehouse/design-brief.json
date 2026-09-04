@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "binding_mode": "shared_artwork_variants",
   "job_slug": "helios-44-2-rehouse",
   "lens_identity": {
@@ -27,6 +27,7 @@
   },
   "anchors": [
     {
+      "anchor_id": "helios-44-2-spec-optical-registration",
       "claim_kind": "lens_specification",
       "subject_scope": "Helios-44-2 / Zenit system",
       "evidence_state": "verified",
@@ -41,6 +42,7 @@
       "qualifier": null
     },
     {
+      "anchor_id": "helios-rehouse-cinema-wedge",
       "claim_kind": "rehousing_and_cinema_association",
       "subject_scope": "rehoused Helios-44-2 family",
       "evidence_state": "verified_for_family; exact shot scope is limited",
@@ -55,6 +57,7 @@
       "qualifier": "family-level cinema association; do not render official film marks"
     },
     {
+      "anchor_id": "helios-zenit-system-calibration",
       "claim_kind": "manufacturer_culture",
       "subject_scope": "Zenit / Helios Soviet lens system",
       "identity_binding": {"brand": "Helios / Zenit", "scope": "brand"},
@@ -71,8 +74,8 @@
     }
   ],
   "approved_references": [
-    {"path_or_url": "https://www.zenitcamera.com/mans/zenit-e/zenit-e-eng.html", "role": "style_reference", "notes": "specification source"},
-    {"path_or_url": "https://theasc.com/article/expanding-view-dune-part-two/", "role": "style_reference", "notes": "qualified family-level cinema context"}
+    {"id": "zenit-manual-spec", "path_or_url": "https://www.zenitcamera.com/mans/zenit-e/zenit-e-eng.html", "roles": ["style_reference"], "notes": "specification source"},
+    {"id": "asc-dune-rehouse", "path_or_url": "https://theasc.com/article/expanding-view-dune-part-two/", "roles": ["style_reference"], "notes": "qualified family-level cinema context"}
   ],
   "generation": {
     "provider": "OpenAI built-in image_gen",
@@ -86,6 +89,35 @@
     "candidate_sha256": "5e1828b1f33473615467d9a3a9929d1a490ed08fda77016dd5e5dcdac4f675ec",
     "approved": true,
     "approval_note": "Agent-reviewed smoke-test master: exact text and hierarchy pass; broad fills and circle pass; no iris/barrel/photo clutter. Re-review before public branding use."
+  },
+  "design_review": {
+    "reviewed_candidate_sha256": "5e1828b1f33473615467d9a3a9929d1a490ed08fda77016dd5e5dcdac4f675ec",
+    "hero_anchor_index": 0,
+    "hero_anchor_id": "helios-44-2-spec-optical-registration",
+    "anchor_system_consequences": [
+      {
+        "anchor_id": "helios-44-2-spec-optical-registration",
+        "system": "typography_or_counterform",
+        "effect": "Concentric optical arcs wrap and counterform the dominant 58 and continue behind F2."
+      },
+      {
+        "anchor_id": "helios-44-2-spec-optical-registration",
+        "system": "container_or_perimeter",
+        "effect": "The same registration language repeats as crosshairs, calibration ticks, and segmented modules around the outer ring."
+      }
+    ],
+    "full_resolution_reviewed": true,
+    "text_off_anchor_recognizable": true,
+    "identity_swap_requires_redesign": true,
+    "anchor_drives_primary_composition": true,
+    "composition_resolved": true,
+    "visual_grammar_consistent": true,
+    "finish_target_met": true,
+    "production_reduction_preserves_authorship": true,
+    "structural_thesis": "Concentric optical registration arcs counterform the dominant 58 and repeat as calibrated modules around the circular perimeter.",
+    "finish_target_note": "The approved finish floor is an integrated optical-and-mechanical system with disciplined radial spacing, purposeful secondary containers, and a resolved perimeter.",
+    "quality_reference_checks": [],
+    "reviewer_note": "The verified Helios optical registration system controls the 58 counterform and outer calibration rhythm; a lens with different focal and optical identity would require a different primary structure."
   },
   "physical_fit": {
     "measured_diameter_mm": null,

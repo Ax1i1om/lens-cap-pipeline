@@ -19,9 +19,14 @@
     "stderr_tail": ""
   },
   "design_brief": {
+    "anchor_consequence_systems": [
+      "container_or_perimeter",
+      "typography_or_counterform"
+    ],
     "anchor_count": 3,
     "candidate_path": "<external>/master.png",
     "candidate_sha256": "3cd44afcc61eaa8793c3a4dfbb92ff7bbf657026ad53be39601bba533c3004ab",
+    "completion_quality_checked": true,
     "culture_anchor_count": 1,
     "display_text": [
       "80",
@@ -30,6 +35,8 @@
       "645",
       "REHOUSED MEDIUM FORMAT"
     ],
+    "hero_anchor_id": "mamiya-m645-80-f1-9-frame-grid",
+    "hero_anchor_index": 0,
     "identity": {
       "brand": "Mamiya",
       "focal_length_display": "80",
@@ -61,7 +68,8 @@
       "side_height_mm",
       "wall_thickness_mm"
     ],
-    "sha256": "e5acadc44f7f10bcbc7dea46b40a994299c8c751d2d8275c03ba0e45a736358d",
+    "quality_reference_count": 0,
+    "sha256": "c07deab76f6b94c455c3c3d26645a7f39acdbf2bcc90d5e0e1291ce5eb636946",
     "status": "passed"
   },
   "fit_status": "unverifiable_until_coupon_measurement",
@@ -282,7 +290,7 @@
       7.056
     ],
     "main_component_vertices": [
-      15413
+      15711
     ],
     "mesh_component_counts": [
       1
@@ -293,7 +301,7 @@
     "minimum_observed_wall_attachment_width_mm": 0.73671,
     "nozzle_mm": 0.2,
     "radial_tolerance_mm": 0.03,
-    "referenced_vertices": 15413,
+    "referenced_vertices": 15711,
     "scope": "referenced_connected_full_width_tip_faces_full_height_axial_contact_columns_and_start_interior_end_wall_cross_sections_physical_fit_requires_coupon",
     "status": "passed",
     "tip_radius_mm": 48.6,
@@ -307,32 +315,32 @@
       "black": {
         "active_in_process_mask": true,
         "displaycolor": "#121212FF",
-        "expected_mask_footprint_mm2": 3555.5059875189745,
+        "expected_vector_footprint_mm2": 3550.5893489627256,
         "minimum_projected_area_ratio": 0.2,
-        "projected_triangle_area_mm2": 12914.941567601825,
+        "projected_triangle_area_mm2": 12919.074297144609,
         "required": true,
         "role": "base",
-        "triangle_count": 10129
+        "triangle_count": 10513
       },
       "gray": {
         "active_in_process_mask": true,
         "displaycolor": "#707070FF",
-        "expected_mask_footprint_mm2": 1513.8984651711924,
+        "expected_vector_footprint_mm2": 1512.7853716899983,
         "minimum_projected_area_ratio": 0.2,
-        "projected_triangle_area_mm2": 1513.8981987898078,
+        "projected_triangle_area_mm2": 1512.785106162234,
         "required": true,
         "role": "relief",
-        "triangle_count": 8528
+        "triangle_count": 8615
       },
       "ivory": {
         "active_in_process_mask": true,
         "displaycolor": "#F0E6D7FF",
-        "expected_mask_footprint_mm2": 1978.7110811266655,
+        "expected_vector_footprint_mm2": 1975.6914582981954,
         "minimum_projected_area_ratio": 0.2,
-        "projected_triangle_area_mm2": 1978.711160834554,
+        "projected_triangle_area_mm2": 1975.6915239194157,
         "required": true,
         "role": "relief",
-        "triangle_count": 12165
+        "triangle_count": 12290
       }
     },
     "scope": "final_3mf_triangle_material_assignments_and_named_relief_masks",
@@ -347,12 +355,12 @@
         "missing_pixels_outside_tolerance": 0,
         "out_of_xy_envelope_triangles": 0,
         "out_of_z_envelope_triangles": 0,
-        "projected_area_tolerance_mm2": 7.569492325855962,
-        "projected_pixels": 31011,
-        "projected_triangle_area_mm2": 1513.8981987898078,
-        "raw_iou": 0.8017800135435813,
+        "projected_area_tolerance_mm2": 7.5639268584499915,
+        "projected_pixels": 30991,
+        "projected_triangle_area_mm2": 1512.785106162234,
+        "raw_iou": 0.8022974411926043,
         "resolution_px": 385,
-        "tolerance_pixels": 1,
+        "tolerance_pixels": 2,
         "top_triangle_count": 3115
       },
       "ivory": {
@@ -365,12 +373,12 @@
         "missing_pixels_outside_tolerance": 0,
         "out_of_xy_envelope_triangles": 0,
         "out_of_z_envelope_triangles": 0,
-        "projected_area_tolerance_mm2": 9.893555405633327,
-        "projected_pixels": 37312,
-        "projected_triangle_area_mm2": 1978.711160834554,
-        "raw_iou": 0.870979845626072,
+        "projected_area_tolerance_mm2": 9.878457291490976,
+        "projected_pixels": 37234,
+        "projected_triangle_area_mm2": 1975.6915239194157,
+        "raw_iou": 0.8728044260622012,
         "resolution_px": 385,
-        "tolerance_pixels": 1,
+        "tolerance_pixels": 2,
         "top_triangle_count": 3350
       }
     },
@@ -412,7 +420,7 @@
     "wall_thickness_mm": 2.4
   },
   "native_3mf": {
-    "bytes": 288936,
+    "bytes": 295874,
     "command": [
       "<external>/python3.11",
       "<external>/three_mf_adapter.py",
@@ -427,7 +435,7 @@
     ],
     "manifest": "<external>/mamiya-sekor-c-80-f1-9-rehouse-95mm-native.3mf.manifest.json",
     "model": {
-      "absolute_volume_mm3": 28739.075630391555,
+      "absolute_volume_mm3": 28736.81860817164,
       "boundary_edges": 0,
       "bounds": {
         "max_mm": [
@@ -457,15 +465,15 @@
       "parts": 1,
       "transformed_build_items": 0,
       "transformed_components": 0,
-      "triangles": 30822,
+      "triangles": 31418,
       "unreferenced_vertices": 0,
-      "vertices": 15413,
+      "vertices": 15711,
       "volume_components": 1,
       "zero_area_triangles": 0,
       "zero_volume_components": 0
     },
     "output": "<external>/mamiya-sekor-c-80-f1-9-rehouse-95mm-native.3mf",
-    "sha256": "910361be047e8aad94f8e05d2a7fa56e1b6b14cc4d0bcf5efad616cd73ad3406"
+    "sha256": "f32621207e47980ee43b791db32aeaa13be6f1c9d763672083b1ca20b784b3b3"
   },
   "native_bounds_audit": {
     "expected": {
@@ -517,17 +525,23 @@
       "gray": {
         "extra_outside_tolerance": 0,
         "missing_outside_tolerance": 0,
-        "raw_iou": 0.80336026
+        "raw_iou": 0.80349006
       },
       "ivory": {
         "extra_outside_tolerance": 0,
         "missing_outside_tolerance": 0,
-        "raw_iou": 0.88502179
+        "raw_iou": 0.88637355
       }
     },
     "diff_dir": "out/model/projection-diff",
     "report": "out/model/projection-report.json",
-    "status": "passed"
+    "status": "passed",
+    "tolerance": {
+      "tolerance_pixels": 2,
+      "triangle_rasterization_pixels": 1,
+      "vectorization_budget_mm": 0.1,
+      "vectorization_budget_pixels": 0.4052631578947369
+    }
   },
   "retention_status": "foam_contact_unverified",
   "retention_warning": "rib/foam contact is a provisional stack-up; print a same-material fit coupon",
@@ -537,7 +551,7 @@
     "approved_candidate_sha256": "3cd44afcc61eaa8793c3a4dfbb92ff7bbf657026ad53be39601bba533c3004ab",
     "current_source_sha256": "3cd44afcc61eaa8793c3a4dfbb92ff7bbf657026ad53be39601bba533c3004ab",
     "process_report": "out/process-report.json",
-    "process_report_sha256": "b8f4355e35ceb9476aeab02f910cd8f3f43c78a825bef0c457972bbd0d63c1ab",
+    "process_report_sha256": "5172909ab186736791dc0f1d933c64f14b2233c2a5567bc4b74bc675dfe639ef",
     "process_source_sha256": "3cd44afcc61eaa8793c3a4dfbb92ff7bbf657026ad53be39601bba533c3004ab",
     "scope": "post_build_and_prepublication_approved_source_binding",
     "status": "passed"

@@ -131,6 +131,98 @@ def test_brief_requires_approved_sourced_handoff(tmp_path: Path) -> None:
         raise AssertionError("an unapproved handoff must not pass the smoke gate")
 
 
+def test_brief_requires_passing_anti_generic_review(tmp_path: Path) -> None:
+    fixture = tmp_path / "generic-fixture"
+    smoke._copy_fixture(FIXTURE, fixture)
+    brief_path = fixture / "design-brief.json"
+    brief = json.loads(brief_path.read_text(encoding="utf-8"))
+    brief["design_review"]["identity_swap_requires_redesign"] = False
+    brief_path.write_text(json.dumps(brief, ensure_ascii=False), encoding="utf-8")
+
+    with pytest.raises(
+        smoke.SmokeError,
+        match=r"design_review\.identity_swap_requires_redesign",
+    ):
+        smoke._validate_brief(fixture)
+
+
+def test_brief_requires_v2_structural_completion_evidence(tmp_path: Path) -> None:
+    fixture = tmp_path / "completion-fixture"
+    smoke._copy_fixture(FIXTURE, fixture)
+    brief_path = fixture / "design-brief.json"
+    original = json.loads(brief_path.read_text(encoding="utf-8"))
+
+    legacy = json.loads(json.dumps(original))
+    legacy["schema_version"] = 1
+    brief_path.write_text(json.dumps(legacy, ensure_ascii=False), encoding="utf-8")
+    with pytest.raises(smoke.SmokeError, match="schema_version"):
+        smoke._validate_brief(fixture)
+
+    nonstructural = json.loads(json.dumps(original))
+    hero_index = nonstructural["design_review"]["hero_anchor_index"]
+    nonstructural["anchors"][hero_index]["motif_commitment"] = "supporting"
+    brief_path.write_text(
+        json.dumps(nonstructural, ensure_ascii=False), encoding="utf-8"
+    )
+    with pytest.raises(smoke.SmokeError, match="structural anchor"):
+        smoke._validate_brief(fixture)
+
+    repeated = json.loads(json.dumps(original))
+    repeated["design_review"]["anchor_system_consequences"][1]["system"] = (
+        repeated["design_review"]["anchor_system_consequences"][0]["system"]
+    )
+    brief_path.write_text(json.dumps(repeated, ensure_ascii=False), encoding="utf-8")
+    with pytest.raises(smoke.SmokeError, match="distinct canonical systems"):
+        smoke._validate_brief(fixture)
+
+    mismatched_hero = json.loads(json.dumps(original))
+    mismatched_hero["design_review"]["hero_anchor_id"] = "other-anchor"
+    brief_path.write_text(
+        json.dumps(mismatched_hero, ensure_ascii=False), encoding="utf-8"
+    )
+    with pytest.raises(smoke.SmokeError, match="hero_anchor_id must match"):
+        smoke._validate_brief(fixture)
+
+    borrowed_consequence = json.loads(json.dumps(original))
+    borrowed_consequence["design_review"]["anchor_system_consequences"][0][
+        "anchor_id"
+    ] = borrowed_consequence["anchors"][1]["anchor_id"]
+    brief_path.write_text(
+        json.dumps(borrowed_consequence, ensure_ascii=False), encoding="utf-8"
+    )
+    with pytest.raises(smoke.SmokeError, match="must equal design_review.hero_anchor_id"):
+        smoke._validate_brief(fixture)
+
+    repetitive_note = json.loads(json.dumps(original))
+    repetitive_note["design_review"]["reviewer_note"] = "abcd" * 12
+    brief_path.write_text(
+        json.dumps(repetitive_note, ensure_ascii=False), encoding="utf-8"
+    )
+    with pytest.raises(smoke.SmokeError, match="reviewer_note"):
+        smoke._validate_brief(fixture)
+
+    packed_roles = json.loads(json.dumps(original))
+    packed_roles["approved_references"][0].pop("roles")
+    packed_roles["approved_references"][0]["role"] = (
+        "quality_reference,style_reference"
+    )
+    brief_path.write_text(
+        json.dumps(packed_roles, ensure_ascii=False), encoding="utf-8"
+    )
+    with pytest.raises(smoke.SmokeError, match=r"\.role is ambiguous"):
+        smoke._validate_brief(fixture)
+
+    multi_role_quality = json.loads(json.dumps(original))
+    multi_role_quality["approved_references"][0]["roles"].append(
+        "quality_reference"
+    )
+    brief_path.write_text(
+        json.dumps(multi_role_quality, ensure_ascii=False), encoding="utf-8"
+    )
+    with pytest.raises(smoke.SmokeError, match="snapshot_path"):
+        smoke._validate_brief(fixture)
+
+
 def test_brief_requires_a_culture_or_rehouse_anchor(tmp_path: Path) -> None:
     fixture = tmp_path / "spec-only-fixture"
     smoke._copy_fixture(FIXTURE, fixture)
@@ -231,6 +323,11 @@ def test_current_imagegen_rehouse_fixture_and_retained_3mf_are_self_contained(tm
     assert release_report["status"] == "passed"
     assert release_report["job_sha256"] == hashlib.sha256(job_path.read_bytes()).hexdigest()
     assert release_report["design_brief"]["status"] == "passed"
+    assert release_report["design_brief"]["completion_quality_checked"] is True
+    assert release_report["design_brief"]["hero_anchor_index"] == 0
+    assert release_report["design_brief"]["hero_anchor_id"] == (
+        "helios-44-2-spec-optical-registration"
+    )
     assert release_report["design_brief"]["sha256"] == current_brief["sha256"]
     assert release_report["design_brief"]["candidate_sha256"] == current_brief["candidate_sha256"]
     assert release_report["design_brief"]["job_identity_binding_checked"] is True
@@ -265,6 +362,9 @@ def test_current_imagegen_rehouse_fixture_and_retained_3mf_are_self_contained(tm
         },
         expected_top_z_mm=expected_top,
         canvas_size_mm=config.face_diameter_mm,
+        tolerance_pixels=int(
+            bridge._projection_tolerance(config)["tolerance_pixels"]
+        ),
     )
     assert material_audit["status"] == "passed"
     assert material_audit["unassigned_triangle_count"] == 0
@@ -379,6 +479,10 @@ def test_multi_lens_multi_diameter_releases_bind_current_sources_and_native_pack
 
             assert release["status"] == "passed"
             assert release["job_sha256"] == hashlib.sha256(job.read_bytes()).hexdigest()
+            assert release["design_brief"]["completion_quality_checked"] is True
+            assert release["design_brief"]["hero_anchor_id"] == brief[
+                "hero_anchor_id"
+            ]
             assert release["design_brief"]["sha256"] == brief["sha256"]
             assert release["design_brief"]["candidate_sha256"] == brief[
                 "candidate_sha256"

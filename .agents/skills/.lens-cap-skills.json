@@ -6,22 +6,24 @@
   "skills": {
     "lens-cap-imagegen": {
       "files": {
-        "SKILL.md": "3a8865ade7f6bba23cd30ef9204061feca6c4a2e43a6b9d4ee84c4aaae24d7ed",
-        "SKILL.zh-CN.md": "eb60a01de4eeff1742c03c3a6f1322da76873173877967e4acc4cc03886efc6d",
-        "agents/openai.yaml": "03da44233e067fde796190b93ec32b73768700d27b250b3bc71ec0e832e019bf"
+        "SKILL.md": "9d504397391a8534f5f1766b6032641203e3b95a603cced5db9ab020f6394645",
+        "SKILL.zh-CN.md": "06c9a709fca35dca5d4f0c864437f046a52b86274217e2dd3f66a81e7b3fbbf0",
+        "agents/openai.yaml": "59681dc04959fc1142bba327aca9ad951bead8b7a831c3d363e5bf8827aea13f",
+        "references/design-depth.md": "c3789be9fd9f565aad26f91e9e49bbf7aee5e42a2c8f1e74d4b44dacd004db97",
+        "references/design-depth.zh-CN.md": "7d9a138082111cd7fe8f4b6f19a9d619faa35406766f94f3f2ac343ab8a8288b"
       },
       "source_dir": "skills/lens-cap-imagegen",
-      "tree_sha256": "d5f44c90d1b24eaa3160263f9e373b970938755628e50377ef79318bcf620f0e",
+      "tree_sha256": "af1135e18d1689a2b849fdd7963a044cca4de07075d70e1bf5f63eefeb440c8c",
       "version": "0.1.0a2"
     },
     "lens-cap-production": {
       "files": {
-        "SKILL.md": "686a5b6dab2d924cf5d7b3c0e4b401b97353500cb16706d80a11c623b260af0a",
-        "SKILL.zh-CN.md": "0484dde700d61c86deec7930b61a7fbb3ced775cfb0413252ba82dad5493efdf",
-        "agents/openai.yaml": "c5af8df954dc21f2e37575cd5c004f87cde6a32cd9af8bec582337111415dd21"
+        "SKILL.md": "1a17709ff0163a58a71d3f228e75df5d0c2992ac4fb970b305137ab628778301",
+        "SKILL.zh-CN.md": "662e0ba2cd5e0bf0ad76809bf9e4c3202bd0fdf135ae2f77d965c4b05d5b7db4",
+        "agents/openai.yaml": "5cb1844c55196134db523dddac28be39c65128b101af634b2fb6b10bfe8472f4"
       },
       "source_dir": "skills/lens-cap-production",
-      "tree_sha256": "330f62fc29fe6ebfbff34bd0b51c2f256e536d3a40742fe9e9fa8dc1e11c9071",
+      "tree_sha256": "2957967860bb21f111d195144087cfe5ce2c5111e4e7b6e83dc4c27b60dd65c3",
       "version": "0.1.0a2"
     }
   }

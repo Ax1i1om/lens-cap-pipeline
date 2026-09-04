@@ -21,7 +21,17 @@ interface:
     invoke generic graphic-design, logo, poster, product-visual, UI, CAD, or
     3D-design Skills—or any other design Skill—in parallel. Make focal length
     the first visual read and maximum aperture (F-stop/F-number/F value) the
-    second. For a zoom, preserve a numeric focal_length_mm anchor and an
+    second. Before generation, read references/design-depth.md, translate one
+    sourced fact into a hero system with two functionally distinct consequences,
+    and bind its stable anchor id through the review and both consequences.
+    A maker-culture layer may set the tone, but combine it with a verified
+    lens-specific structural layer; never invent unique lore to force a sibling
+    distinction. Minimalism is not stacked labels, one icon,
+    or unexplained empty space. Bind the full-resolution completion review and
+    every hashed quality-reference comparison to the exact candidate in a v2
+    design brief; store reference roles in canonical arrays, never packed text. Keep rich
+    concept exploration separate from printable reduction. For a zoom,
+    preserve a numeric focal_length_mm anchor and an
     optional full-range focal_length_display token (for example 28–70mm). For fitted caps,
     ask one grouped question covering mating diameter, foam and uncompressed
     thickness, and friction ribs (enabled by default). Concept art may precede
@@ -32,6 +42,6 @@ interface:
     requested, finish and approve the artwork here, then hand it to
     $lens-cap-production. Treat saving the provider attachment, recording its
     hash, and marking human approval as an explicit handoff gate; never invent
-    those fields. If the user requested an actual 3MF, do not stop at artwork
+    or self-attest those fields. If the user requested an actual 3MF, do not stop at artwork
     or a command suggestion: continue sequentially after approval and report
     success only when the verified .3mf exists.

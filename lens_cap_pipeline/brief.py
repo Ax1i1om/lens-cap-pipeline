@@ -65,6 +65,30 @@ _MANUFACTURER_CULTURE_CLAIM_KINDS = frozenset(
     }
 )
 _ANCHOR_IDENTITY_SCOPES = frozenset({"brand", "model", "family"})
+_ANCHOR_CONSEQUENCE_SYSTEMS = frozenset(
+    {
+        "typography_or_counterform",
+        "field_path_or_divide",
+        "container_or_perimeter",
+    }
+)
+_REFERENCE_ROLES = frozenset(
+    {
+        "quality_reference",
+        "style_reference",
+        "edit_target",
+        "exact_content_reference",
+    }
+)
+_PLACEHOLDER_PREFIX_RE = re.compile(
+    r"^(?:replace(?:\b|_)|to[\s_-]*verify(?:\b|_)|todo(?:\b|:)|"
+    r"tbd(?:\b|:)|url\s+or\s+archive(?:\b|:))",
+    re.I,
+)
+_STABLE_ID_RE = re.compile(r"^[a-z0-9]+(?:[-_][a-z0-9]+)*$")
+_KNOWN_REVIEW_FILLER = frozenset(
+    {"asdf", "qwer", "zxcv", "lorem", "ipsum", "blah", "dummy", "test", "okay", "ok"}
+)
 
 
 def sha256_file(path: Path) -> str:
@@ -100,8 +124,8 @@ def _reviewed(value: Any, field: str) -> str:
     """Require a non-placeholder value at the public approval boundary."""
 
     text = _nonempty(value, field)
-    folded = text.casefold()
-    if any(token in folded for token in ("replace", "to_verify", "todo", "tbd", "url or archive")):
+    folded = unicodedata.normalize("NFKC", text).casefold().strip()
+    if _PLACEHOLDER_PREFIX_RE.match(folded):
         raise BriefError(f"{field} still contains a scaffold placeholder")
     return text
 
@@ -121,6 +145,94 @@ def _substantive_reviewed(value: Any, field: str, *, min_alnum: int = 3) -> str:
         "ok",
     }:
         raise BriefError(f"{field} must contain a substantive reviewed value")
+    return text
+
+
+def _stable_id(value: Any, field: str) -> str:
+    """Require a portable, human-readable identifier for cross-field binding."""
+
+    text = _reviewed(value, field)
+    if not _STABLE_ID_RE.fullmatch(text):
+        raise BriefError(
+            f"{field} must be a lowercase stable id using letters, digits, '-' or '_'"
+        )
+    return text
+
+
+def _reference_roles(reference: Mapping[str, Any], prefix: str) -> tuple[str, ...]:
+    """Return canonical reference roles without accepting ambiguous packed text."""
+
+    if "role" in reference:
+        raise BriefError(f"{prefix}.role is ambiguous; use a roles array even for one role")
+    roles = reference.get("roles")
+    if not isinstance(roles, list) or not roles:
+        raise BriefError(f"{prefix}.roles must be a non-empty list")
+    if not all(isinstance(role, str) and role in _REFERENCE_ROLES for role in roles):
+        raise BriefError(
+            f"{prefix}.roles must contain only " + ", ".join(sorted(_REFERENCE_ROLES))
+        )
+    if len(set(roles)) != len(roles):
+        raise BriefError(f"{prefix}.roles must not contain duplicates")
+    return tuple(roles)
+
+
+def _review_evidence(
+    value: Any,
+    field: str,
+    *,
+    min_alnum: int,
+    min_words: int = 3,
+) -> str:
+    """Reject token, repeated-pattern, and single-word pseudo-review evidence.
+
+    This deliberately does not pretend to score visual quality.  It only makes
+    the release record carry inspectable natural-language evidence rather than
+    a checkbox, repeated character, or copied scaffold sentinel.  CJK evidence
+    is assessed by character diversity because whitespace tokenization is not
+    meaningful for those scripts.
+    """
+
+    text = _substantive_reviewed(value, field, min_alnum=min_alnum)
+    normalized = unicodedata.normalize("NFKC", text).casefold()
+    alnum = "".join(character for character in normalized if character.isalnum())
+    unique_alnum = set(alnum)
+    minimum_unique = 5 if min_alnum >= 20 else 4
+    if len(unique_alnum) < minimum_unique:
+        raise BriefError(f"{field} must contain varied review evidence, not repeated characters")
+    if alnum and max(alnum.count(character) for character in unique_alnum) / len(alnum) > 0.7:
+        raise BriefError(f"{field} must contain varied review evidence, not repeated characters")
+    for period in range(1, min(32, len(alnum) // 3) + 1):
+        if len(alnum) % period == 0 and alnum == alnum[:period] * (len(alnum) // period):
+            raise BriefError(f"{field} must contain varied review evidence, not a repeated pattern")
+    token_sequence = re.findall(r"[^\W_]+", normalized, re.UNICODE)
+    for period in range(1, min(8, len(token_sequence) // 3) + 1):
+        repetitions = len(token_sequence) // period
+        if (
+            len(token_sequence) % period == 0
+            and repetitions >= 3
+            and token_sequence == token_sequence[:period] * repetitions
+        ):
+            raise BriefError(
+                f"{field} must contain varied review evidence, not a repeated phrase"
+            )
+    has_unsegmented_east_asian_script = bool(
+        re.search(
+            r"[\u3040-\u30ff\u3400-\u4dbf\u4e00-\u9fff\uac00-\ud7af\uf900-\ufaff]",
+            normalized,
+        )
+    )
+    if not has_unsegmented_east_asian_script:
+        word_sequence = [
+            match.casefold()
+            for match in re.findall(r"[^\W\d_]{2,}", normalized, re.UNICODE)
+        ]
+        words = set(word_sequence)
+        if words and words <= _KNOWN_REVIEW_FILLER:
+            raise BriefError(f"{field} must contain review evidence, not known filler text")
+        if len(words) < min_words:
+            raise BriefError(
+                f"{field} must contain at least {min_words} distinct review words"
+            )
     return text
 
 
@@ -599,8 +711,18 @@ def validate_design_brief(
             f"'lens-cap handoff-init {config.config_path}' and review it"
         )
     brief = _json_object(brief_path, "design brief")
-    if brief.get("schema_version", 1) != 1:
-        raise BriefError("design brief schema_version must be 1")
+    schema_version = brief.get("schema_version")
+    if type(schema_version) is not int:  # bool and 2.0 are not schema integers
+        raise BriefError("design brief schema_version must be the integer 2")
+    if schema_version == 1:
+        raise BriefError(
+            "design brief schema_version must be 2; legacy v1 requires a new reviewed "
+            "v2 brief—do not overwrite the old approval record in place"
+        )
+    if schema_version != 2:
+        raise BriefError(
+            f"unsupported design brief schema_version {schema_version}; this tool supports 2"
+        )
     binding_mode = _nonempty(brief.get("binding_mode"), "binding_mode")
     if binding_mode not in _BINDING_MODES:
         raise BriefError(
@@ -619,6 +741,19 @@ def validate_design_brief(
         raise BriefError("design brief generation.approved must be true before a 3MF release")
     _reviewed(generation.get("provider"), "generation.provider")
     _reviewed(generation.get("mode"), "generation.mode")
+    _review_evidence(
+        generation.get("approval_note"),
+        "generation.approval_note",
+        min_alnum=20,
+    )
+
+    production_target = _reviewed(
+        brief.get("production_target"), "production_target"
+    )
+    if production_target != "printable_front":
+        raise BriefError(
+            "production_target must be printable_front before a 3MF release"
+        )
 
     identity = brief.get("lens_identity")
     if not isinstance(identity, Mapping):
@@ -680,10 +815,16 @@ def validate_design_brief(
     if not isinstance(anchors, list) or not anchors:
         raise BriefError("design brief needs at least one sourced anchor")
     culture_count = 0
+    anchor_commitments: list[str] = []
+    anchor_ids: list[str] = []
     for index, anchor in enumerate(anchors):
         if not isinstance(anchor, Mapping):
             raise BriefError(f"anchors[{index}] must be an object")
         prefix = f"anchors[{index}]"
+        anchor_id = _stable_id(anchor.get("anchor_id"), f"{prefix}.anchor_id")
+        if anchor_id in anchor_ids:
+            raise BriefError(f"duplicate anchor_id: {anchor_id}")
+        anchor_ids.append(anchor_id)
         claim_value = _substantive_reviewed(anchor.get("claim_kind"), f"{prefix}.claim_kind")
         claim = unicodedata.normalize("NFKC", claim_value).casefold().strip()
         if claim not in _ANCHOR_CLAIM_KINDS:
@@ -704,7 +845,12 @@ def validate_design_brief(
         _substantive_reviewed(
             anchor.get("anchor_context"), f"{prefix}.anchor_context", min_alnum=8
         )
-        _substantive_reviewed(anchor.get("motif_commitment"), f"{prefix}.motif_commitment")
+        commitment = _substantive_reviewed(
+            anchor.get("motif_commitment"), f"{prefix}.motif_commitment"
+        )
+        anchor_commitments.append(
+            unicodedata.normalize("NFKC", commitment).casefold().strip()
+        )
         _substantive_reviewed(
             anchor.get("anchor_visual_motif"),
             f"{prefix}.anchor_visual_motif",
@@ -730,6 +876,195 @@ def validate_design_brief(
             "design brief needs at least one source-backed manufacturer/brand culture anchor"
         )
 
+    approved_references = brief.get("approved_references")
+    if not isinstance(approved_references, list):
+        raise BriefError("approved_references must be a list")
+    generation_reference_hashes = generation.get("reference_hashes")
+    if not isinstance(generation_reference_hashes, list) or not all(
+        isinstance(value, str) and re.fullmatch(r"[0-9a-fA-F]{64}", value)
+        for value in generation_reference_hashes
+    ):
+        raise BriefError("generation.reference_hashes must be a list of SHA-256 digests")
+    declared_reference_hashes = {
+        value.casefold() for value in generation_reference_hashes
+    }
+    reference_ids: list[str] = []
+    quality_reference_ids: list[str] = []
+    for index, reference in enumerate(approved_references):
+        if not isinstance(reference, Mapping):
+            raise BriefError(f"approved_references[{index}] must be an object")
+        prefix = f"approved_references[{index}]"
+        roles = _reference_roles(reference, prefix)
+        reference_id = _stable_id(reference.get("id"), f"{prefix}.id")
+        if reference_id in reference_ids:
+            raise BriefError(f"duplicate approved-reference id: {reference_id}")
+        reference_ids.append(reference_id)
+        _substantive_reviewed(
+            reference.get("path_or_url"), f"{prefix}.path_or_url", min_alnum=3
+        )
+        if "quality_reference" not in roles:
+            continue
+        quality_reference_ids.append(reference_id)
+        snapshot_value = _nonempty(
+            reference.get("snapshot_path"), f"{prefix}.snapshot_path"
+        )
+        snapshot = _resolve_inside(
+            brief_path.parent, snapshot_value, f"{prefix}.snapshot_path"
+        )
+        if brief_path.parent.resolve() not in snapshot.parents:
+            raise BriefError(
+                f"{prefix}.snapshot_path must stay inside the design-brief directory"
+            )
+        snapshot_hash = _nonempty(
+            reference.get("snapshot_sha256"), f"{prefix}.snapshot_sha256"
+        )
+        if not re.fullmatch(r"[0-9a-fA-F]{64}", snapshot_hash):
+            raise BriefError(f"{prefix}.snapshot_sha256 must be a SHA-256 digest")
+        actual_snapshot_hash = sha256_file(snapshot)
+        if actual_snapshot_hash.casefold() != snapshot_hash.casefold():
+            raise BriefError(f"{prefix}.snapshot_sha256 does not match snapshot_path")
+        if snapshot_hash.casefold() not in declared_reference_hashes:
+            raise BriefError(
+                f"{prefix}.snapshot_sha256 must appear in generation.reference_hashes"
+            )
+        traits = reference.get("transferable_traits")
+        if not isinstance(traits, list) or len(traits) < 2:
+            raise BriefError(
+                f"{prefix}.transferable_traits must name at least two observable traits"
+            )
+        for trait_index, trait in enumerate(traits):
+            _review_evidence(
+                trait,
+                f"{prefix}.transferable_traits[{trait_index}]",
+                min_alnum=8,
+                min_words=2,
+            )
+
+    design_review = brief.get("design_review")
+    if not isinstance(design_review, Mapping):
+        raise BriefError("design brief design_review must be an object")
+    reviewed_candidate_hash = _nonempty(
+        design_review.get("reviewed_candidate_sha256"),
+        "design_review.reviewed_candidate_sha256",
+    )
+    if not re.fullmatch(r"[0-9a-fA-F]{64}", reviewed_candidate_hash):
+        raise BriefError(
+            "design_review.reviewed_candidate_sha256 must be a 64-character "
+            "hexadecimal digest"
+        )
+    hero_anchor_index = design_review.get("hero_anchor_index")
+    if type(hero_anchor_index) is not int:
+        raise BriefError("design_review.hero_anchor_index must be an integer")
+    if not 0 <= hero_anchor_index < len(anchors):
+        raise BriefError("design_review.hero_anchor_index is outside anchors")
+    if anchor_commitments[hero_anchor_index] != "structural":
+        raise BriefError(
+            "design_review.hero_anchor_index must select an anchor whose "
+            "motif_commitment is structural"
+        )
+    hero_anchor_id = _stable_id(
+        design_review.get("hero_anchor_id"), "design_review.hero_anchor_id"
+    )
+    if hero_anchor_id != anchor_ids[hero_anchor_index]:
+        raise BriefError(
+            "design_review.hero_anchor_id must match the anchor selected by "
+            "hero_anchor_index"
+        )
+    consequences = design_review.get("anchor_system_consequences")
+    if not isinstance(consequences, list) or len(consequences) < 2:
+        raise BriefError(
+            "design_review.anchor_system_consequences must contain at least two "
+            "observable consequences"
+        )
+    consequence_systems: set[str] = set()
+    for index, consequence in enumerate(consequences):
+        if not isinstance(consequence, Mapping):
+            raise BriefError(
+                f"design_review.anchor_system_consequences[{index}] must be an object"
+            )
+        prefix = f"design_review.anchor_system_consequences[{index}]"
+        consequence_anchor_id = _stable_id(
+            consequence.get("anchor_id"), f"{prefix}.anchor_id"
+        )
+        if consequence_anchor_id != hero_anchor_id:
+            raise BriefError(
+                f"{prefix}.anchor_id must equal design_review.hero_anchor_id"
+            )
+        system = _nonempty(consequence.get("system"), f"{prefix}.system")
+        if system not in _ANCHOR_CONSEQUENCE_SYSTEMS:
+            raise BriefError(
+                f"{prefix}.system must be one of "
+                + ", ".join(sorted(_ANCHOR_CONSEQUENCE_SYSTEMS))
+            )
+        if system in consequence_systems:
+            raise BriefError(
+                "design_review.anchor_system_consequences must use distinct systems; "
+                "repetition or scaling alone is not a second consequence"
+            )
+        consequence_systems.add(system)
+        _review_evidence(
+            consequence.get("effect"),
+            f"{prefix}.effect",
+            min_alnum=12,
+        )
+    for field in (
+        "full_resolution_reviewed",
+        "text_off_anchor_recognizable",
+        "identity_swap_requires_redesign",
+        "anchor_drives_primary_composition",
+        "composition_resolved",
+        "visual_grammar_consistent",
+        "finish_target_met",
+        "production_reduction_preserves_authorship",
+    ):
+        if design_review.get(field) is not True:
+            raise BriefError(f"design_review.{field} must be true before a 3MF release")
+    _review_evidence(
+        design_review.get("structural_thesis"),
+        "design_review.structural_thesis",
+        min_alnum=20,
+    )
+    _review_evidence(
+        design_review.get("finish_target_note"),
+        "design_review.finish_target_note",
+        min_alnum=20,
+    )
+    _review_evidence(
+        design_review.get("reviewer_note"),
+        "design_review.reviewer_note",
+        min_alnum=32,
+    )
+    reference_checks = design_review.get("quality_reference_checks")
+    if not isinstance(reference_checks, list):
+        raise BriefError("design_review.quality_reference_checks must be a list")
+    checked_reference_ids: list[str] = []
+    for index, check in enumerate(reference_checks):
+        if not isinstance(check, Mapping):
+            raise BriefError(
+                f"design_review.quality_reference_checks[{index}] must be an object"
+            )
+        prefix = f"design_review.quality_reference_checks[{index}]"
+        reference_id = _stable_id(
+            check.get("reference_id"), f"{prefix}.reference_id"
+        )
+        if reference_id in checked_reference_ids:
+            raise BriefError(f"duplicate quality-reference check: {reference_id}")
+        checked_reference_ids.append(reference_id)
+        if check.get("met") is not True:
+            raise BriefError(f"{prefix}.met must be true")
+        _review_evidence(
+            check.get("comparison_note"),
+            f"{prefix}.comparison_note",
+            min_alnum=20,
+        )
+    if set(checked_reference_ids) != set(quality_reference_ids) or len(
+        checked_reference_ids
+    ) != len(quality_reference_ids):
+        raise BriefError(
+            "design_review.quality_reference_checks must cover every quality_reference "
+            "exactly once and no other reference"
+        )
+
     provenance = brief.get("provenance")
     if not isinstance(provenance, Mapping):
         raise BriefError("design brief provenance must be an object")
@@ -753,6 +1088,11 @@ def validate_design_brief(
     actual_candidate_hash = sha256_file(candidate)
     if actual_candidate_hash.lower() != candidate_hash.lower():
         raise BriefError("generation.candidate_sha256 does not match the approved raster")
+    if actual_candidate_hash.lower() != reviewed_candidate_hash.lower():
+        raise BriefError(
+            "design_review.reviewed_candidate_sha256 does not match the approved raster; "
+            "repeat the full-resolution composition review for this exact candidate"
+        )
     actual_source_hash = sha256_file(config.source_path)
     if actual_source_hash.lower() != actual_candidate_hash.lower():
         raise BriefError(
@@ -938,6 +1278,11 @@ def validate_design_brief(
         "binding_mode": binding_mode,
         "anchor_count": len(anchors),
         "culture_anchor_count": culture_count,
+        "hero_anchor_index": hero_anchor_index,
+        "hero_anchor_id": hero_anchor_id,
+        "anchor_consequence_systems": sorted(consequence_systems),
+        "quality_reference_count": len(quality_reference_ids),
+        "completion_quality_checked": True,
         "physical_fit_checked": checked_physical_fields,
         "job_identity_binding_checked": binding_checked,
         "job_circle_binding_checked": True,
@@ -1112,10 +1457,11 @@ def create_design_brief_scaffold(
             prompt_hash = sha256_file(prompt)
 
     anchors: list[dict[str, Any]] = []
-    for source in anchor_sources or []:
+    for anchor_number, source in enumerate(anchor_sources or [], start=1):
         source_text = _nonempty(source, "--anchor-source")
         anchors.append(
             {
+                "anchor_id": f"anchor-{anchor_number}",
                 "claim_kind": "manufacturer_culture",
                 "subject_scope": f"{brand_value} {model_value}",
                 "identity_binding": {
@@ -1128,7 +1474,7 @@ def create_design_brief_scaffold(
                 "summary": "REPLACE with a source-backed manufacturer, system, history, or qualified rehouse fact.",
                 "render_role": "visual_metaphor",
                 "anchor_context": "REPLACE with the exact scope and uncertainty.",
-                "motif_commitment": "symbolic",
+                "motif_commitment": "REPLACE with structural for the hero anchor or supporting",
                 "anchor_visual_motif": "REPLACE with original geometry; do not copy a film still or logo.",
                 "recognition_cue": "REPLACE with the cue that remains when lore words are hidden.",
                 "qualifier": "REPLACE if the association is family-level, folklore, or contested.",
@@ -1137,6 +1483,7 @@ def create_design_brief_scaffold(
     if not anchors:
         anchors = [
             {
+                "anchor_id": "anchor-1",
                 "claim_kind": "manufacturer_culture",
                 "subject_scope": f"{brand_value} {model_value}",
                 "identity_binding": {
@@ -1149,7 +1496,7 @@ def create_design_brief_scaffold(
                 "summary": "REPLACE with a source-backed manufacturer, system, history, or qualified rehouse fact.",
                 "render_role": "visual_metaphor",
                 "anchor_context": "REPLACE with the exact scope and uncertainty.",
-                "motif_commitment": "symbolic",
+                "motif_commitment": "REPLACE with structural for the hero anchor or supporting",
                 "anchor_visual_motif": "REPLACE with original geometry; do not copy a film still or logo.",
                 "recognition_cue": "REPLACE with the cue that remains when lore words are hidden.",
                 "qualifier": "REPLACE if the association is family-level, folklore, or contested.",
@@ -1169,7 +1516,7 @@ def create_design_brief_scaffold(
         ),
     }
     brief: dict[str, Any] = {
-        "schema_version": 1,
+        "schema_version": 2,
         "binding_mode": "single_job",
         "job_slug": config.job_slug,
         "lens_identity": {
@@ -1194,7 +1541,10 @@ def create_design_brief_scaffold(
         "forbidden_legacy_tokens": [],
         "object_mode": "typographic_medallion",
         "narrative_mode": "balanced",
-        "production_target": "printable_front" if config.measured_diameter_mm is not None else "concept_art",
+        # Handoff-init belongs to the production bridge.  Every loaded job has
+        # a reviewed face diameter even when a fitted cap still lacks its
+        # measured mating diameter, so a face-only relief remains printable.
+        "production_target": "printable_front",
         "visual_direction": {
             "aspect_ratio": "1:1",
             "palette": ["black", "charcoal", "gray", "ivory"],
@@ -1215,7 +1565,25 @@ def create_design_brief_scaffold(
             "candidate_path": source_rel,
             "candidate_sha256": source_hash,
             "approved": bool(approved),
-            "approval_note": "REVIEW exact text, hierarchy, motif, permissions, and circle before setting approved=true.",
+            "approval_note": None,
+        },
+        "design_review": {
+            "reviewed_candidate_sha256": None,
+            "hero_anchor_index": None,
+            "hero_anchor_id": None,
+            "anchor_system_consequences": [],
+            "full_resolution_reviewed": False,
+            "text_off_anchor_recognizable": False,
+            "identity_swap_requires_redesign": False,
+            "anchor_drives_primary_composition": False,
+            "composition_resolved": False,
+            "visual_grammar_consistent": False,
+            "finish_target_met": False,
+            "production_reduction_preserves_authorship": False,
+            "structural_thesis": None,
+            "finish_target_note": None,
+            "quality_reference_checks": [],
+            "reviewer_note": None,
         },
         "circle_suggestion": _circle_suggestion(config.source_path),
         "physical_fit": physical_fit,
@@ -1256,7 +1624,9 @@ def create_design_brief_scaffold(
             "Verify each anchor source, replace every REPLACE field, and change evidence_state from to_verify to a sourced/verified value.",
             "Complete provenance.artwork_license, provenance.brand_mark_license, provenance.film_or_history_permissions, and provenance.notes.",
             "Review the circular composition and copy the reviewed circle_suggestion center/radius into [circle] for opaque artwork.",
-            "Set generation.approved=true only after a human approves the exact text, hierarchy, sources, licences, and circle.",
+            "Choose a structural hero_anchor_index, copy its stable anchor_id into hero_anchor_id, and bind at least two observable anchor_system_consequences to that same anchor_id in different systems; repetition or scaling alone does not count.",
+            "Pass every candidate-bound design_review check: copy the exact candidate hash only after full-resolution review, complete the structural thesis and observable finish target, cover every quality_reference exactly once, then pass text-off recognition, nearest-neighbour identity swap, anchor-system integration, whole-field resolution, visual grammar, finish, and printable-reduction integrity.",
+            "Set generation.approved=true only after a human approves the exact text, hierarchy, sources, licences, circle, and design_review.",
             f"Run lens-cap handoff-check JOB.toml --brief {brief_cli} --json.",
             f"Run ./bin/lens-cap-3mf JOB.toml --brief {brief_cli} --force --json after the brief gate passes.",
         ],

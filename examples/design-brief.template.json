@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "binding_mode": "single_job",
   "job_slug": "replace-with-lens-slug",
   "lens_identity": {
@@ -21,7 +21,7 @@
   "forbidden_legacy_tokens": [],
   "object_mode": "typographic_medallion",
   "narrative_mode": "balanced",
-  "production_target": "concept_art",
+  "production_target": "printable_front",
   "visual_direction": {
     "aspect_ratio": "1:1",
     "palette": ["black", "charcoal", "gray", "ivory"],
@@ -31,6 +31,7 @@
   },
   "anchors": [
     {
+      "anchor_id": "replace-with-stable-anchor-id",
       "claim_kind": "brand_culture",
       "subject_scope": "brand",
       "identity_binding": {"brand": "REPLACE", "scope": "brand"},
@@ -40,7 +41,7 @@
       "summary": "A source-backed manufacturer or lens-system culture fact.",
       "render_role": "visual_metaphor",
       "anchor_context": "What the source establishes.",
-      "motif_commitment": "symbolic",
+      "motif_commitment": "REPLACE with structural for the hero anchor or supporting",
       "anchor_visual_motif": "Original geometry that carries the association.",
       "recognition_cue": "What remains perceptible when secondary words are hidden.",
       "qualifier": null
@@ -58,6 +59,24 @@
     "candidate_sha256": null,
     "approved": false,
     "approval_note": null
+  },
+  "design_review": {
+    "reviewed_candidate_sha256": null,
+    "hero_anchor_index": null,
+    "hero_anchor_id": null,
+    "anchor_system_consequences": [],
+    "full_resolution_reviewed": false,
+    "text_off_anchor_recognizable": false,
+    "identity_swap_requires_redesign": false,
+    "anchor_drives_primary_composition": false,
+    "composition_resolved": false,
+    "visual_grammar_consistent": false,
+    "finish_target_met": false,
+    "production_reduction_preserves_authorship": false,
+    "structural_thesis": null,
+    "finish_target_note": null,
+    "quality_reference_checks": [],
+    "reviewer_note": null
   },
   "physical_fit": {
     "measured_diameter_mm": null,

@@ -1089,12 +1089,14 @@ def template_config(
     """Return a portable starter config for ``lens-cap init``."""
     manufacturing_grid = 1000
     if face_diameter_mm is not None and face_diameter_mm > 0 and nozzle_mm > 0:
-        # A starter job should not encode raster cells narrower than the
-        # nozzle. Users may deliberately raise the grid later, but the
-        # minimum-feature gate will then reject meaningful hairlines.
+        # Geometry coordinates need finer sampling than the extrusion width:
+        # equating one raster cell with one nozzle width visibly stair-steps
+        # type and arcs before the slicer sees them. Two deterministic samples
+        # per nozzle retain sub-bead path placement while the independent
+        # minimum-feature gate still rejects unprintable hairlines.
         manufacturing_grid = max(
             64,
-            min(1000, int(math.floor(face_diameter_mm / nozzle_mm + 1e-9))),
+            min(1600, int(math.ceil(2.0 * face_diameter_mm / nozzle_mm - 1e-9))),
         )
     return {
         "schema_version": 1,

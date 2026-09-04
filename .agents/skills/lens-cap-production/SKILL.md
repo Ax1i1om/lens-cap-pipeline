@@ -179,6 +179,15 @@ An ImageGen attachment is not an approved filesystem input by itself. If the
 provider result has not been explicitly saved and paired with a brief/hash and
 reviewed circle/palette, stop at the artwork handoff and report the missing
 packet; do not fabricate approval or silently use a previous job's master.
+The release brief must be `schema_version=2` and bind its full-resolution
+completion review to the exact raster hash. Production must not fill, infer, or
+self-attest the stable anchor ids, matched hero index/id, hero-bound
+cross-system consequences, composition, grammar,
+finish, quality-reference comparisons, or printable-reduction fields. If the
+image Skill has not supplied that evidence, return to artwork review rather
+than converting a merely valid raster into a release 3MF.
+Reference roles must be a canonical `roles` array; a comma-packed `role`
+string may not bypass quality-reference snapshot and comparison checks.
 
 The approved artwork's focal length remains the first visual read and its
 maximum aperture (F-stop/F-number) the second. Production only emits same-canvas derivatives and
@@ -283,13 +292,29 @@ same-named STL files behind, Bambu handoff accepts them only when the current
 OpenSCAD report's model and per-part hashes match; manual STLs without that
 report remain explicitly unverified.
 
+The process SVG must use the canonical directed pixel-union contour exporter,
+not a collection of per-pixel or run-length rectangles and not unprotected
+marching squares. It preserves exact orthogonal type corners, separates only
+checkerboard point contacts with deterministic quarter-pixel chamfers, and
+uses a bounded corner-protected simplification for curves and diagonals. The
+approved raster is never rewritten. New 0.2 mm-nozzle jobs default to two
+geometry samples per nozzle width (95 mm → 950), while the independent
+minimum-feature gate still uses the actual nozzle width. The process report
+must record vector area, source-area delta, contour/vertex counts, diagonal
+segments, coordinate quantum, and maximum deviation. The canonical bridge
+derives its projection-raster tolerance from that declared sub-nozzle budget;
+do not silently widen it or bypass the source-mask audit to make a mesh pass.
+
 The `bin/lens-cap-3mf` bridge is the canonical endpoint when the user asks for
 an actual 3MF: it reruns the public build, exports the integrated native package
 through `tools/3mf_adapter`, and verifies ZIP/Core XML, mesh indices, and
 bounds, required palette assignments, and enabled rib positions in the final
 mesh. Before it starts, it requires the same passing `design-brief.json` as
 `handoff-check`; a missing, unapproved, or current-job-mismatched brief is an explicit `FAILED`
-handoff failure. Every non-null mechanical value declared in the brief must
+handoff failure. A legacy v1 brief, stale candidate/review hash, non-structural
+hero anchor, fewer than two cross-system consequences, incomplete local-hashed
+quality-reference comparisons, or failed completion check is also `FAILED`.
+Every non-null mechanical value declared in the brief must
 match the active job; null diameter fields let one approved artwork serve
 several size variants while each TOML remains mechanically authoritative. Add
 `--bambu slice` with three explicit local profiles for a sliced printer
@@ -327,6 +352,10 @@ version and hashes.
   lock; use the committed dependency lock for byte-level release comparisons.
 - Outside, base, and positive-relief roles partition the face; per-colour
   masks do not overlap; the safe border is base-only.
+- Never export relief geometry as raw pixel/run rectangles. Require the
+  directed pixel-union compound path, `evenodd` hole semantics, exact protected
+  right angles, bounded contour deviation below one nozzle, and the recorded
+  vector-footprint/material-area check.
 - Every derivative links to the current source/config hash. Existing output is
   reused only when its hashes match; use --force to intentionally rebuild.
 - The model stage must match the current source lock and per-colour SVG hashes;

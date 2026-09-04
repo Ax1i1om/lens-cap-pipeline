@@ -7,16 +7,16 @@
     "Manifold",
     "-o",
     "<temporary-workdir>/helios-44-2-rehouse-imagegen-v3-95mm-native.3mf",
-    "examples/fixtures/helios-44-2-rehouse-imagegen-v3/jobs/95mm/out/model/helios-44-2-rehouse-imagegen-v3-95mm.scad"
+    "<external>/helios-44-2-rehouse-imagegen-v3-95mm.scad"
   ],
   "command_exit_code": 0,
   "determinism": "byte-stable for identical OpenSCAD geometry under the same OpenSCAD/Python/zlib toolchain after nonsemantic metadata canonicalization; exporter geometry may vary by OpenSCAD release",
-  "generated_at_utc": "2026-09-03T09:42:28.444152+00:00",
-  "input": "examples/fixtures/helios-44-2-rehouse-imagegen-v3/jobs/95mm/out/model/helios-44-2-rehouse-imagegen-v3-95mm.scad",
+  "generated_at_utc": "2026-09-04T08:11:21.275589+00:00",
+  "input": "<external>/helios-44-2-rehouse-imagegen-v3-95mm.scad",
   "input_sha256": "016c514aeb22346f83d108c4e8c328cb94e47a96821b32e15e73e6efc2702975",
   "openscad": "<OpenSCAD.app>/Contents/MacOS/OpenSCAD",
   "openscad_version": "OpenSCAD version 2026.06.12",
-  "output": "examples/fixtures/helios-44-2-rehouse-imagegen-v3/artifacts/helios-44-2-rehouse-imagegen-v3-95mm-native.3mf",
+  "output": "<external>/helios-44-2-rehouse-imagegen-v3-95mm-native.3mf",
   "python": "3.11.15",
   "render_part": "assembly (SCAD default)",
   "sanitization": {
@@ -25,16 +25,16 @@
     "dropped_triangles": 0,
     "dropped_vertices": 0,
     "dropped_zero_volume_components": 0,
-    "maximum_nudge_mm": 1.2649110640673506e-06,
-    "nudged_collinear_triangles": 5,
+    "maximum_nudge_mm": 3.6055512754639905e-06,
+    "nudged_collinear_triangles": 2,
     "removed_volatile_metadata": 1,
     "scope": "zero_volume_components_submicron_collinear_facets_and_nonsemantic_openscad_metadata",
     "status": "passed"
   },
-  "stderr_tail": "Geometries in cache: 27\nGeometry cache size in bytes: 10193632\nCGAL Polyhedrons in cache: 6\nCGAL cache size in bytes: 10098000\nTotal rendering time: 0:00:00.190\n   Top level object is a 3D object (manifold):\n   Status:     NoError\n   Genus:      0\n   Vertices:    32736\n   Facets:      65468\n",
+  "stderr_tail": "Geometries in cache: 27\nGeometry cache size in bytes: 8582112\nCGAL Polyhedrons in cache: 6\nCGAL cache size in bytes: 9104000\nTotal rendering time: 0:00:00.162\n   Top level object is a 3D object (manifold):\n   Status:     NoError\n   Genus:      0\n   Vertices:    28760\n   Facets:      57516\n",
   "stdout_tail": "",
   "verification": {
-    "bytes": 579625,
+    "bytes": 514220,
     "closed_direct_mesh_required": true,
     "entries": [
       "3D/3dmodel.model",
@@ -44,7 +44,7 @@
     "gcode_bytes": 0,
     "has_embedded_gcode": false,
     "model": {
-      "absolute_volume_mm3": 27358.20297604497,
+      "absolute_volume_mm3": 27355.605729535706,
       "boundary_edges": 0,
       "bounds": {
         "max_mm": [
@@ -74,15 +74,15 @@
       "parts": 1,
       "transformed_build_items": 0,
       "transformed_components": 0,
-      "triangles": 65468,
+      "triangles": 57516,
       "unreferenced_vertices": 0,
-      "vertices": 32736,
+      "vertices": 28760,
       "volume_components": 1,
       "zero_area_triangles": 0,
       "zero_volume_components": 0
     },
-    "path": "examples/fixtures/helios-44-2-rehouse-imagegen-v3/artifacts/helios-44-2-rehouse-imagegen-v3-95mm-native.3mf",
-    "sha256": "e1fda045d4df0c85b81d1edf46f1bab3e2f1ee86523d74bcac39f60ad1d9213c",
+    "path": "<external>/helios-44-2-rehouse-imagegen-v3-95mm-native.3mf",
+    "sha256": "d40bea08a8a2bb08a93c417641799a7bc61892deb349b6c1fc580182267e5b81",
     "single_positive_volume_required": true,
     "slice_audit": null
   }

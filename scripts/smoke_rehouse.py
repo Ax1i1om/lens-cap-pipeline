@@ -38,10 +38,14 @@ if str(ROOT) not in sys.path:
 
 from lens_cap_pipeline.brief import (  # noqa: E402
     BriefError,
+    _reference_roles,
+    _review_evidence,
+    _stable_id,
     canonical_aperture_display,
     validate_design_brief,
 )
 from lens_cap_pipeline.config import PipelineConfig, load_config  # noqa: E402
+from scripts.build_3mf import _projection_tolerance  # noqa: E402
 
 ADAPTER = ROOT / "tools" / "3mf_adapter" / "three_mf_adapter.py"
 PROJECTION = ROOT / "scripts" / "audit_stl_projection.py"
@@ -52,6 +56,38 @@ DEFAULT_SIZES = (95, 82, 77)  # fallback for the original Helios fixture
 
 class SmokeError(RuntimeError):
     """Raised when a deterministic smoke gate fails."""
+
+
+def _smoke_review_evidence(
+    value: Any,
+    field: str,
+    *,
+    min_alnum: int,
+    min_words: int = 3,
+) -> str:
+    try:
+        return _review_evidence(
+            value,
+            field,
+            min_alnum=min_alnum,
+            min_words=min_words,
+        )
+    except BriefError as exc:
+        raise SmokeError(str(exc)) from exc
+
+
+def _smoke_stable_id(value: Any, field: str) -> str:
+    try:
+        return _stable_id(value, field)
+    except BriefError as exc:
+        raise SmokeError(str(exc)) from exc
+
+
+def _smoke_reference_roles(reference: Mapping[str, Any], prefix: str) -> tuple[str, ...]:
+    try:
+        return _reference_roles(reference, prefix)
+    except BriefError as exc:
+        raise SmokeError(str(exc)) from exc
 
 
 _FOCAL_DISPLAY_RE = re.compile(
@@ -277,6 +313,10 @@ def _validate_brief(fixture: Path) -> dict[str, Any]:
     brief = json.loads(brief_path.read_text(encoding="utf-8"))
     if not isinstance(brief, dict):
         raise SmokeError("design-brief.json must contain an object")
+    if type(brief.get("schema_version")) is not int or brief["schema_version"] != 2:
+        raise SmokeError("fixture design brief schema_version must be the integer 2")
+    if brief.get("production_target") != "printable_front":
+        raise SmokeError("fixture production_target must be printable_front")
     identity = brief.get("lens_identity")
     if not isinstance(identity, dict):
         raise SmokeError("fixture must declare a lens_identity object")
@@ -310,25 +350,228 @@ def _validate_brief(fixture: Path) -> dict[str, Any]:
         raise SmokeError("fixture must declare a generation handoff object")
     if generation.get("approved") is not True:
         raise SmokeError("approved artwork handoff must set generation.approved=true")
+    _smoke_review_evidence(
+        generation.get("approval_note"),
+        "generation.approval_note",
+        min_alnum=20,
+    )
+    design_review = brief.get("design_review")
+    if not isinstance(design_review, Mapping):
+        raise SmokeError("fixture must declare a design_review object")
+    reviewed_candidate_hash = design_review.get("reviewed_candidate_sha256")
+    if not isinstance(reviewed_candidate_hash, str) or not re.fullmatch(
+        r"[0-9a-fA-F]{64}", reviewed_candidate_hash
+    ):
+        raise SmokeError(
+            "design_review.reviewed_candidate_sha256 must bind the reviewed raster"
+        )
+    for field in (
+        "full_resolution_reviewed",
+        "text_off_anchor_recognizable",
+        "identity_swap_requires_redesign",
+        "anchor_drives_primary_composition",
+        "composition_resolved",
+        "visual_grammar_consistent",
+        "finish_target_met",
+        "production_reduction_preserves_authorship",
+    ):
+        if design_review.get(field) is not True:
+            raise SmokeError(f"design_review.{field} must be true")
+    for field, minimum in (
+        ("structural_thesis", 20),
+        ("finish_target_note", 20),
+        ("reviewer_note", 32),
+    ):
+        _smoke_review_evidence(
+            design_review.get(field),
+            f"design_review.{field}",
+            min_alnum=minimum,
+        )
+    generation_hash = generation.get("candidate_sha256")
+    if not isinstance(generation_hash, str) or (
+        reviewed_candidate_hash.lower() != generation_hash.lower()
+    ):
+        raise SmokeError(
+            "design_review.reviewed_candidate_sha256 must match generation.candidate_sha256"
+        )
     anchors = brief.get("anchors")
     if not isinstance(anchors, list) or not anchors:
         raise SmokeError("fixture must declare at least one sourced design anchor")
     sourced_anchors = []
     culture_anchors = []
+    anchor_commitments = []
+    anchor_ids = []
     for index, raw_anchor in enumerate(anchors):
         if not isinstance(raw_anchor, Mapping):
             raise SmokeError(f"anchors[{index}] must be an object")
+        anchor_id = _smoke_stable_id(
+            raw_anchor.get("anchor_id"), f"anchors[{index}].anchor_id"
+        )
+        if anchor_id in anchor_ids:
+            raise SmokeError(f"duplicate anchor_id: {anchor_id}")
+        anchor_ids.append(anchor_id)
         source = raw_anchor.get("source")
         evidence = raw_anchor.get("evidence_state")
         render_role = raw_anchor.get("render_role")
         if not all(isinstance(value, str) and value.strip() for value in (source, evidence, render_role)):
             raise SmokeError(f"anchors[{index}] must include source, evidence_state, and render_role")
         sourced_anchors.append(str(source).strip())
+        anchor_commitments.append(str(raw_anchor.get("motif_commitment", "")).casefold())
         claim_kind = str(raw_anchor.get("claim_kind", "")).casefold()
         if any(term in claim_kind for term in ("culture", "manufacturer", "rehouse", "cinema", "history", "craft", "system")):
             culture_anchors.append(str(source).strip())
     if not culture_anchors:
         raise SmokeError("fixture needs a source-backed manufacturer/culture or qualified rehouse anchor")
+    hero_anchor_index = design_review.get("hero_anchor_index")
+    if type(hero_anchor_index) is not int or not 0 <= hero_anchor_index < len(anchors):
+        raise SmokeError("design_review.hero_anchor_index must select an existing anchor")
+    if anchor_commitments[hero_anchor_index].strip() != "structural":
+        raise SmokeError(
+            "design_review.hero_anchor_index must select a structural anchor"
+        )
+    hero_anchor_id = _smoke_stable_id(
+        design_review.get("hero_anchor_id"), "design_review.hero_anchor_id"
+    )
+    if hero_anchor_id != anchor_ids[hero_anchor_index]:
+        raise SmokeError(
+            "design_review.hero_anchor_id must match the anchor selected by "
+            "hero_anchor_index"
+        )
+    consequences = design_review.get("anchor_system_consequences")
+    consequence_systems = set()
+    allowed_systems = {
+        "typography_or_counterform",
+        "field_path_or_divide",
+        "container_or_perimeter",
+    }
+    if not isinstance(consequences, list) or len(consequences) < 2:
+        raise SmokeError(
+            "design_review.anchor_system_consequences must contain at least two entries"
+        )
+    for index, consequence in enumerate(consequences):
+        if not isinstance(consequence, Mapping):
+            raise SmokeError(
+                f"design_review.anchor_system_consequences[{index}] must be an object"
+            )
+        consequence_anchor_id = _smoke_stable_id(
+            consequence.get("anchor_id"),
+            f"design_review.anchor_system_consequences[{index}].anchor_id",
+        )
+        if consequence_anchor_id != hero_anchor_id:
+            raise SmokeError(
+                f"design_review.anchor_system_consequences[{index}].anchor_id "
+                "must equal design_review.hero_anchor_id"
+            )
+        system = consequence.get("system")
+        effect = consequence.get("effect")
+        if system not in allowed_systems or system in consequence_systems:
+            raise SmokeError(
+                "design_review.anchor_system_consequences must use distinct canonical systems"
+            )
+        _smoke_review_evidence(
+            effect,
+            f"design_review.anchor_system_consequences[{index}].effect",
+            min_alnum=12,
+        )
+        consequence_systems.add(system)
+
+    reference_hashes = generation.get("reference_hashes")
+    if not isinstance(reference_hashes, list) or not all(
+        isinstance(value, str) and re.fullmatch(r"[0-9a-fA-F]{64}", value)
+        for value in reference_hashes
+    ):
+        raise SmokeError("generation.reference_hashes must be SHA-256 digests")
+    reference_hash_set = {value.casefold() for value in reference_hashes}
+    approved_references = brief.get("approved_references")
+    if not isinstance(approved_references, list):
+        raise SmokeError("approved_references must be a list")
+    reference_ids = []
+    quality_ids = []
+    for index, reference in enumerate(approved_references):
+        if not isinstance(reference, Mapping):
+            raise SmokeError(f"approved_references[{index}] must be an object")
+        prefix = f"approved_references[{index}]"
+        roles = _smoke_reference_roles(reference, prefix)
+        reference_id = _smoke_stable_id(reference.get("id"), f"{prefix}.id")
+        if reference_id in reference_ids:
+            raise SmokeError(f"duplicate approved-reference id: {reference_id}")
+        reference_ids.append(reference_id)
+        path_or_url = reference.get("path_or_url")
+        if not isinstance(path_or_url, str) or not path_or_url.strip():
+            raise SmokeError(f"{prefix}.path_or_url must be recorded")
+        if "quality_reference" not in roles:
+            continue
+        snapshot_value = reference.get("snapshot_path")
+        snapshot_hash = reference.get("snapshot_sha256")
+        traits = reference.get("transferable_traits")
+        quality_ids.append(reference_id)
+        if not isinstance(snapshot_value, str) or not snapshot_value.strip():
+            raise SmokeError(
+                f"approved_references[{index}].snapshot_path must be recorded"
+            )
+        snapshot = (fixture / snapshot_value).resolve()
+        if fixture not in snapshot.parents or not snapshot.is_file():
+            raise SmokeError(
+                f"approved_references[{index}].snapshot_path must stay inside the fixture"
+            )
+        if not isinstance(snapshot_hash, str) or not re.fullmatch(
+            r"[0-9a-fA-F]{64}", snapshot_hash
+        ):
+            raise SmokeError(
+                f"approved_references[{index}].snapshot_sha256 must be a digest"
+            )
+        if _sha256(snapshot).casefold() != snapshot_hash.casefold():
+            raise SmokeError(
+                f"approved_references[{index}].snapshot_sha256 does not match"
+            )
+        if snapshot_hash.casefold() not in reference_hash_set:
+            raise SmokeError(
+                f"approved_references[{index}].snapshot_sha256 must be a generation reference hash"
+            )
+        if not isinstance(traits, list) or len(traits) < 2:
+            raise SmokeError(
+                f"approved_references[{index}].transferable_traits must name two traits"
+            )
+        for trait_index, trait in enumerate(traits):
+            _smoke_review_evidence(
+                trait,
+                f"approved_references[{index}].transferable_traits[{trait_index}]",
+                min_alnum=8,
+                min_words=2,
+            )
+    quality_checks = design_review.get("quality_reference_checks")
+    if not isinstance(quality_checks, list):
+        raise SmokeError("design_review.quality_reference_checks must be a list")
+    checked_quality_ids = []
+    for index, check in enumerate(quality_checks):
+        if not isinstance(check, Mapping):
+            raise SmokeError(
+                f"design_review.quality_reference_checks[{index}] must be an object"
+            )
+        reference_id = _smoke_stable_id(
+            check.get("reference_id"),
+            f"design_review.quality_reference_checks[{index}].reference_id",
+        )
+        note = check.get("comparison_note")
+        if (
+            reference_id in checked_quality_ids
+            or check.get("met") is not True
+        ):
+            raise SmokeError(
+                f"design_review.quality_reference_checks[{index}] is incomplete"
+            )
+        _smoke_review_evidence(
+            note,
+            f"design_review.quality_reference_checks[{index}].comparison_note",
+            min_alnum=20,
+        )
+        checked_quality_ids.append(reference_id)
+    if set(checked_quality_ids) != set(quality_ids) or len(checked_quality_ids) != len(
+        quality_ids
+    ):
+        raise SmokeError(
+            "design_review.quality_reference_checks must cover every quality_reference"
+        )
     provenance = brief.get("provenance")
     if not isinstance(provenance, Mapping):
         raise SmokeError("fixture must declare provenance/licence notes")
@@ -411,6 +654,10 @@ def _validate_brief(fixture: Path) -> dict[str, Any]:
         "artwork_sha256": _sha256(art_path),
         "anchor_count": len(sourced_anchors),
         "culture_anchor_count": len(culture_anchors),
+        "hero_anchor_index": hero_anchor_index,
+        "hero_anchor_id": hero_anchor_id,
+        "quality_reference_count": len(quality_ids),
+        "completion_quality_checked": True,
     }
 
 
@@ -523,6 +770,7 @@ def _projection_audit(config: PipelineConfig) -> dict[str, Any]:
     mesh_dir = config.output_dir / "model" / "mesh"
     mask_dir = config.output_dir / "masks"
     names: list[str] = []
+    tolerance = _projection_tolerance(config)
     command = [sys.executable, str(PROJECTION)]
     for palette in config.relief:
         mesh = mesh_dir / f"{config.job_slug}-{palette.name}_relief.stl"
@@ -543,7 +791,7 @@ def _projection_audit(config: PipelineConfig) -> dict[str, Any]:
             "--canvas-size-mm",
             str(config.face_diameter_mm),
             "--tolerance-pixels",
-            "1",
+            str(tolerance["tolerance_pixels"]),
             "--output-report",
             str(report_path),
             "--output-dir",
@@ -561,6 +809,7 @@ def _projection_audit(config: PipelineConfig) -> dict[str, Any]:
     return {
         "status": "passed",
         "report": str(report_path),
+        "tolerance": tolerance,
         "colors": {
             name: {
                 "raw_iou": report["colors"][name]["raw_iou"],

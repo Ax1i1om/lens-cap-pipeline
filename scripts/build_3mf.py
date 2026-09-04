@@ -1513,7 +1513,7 @@ def _audit_material_assignments(
             area_tolerance = max(pixel_area * 8.0, expected_area * 0.005)
             if abs(observed_area - expected_area) > area_tolerance:
                 raise ReleaseError(
-                    "native 3MF relief material projected area disagrees with its process mask "
+                    "native 3MF relief material projected area disagrees with its process vector "
                     f"for {name}: {observed_area:g} != {expected_area:g} mm2"
                 )
             spatial[name] = {
@@ -1552,7 +1552,7 @@ def _audit_material_assignments(
                 ),
                 "triangle_count": assigned.get(color, 0),
                 "projected_triangle_area_mm2": projected_area.get(color, 0.0),
-                "expected_mask_footprint_mm2": float(
+                "expected_vector_footprint_mm2": float(
                     expected_footprint_mm2.get(details["name"], 0.0)
                 ),
                 "minimum_projected_area_ratio": 0.20,
@@ -1567,7 +1567,7 @@ def _audit_material_assignments(
 
 
 def _expected_palette_footprints(config: Any) -> dict[str, float]:
-    """Convert current process-mask pixels into physical XY footprint areas."""
+    """Read the exact post-vectorisation XY footprint for each palette."""
 
     report_path = config.output_dir / "process-report.json"
     try:
@@ -1579,19 +1579,87 @@ def _expected_palette_footprints(config: Any) -> dict[str, float]:
     mask_stats = payload.get("mask_stats") if isinstance(payload, dict) else None
     if not isinstance(mask_stats, dict):
         raise ReleaseError("process report lacks mask_stats for material footprint audit")
-    pixel_area = (float(config.face_diameter_mm) / float(config.grid_size)) ** 2
     footprints: dict[str, float] = {}
     for name, stats in mask_stats.items():
         if not isinstance(stats, dict):
             continue
+        vector = stats.get("svg_vectorization")
+        if not isinstance(vector, dict):
+            raise ReleaseError(
+                f"process mask_stats.{name}.svg_vectorization is missing"
+            )
         try:
-            pixels = int(stats["pixels"])
+            area = float(vector["filled_area_mm2"])
         except (KeyError, TypeError, ValueError, OverflowError) as exc:
-            raise ReleaseError(f"process mask_stats.{name}.pixels is invalid") from exc
-        if pixels < 0:
-            raise ReleaseError(f"process mask_stats.{name}.pixels is negative")
-        footprints[str(name)] = pixels * pixel_area
+            raise ReleaseError(
+                f"process mask_stats.{name}.svg_vectorization.filled_area_mm2 is invalid"
+            ) from exc
+        if not math.isfinite(area) or area < 0:
+            raise ReleaseError(
+                f"process mask_stats.{name}.svg_vectorization.filled_area_mm2 "
+                "must be finite and non-negative"
+            )
+        footprints[str(name)] = area
     return footprints
+
+
+def _projection_tolerance(config: Any) -> dict[str, float | int]:
+    """Derive raster audit tolerance from the bounded vectorisation budget.
+
+    Triangle rasterisation already needs one inclusive edge pixel.  A contour
+    deliberately simplified by at most half a source cell can touch the next
+    raster cell despite remaining less than one nozzle from the binary mask,
+    so that declared budget adds one—not an arbitrary relaxation—to the gate.
+    """
+
+    report_path = config.output_dir / "process-report.json"
+    try:
+        payload = json.loads(report_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise ReleaseError(
+            f"cannot read process report for projection tolerance: {report_path}"
+        ) from exc
+    mask_stats = payload.get("mask_stats")
+    if not isinstance(mask_stats, dict):
+        raise ReleaseError("process report lacks mask_stats for projection tolerance")
+    maximum = 0.0
+    maximum_mm = 0.0
+    for name, mask_details in mask_stats.items():
+        stats = (
+            mask_details.get("svg_vectorization")
+            if isinstance(mask_details, dict)
+            else None
+        )
+        if not isinstance(stats, dict):
+            raise ReleaseError(
+                f"process mask_stats.{name}.svg_vectorization is invalid"
+            )
+        try:
+            deviation_px = float(stats["simplification_tolerance_px"])
+            deviation_mm = float(stats["maximum_deviation_mm"])
+        except (KeyError, TypeError, ValueError, OverflowError) as exc:
+            raise ReleaseError(
+                f"process mask_stats.{name}.svg_vectorization lacks a valid deviation budget"
+            ) from exc
+        if (
+            not math.isfinite(deviation_px)
+            or not math.isfinite(deviation_mm)
+            or deviation_px < 0
+            or deviation_px > 0.5 + 1e-9
+            or deviation_mm < 0
+            or deviation_mm >= float(config.nozzle_mm)
+        ):
+            raise ReleaseError(
+                f"process mask_stats.{name}.svg_vectorization exceeds the bounded contour budget"
+            )
+        maximum = max(maximum, deviation_px)
+        maximum_mm = max(maximum_mm, deviation_mm)
+    return {
+        "tolerance_pixels": 1 + int(math.ceil(maximum - 1e-12)),
+        "triangle_rasterization_pixels": 1,
+        "vectorization_budget_pixels": maximum,
+        "vectorization_budget_mm": maximum_mm,
+    }
 
 
 def _audit_native_bounds(
@@ -2635,6 +2703,7 @@ def _projection_audit(config: Any, *, timeout: int = 1200) -> dict[str, Any]:
             raise ReleaseError(f"cannot read process report for projection audit: {process_report}") from exc
         if isinstance(parsed, dict) and isinstance(parsed.get("mask_stats"), dict):
             mask_stats = parsed["mask_stats"]
+    tolerance = _projection_tolerance(config)
     command: list[str] = [sys.executable, str(PROJECTION)]
     names: list[str] = []
     for palette in reliefs:
@@ -2660,7 +2729,7 @@ def _projection_audit(config: Any, *, timeout: int = 1200) -> dict[str, Any]:
             "--canvas-size-mm",
             str(float(config.face_diameter_mm)),
             "--tolerance-pixels",
-            "1",
+            str(tolerance["tolerance_pixels"]),
             "--output-report",
             str(report_path),
             "--output-dir",
@@ -2681,6 +2750,7 @@ def _projection_audit(config: Any, *, timeout: int = 1200) -> dict[str, Any]:
         "status": "passed",
         "report": _portable(report_path, config.config_path.parent),
         "diff_dir": _portable(diff_dir, config.config_path.parent),
+        "tolerance": tolerance,
         "colors": {
             name: {
                 "raw_iou": report["colors"][name]["raw_iou"],
@@ -2953,6 +3023,9 @@ def main(argv: list[str] | None = None) -> int:
             },
             expected_top_z_mm=expected_relief_top_z,
             canvas_size_mm=loaded.face_diameter_mm,
+            tolerance_pixels=int(
+                projection.get("tolerance", {}).get("tolerance_pixels", 1)
+            ),
         )
         public_native_command = [
             str(native) if item == str(stage_native) else item for item in native_command
@@ -2990,6 +3063,15 @@ def main(argv: list[str] | None = None) -> int:
                 "display_text": brief_report["display_text"],
                 "anchor_count": brief_report["anchor_count"],
                 "culture_anchor_count": brief_report["culture_anchor_count"],
+                "hero_anchor_index": brief_report["hero_anchor_index"],
+                "hero_anchor_id": brief_report["hero_anchor_id"],
+                "anchor_consequence_systems": brief_report[
+                    "anchor_consequence_systems"
+                ],
+                "quality_reference_count": brief_report["quality_reference_count"],
+                "completion_quality_checked": brief_report[
+                    "completion_quality_checked"
+                ],
                 "physical_fit_checked": brief_report["physical_fit_checked"],
                 "job_identity_binding_checked": brief_report[
                     "job_identity_binding_checked"

@@ -8,8 +8,9 @@ The repository has two deliberately separate contracts:
    deterministically produces masks, SVGs, SCAD, and—when requested and the
    required local tool is available—a verified 3MF.
 
-This boundary matters. “High quality” means equivalence of the declared lens
-specification, text hierarchy, and visual style—not pixel-identical generation.
+This boundary matters. “High quality” means semantic fidelity plus a resolved,
+authored composition with coherent hierarchy, field responsibility, visual
+grammar, and finish—not pixel-identical generation.
 A generative image provider can change typography, texture, or composition
 between runs; no prompt can make that output a reproducible CAD input. Once a
 candidate is approved, copy it into the job, compute its SHA-256, and never let
@@ -38,8 +39,11 @@ omit the optional field and continue to use the numeric focal token.
 - forbidden_legacy_tokens prevents a previous lens job leaking into a new
   one;
 - anchors separates verified facts, sourced folklore, and visual inspiration;
+  each anchor carries a unique stable `anchor_id`;
 - generation records the actual provider/mode, model/version, prompt,
   reference hashes, candidate hash, and human approval;
+- design_review is schema-v2, candidate-hash-bound evidence for the structural,
+  anti-generic, completion, and printable-reduction gates;
 - provenance records copyright, trademark, and source-model terms.
 
 At least one anchor must be a source-backed manufacturer-culture fact. A film,
@@ -52,7 +56,8 @@ two claims. Keep a qualifier next to any lore that appears in the artwork.
 
 The default prompt contract is:
 
-- complete circular medallion on a square canvas;
+- complete circular cap-front composition on a square canvas (do not prompt it
+  as a generic badge/logo/seal unless requested);
 - focal length as the largest first read and maximum aperture as the second;
 - for a variable-aperture zoom, keep the first F-number as the machine anchor,
   record the full normalized range in `maximum_aperture_display`, and preserve
@@ -72,10 +77,23 @@ association must have a visible symbolic/structural role, not only a tiny
 caption. Hide the lore words once and check that the motif still reads without
 becoming an official mark.
 
+The selected anchor must act as a system: it creates at least two observable,
+functionally distinct consequences across typography/counterform,
+field/path/division, or container/perimeter. Copying or scaling one icon does
+not count. “Minimal”, “clean”, “vintage”, or “printable” are not finish targets;
+state observable integration, edge, rhythm, and field relationships. Any image
+the user presents as a quality benchmark includes `quality_reference` in its
+canonical `roles` array, even if it is also a style or series reference; save a local snapshot and hash, name at
+least two transferable traits, and compare them without copying identity or
+literal motifs.
+
 Review the candidate at full resolution. Confirm the circle, exact focal and
-aperture strings, hierarchy, omissions, palette, and motif. If typography is
-wrong, make a targeted iteration or deliver a clean artwork plus a separate
-editable text layer; never silently substitute a near model name.
+aperture strings, hierarchy, omissions, palette, structural anchor,
+whole-field resolution, visual grammar, finish target, and printable reduction.
+If identity, anchor, or large-scale composition fails, change direction; once
+those structural checks pass, local typography/edge/spacing/palette fixes are
+allowed but every gate must run again. Never silently substitute a near model
+name.
 
 ## Handoff to production
 
@@ -94,8 +112,12 @@ After approval:
 5. verify each http(s) or explicit archive anchor source, replace its
    `to_verify` evidence state and every
    scaffold placeholder, complete all provenance licence fields, confirm the
-   full `display_text`/`allowed_text` set and circular composition, and set
-   `generation.approved=true` only after human review;
+   full `display_text`/`allowed_text` set and circular composition, then fill
+   schema-v2 `design_review`: exact reviewed hash, structural hero index plus
+   matching stable id, two distinct-system consequences explicitly bound to
+   that same anchor id, all completion booleans, structural thesis,
+   observable finish target, exact quality-reference coverage, and reviewer
+   evidence. Set `generation.approved=true` only after that human review;
 6. run `lens-cap handoff-check JOB.toml` and then the production CLI;
 7. compare the process master and role masks before any external adapter;
 8. if the requested deliverable is a 3MF, continue through the canonical
@@ -110,7 +132,7 @@ for a new Codex task is:
 
 1. the approved raster copied inside the job (normally `art/master.png`), with
    its SHA-256;
-2. `design-brief.json` containing `approved=true`, the exact `display_text`,
+2. schema-v2 `design-brief.json` containing `approved=true`, the exact `display_text`,
    `allowed_text`/`allowed_marks`, the prompt/provider record, anchor evidence,
    and licence/provenance notes;
 3. a job TOML containing the current palette and, for an opaque raster, the
@@ -162,7 +184,8 @@ reasoned `not applicable — ...` statement is valid, while bare `NONE`/`N/A` is
 not.
 `handoff-check` and the canonical
 `bin/lens-cap-3mf` bridge verify the approved flag, exact identity/text order,
-source hash, culture/rehousing anchor, and licence fields. A missing or
+candidate/review/source hash chain, structural hero and cross-system evidence,
+completion and quality-reference checks, culture/rehousing anchor, and licence fields. A missing or
 unapproved or mismatched brief is `FAILED` at the 3MF endpoint, while private
 relief-only experiments may still use the core `process`/`model` commands.
 Treat any `physical_fit` data in the brief as a snapshot from approval time.

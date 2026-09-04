@@ -187,7 +187,10 @@ tessellation or compressed bytes.
 
 Before a printable release, run the public
 scripts/audit_stl_projection.py (or an equivalent recorded adapter) once for
-each positive-relief STL:
+each positive-relief STL. The manual `1` below is for an unsimplified contour;
+the canonical 3MF bridge derives the exact raster allowance from the bounded
+vectorisation fields in `process-report.json` (normally `2` with the canonical
+anti-jag contour), and rejects a vector budget of one nozzle or more:
 
 ~~~sh
 ./bin/audit-stl-projection \

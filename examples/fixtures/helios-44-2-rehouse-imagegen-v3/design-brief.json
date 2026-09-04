@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "binding_mode": "single_job",
   "job_slug": "helios-44-2-rehouse-imagegen-v3-95mm",
   "lens_identity": {
@@ -27,6 +27,7 @@
   },
   "anchors": [
     {
+      "anchor_id": "helios-44-2-spec-optical-registration",
       "claim_kind": "lens_specification",
       "subject_scope": "Helios-44-2 / Zenit system",
       "evidence_state": "verified",
@@ -41,6 +42,7 @@
       "qualifier": null
     },
     {
+      "anchor_id": "helios-zenit-system-calibration",
       "claim_kind": "manufacturer_culture",
       "subject_scope": "Zenit / Helios Soviet lens system",
       "identity_binding": {"brand": "Helios / Zenit", "scope": "brand"},
@@ -56,6 +58,7 @@
       "qualifier": "the manual supports system identity, not a specific film credit"
     },
     {
+      "anchor_id": "helios-rehouse-cinema-wedge-swirl",
       "claim_kind": "rehousing_and_cinema_association",
       "subject_scope": "rehoused Helios-44-2 family",
       "evidence_state": "verified_for_family; exact shot scope is limited",
@@ -70,6 +73,7 @@
       "qualifier": "family-level cinema association; no official film marks are rendered"
     },
     {
+      "anchor_id": "ironglass-rehouse-registration",
       "claim_kind": "cinema_rehousing_context",
       "subject_scope": "IronGlass Soviet-lens rehousing practice",
       "evidence_state": "verified_industry_account",
@@ -85,9 +89,9 @@
     }
   ],
   "approved_references": [
-    {"path_or_url": "https://www.zenitcamera.com/mans/zenit-e/zenit-e-eng.html", "role": "style_reference", "notes": "period specification source"},
-    {"path_or_url": "https://theasc.com/article/expanding-view-dune-part-two/", "role": "style_reference", "notes": "qualified rehoused-lens production context"},
-    {"path_or_url": "https://theasc.com/article/greig-fraser-batman/", "role": "style_reference", "notes": "qualified Soviet-rehouse cinema context"}
+    {"id": "zenit-manual-spec", "path_or_url": "https://www.zenitcamera.com/mans/zenit-e/zenit-e-eng.html", "roles": ["style_reference"], "notes": "period specification source"},
+    {"id": "asc-dune-rehouse", "path_or_url": "https://theasc.com/article/expanding-view-dune-part-two/", "roles": ["style_reference"], "notes": "qualified rehoused-lens production context"},
+    {"id": "asc-batman-rehouse", "path_or_url": "https://theasc.com/article/greig-fraser-batman/", "roles": ["style_reference"], "notes": "qualified Soviet-rehouse cinema context"}
   ],
   "generation": {
     "provider": "OpenAI built-in image_gen",
@@ -102,6 +106,35 @@
     "candidate_sha256": "f6eb8046c61e1359783c1a869722bc8da3a4d76acdbf1782a6bde2121ea48e1e",
     "approved": true,
     "approval_note": "Fresh ImageGen v3 test master: 58 is first read and F2 second; exact requested labels and flat broad geometry pass visual review. Re-review before public branding use."
+  },
+  "design_review": {
+    "reviewed_candidate_sha256": "f6eb8046c61e1359783c1a869722bc8da3a4d76acdbf1782a6bde2121ea48e1e",
+    "hero_anchor_index": 0,
+    "hero_anchor_id": "helios-44-2-spec-optical-registration",
+    "anchor_system_consequences": [
+      {
+        "anchor_id": "helios-44-2-spec-optical-registration",
+        "system": "typography_or_counterform",
+        "effect": "Concentric optical lanes bend around both sides of the dominant 58 and frame F2 as one continuous optical field."
+      },
+      {
+        "anchor_id": "helios-44-2-spec-optical-registration",
+        "system": "container_or_perimeter",
+        "effect": "Segmented registration geometry converts that radial cadence into the calibrated outer ring and its repeated ticks."
+      }
+    ],
+    "full_resolution_reviewed": true,
+    "text_off_anchor_recognizable": true,
+    "identity_swap_requires_redesign": true,
+    "anchor_drives_primary_composition": true,
+    "composition_resolved": true,
+    "visual_grammar_consistent": true,
+    "finish_target_met": true,
+    "production_reduction_preserves_authorship": true,
+    "structural_thesis": "Concentric Helios optical lanes bend around 58 and convert their radial cadence into the segmented registration perimeter.",
+    "finish_target_note": "The approved finish floor is a fully resolved cinematic field with systematic contours, broad printable registration geometry, and no arbitrary filler regions.",
+    "quality_reference_checks": [],
+    "reviewer_note": "The verified Helios optical-registration anchor controls the lanes around 58 and the calibrated outer ring; replacing this focal and optical identity would require a different primary structure."
   },
   "physical_fit": {
     "measured_diameter_mm": 95.0,

@@ -4,15 +4,30 @@ The stable core accepts TOML (`.toml`) or JSON (`.json`). Paths are resolved
 relative to the config file, so a job directory can be moved or archived.
 
 The public `bin/lens-cap-3mf` release bridge has an additional handoff input:
-an approved `design-brief.json`. Create a release-bound job with paired
+an approved design-brief schema v2 `design-brief.json` (separate from the stable
+job schema v1 described below). Create a release-bound job with paired
 `lens-cap init --lens-identity ... --display-text FOCAL APERTURE ...` options,
 then run `lens-cap handoff-init JOB.toml ... --provider PROVIDER` to create a
 review-required scaffold. Verify anchor sources and evidence states, replace
 its placeholders, complete provenance licences, review the full text set and
-circular composition, and only then set `generation.approved=true`.
+circular composition, and pass the candidate-bound `design_review` before
+setting `generation.approved=true`.
 `lens-cap handoff-check JOB.toml` and the bridge
 validate the brief's source hash, focal-length/aperture order, source-backed
-culture/rehousing anchor, and licence fields. This semantic gate is separate
+culture/rehousing anchor, anti-generic/completion review, and licence fields.
+The review hash must equal the exact candidate and job source. Every anchor has
+a unique stable `anchor_id`; the review's hero index/id must select the same
+`motif_commitment=structural` anchor, and every one of its at least two
+observable consequences must bind that same id while using distinct systems.
+It also requires full-resolution text-off,
+nearest-neighbour swap, composition-resolution, visual-grammar, finish-target,
+and printable-reduction checks. `structural_thesis`, `finish_target_note`, and
+`reviewer_note` are substantive evidence, not scaffold defaults. Any
+An approved reference always uses a canonical `roles` array. A
+`quality_reference` role requires a local hashed snapshot, at least two observable
+transferable traits, inclusion in `generation.reference_hashes`, and exactly
+one passing comparison record; singular or comma-packed `role` strings are
+rejected. This semantic gate is separate
 from the deterministic config schema; `process`/`model` remain available for
 private experiments without a brief. The brief is an approval/provenance
 snapshot for one raster. A `job.toml` is the authoritative mechanical record
@@ -68,7 +83,7 @@ rejected rather than silently relabelled as an F-number.
 | `output_dir` | no | generated derivatives, default `build` |
 | `face_diameter_mm` | process/model | finished circular face/relief diameter; derived from `measured_diameter_mm` when omitted |
 | `measured_diameter_mm` | model/fitted cap | actual outside diameter of the surface the cap grips |
-| `grid_size` | no | square output grid, 64–4096; a hand-authored omission loads as 1000, while `lens-cap init` writes `min(1000, floor(face_diameter_mm / nozzle_mm))` with a floor of 64 (95/0.2 → 475) |
+| `grid_size` | no | square output grid, 64–4096; a hand-authored omission loads as 1000, while `lens-cap init` writes two geometry samples per nozzle width, capped at 1600 (95/0.2 → 950); printability remains governed by `nozzle_mm`, not by treating one pixel as one extrusion line |
 | `nozzle_mm` | no | minimum feature reference, default 0.2; record whether explicit |
 | `safe_border_mm` | no | base-only outer border; a hand-authored omission loads as 0, while `lens-cap init` explicitly writes the safer 0.4 mm starter value |
 | `source_sha256` | no | expected SHA-256 for the immutable source (the process writes its own lock) |

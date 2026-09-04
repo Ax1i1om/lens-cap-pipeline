@@ -33,7 +33,7 @@ from PIL import Image, ImageFilter
 
 from .config import CircleSpec, PaletteSpec, PipelineConfig
 
-PROCESS_VERSION = "0.2.0"
+PROCESS_VERSION = "0.3.0"
 
 
 class ProcessError(RuntimeError):
@@ -585,40 +585,408 @@ def _minimum_relief_feature_audit(
     }
 
 
-def _merged_rectangles(mask: np.ndarray) -> list[tuple[int, int, int, int]]:
-    active: dict[tuple[int, int], int] = {}
-    output: list[tuple[int, int, int, int]] = []
-    for y, row in enumerate(mask):
-        padded = np.concatenate(([False], row, [False]))
-        edges = np.flatnonzero(padded[1:] != padded[:-1])
-        # Sort instead of iterating a set: Python's hash seed is intentionally
-        # randomized, and unsorted rectangle order would make SVG bytes (and
-        # therefore job hashes) vary between otherwise identical runs.
-        runs = sorted((int(edges[i]), int(edges[i + 1])) for i in range(0, len(edges), 2))
-        for run, start_y in list(active.items()):
-            if run not in runs:
-                output.append((run[0], start_y, run[1] - run[0], y - start_y))
-                del active[run]
-        for run in runs:
-            active.setdefault(run, y)
-    height = mask.shape[0]
-    for run, start_y in active.items():
-        output.append((run[0], start_y, run[1] - run[0], height - start_y))
-    return output
+def _trace_mask_contours(mask: np.ndarray) -> list[list[tuple[float, float]]]:
+    """Trace the exact directed boundary of a binary pixel union.
+
+    Standard marching squares cuts 0.5 pixel from every true ninety-degree
+    corner and turns an isolated square pixel into a diamond.  That is
+    unacceptable for typography.  Here every true pixel remains a unit square
+    and only its exposed edges are emitted.  Foreground stays on the right of
+    each directed edge, giving positive outer rings and negative holes in
+    SVG's downward-Y coordinates.
+
+    Checkerboard contacts otherwise leave two polygons touching at one point,
+    which can become non-manifold after extrusion.  At only those ambiguous
+    vertices each incident foreground corner is clipped by 1/4 px.  Normal
+    font corners and rectangular blocks remain exact.
+    """
+
+    values = np.asarray(mask, dtype=bool)
+    if values.ndim != 2:
+        raise ValueError("SVG mask must be a two-dimensional array")
+    if not np.any(values):
+        return []
+    above = np.zeros_like(values)
+    above[1:] = values[:-1]
+    below = np.zeros_like(values)
+    below[:-1] = values[1:]
+    left = np.zeros_like(values)
+    left[:, 1:] = values[:, :-1]
+    right = np.zeros_like(values)
+    right[:, :-1] = values[:, 1:]
+
+    # In image coordinates (+Y down), these directions walk clockwise around
+    # an outer boundary and counter-clockwise around a hole.
+    edges: set[tuple[tuple[int, int], tuple[int, int]]] = set()
+    for y_raw, x_raw in zip(*np.nonzero(values & ~above), strict=True):
+        y, x = int(y_raw), int(x_raw)
+        edges.add(((x, y), (x + 1, y)))
+    for y_raw, x_raw in zip(*np.nonzero(values & ~right), strict=True):
+        y, x = int(y_raw), int(x_raw)
+        edges.add(((x + 1, y), (x + 1, y + 1)))
+    for y_raw, x_raw in zip(*np.nonzero(values & ~below), strict=True):
+        y, x = int(y_raw), int(x_raw)
+        edges.add(((x + 1, y + 1), (x, y + 1)))
+    for y_raw, x_raw in zip(*np.nonzero(values & ~left), strict=True):
+        y, x = int(y_raw), int(x_raw)
+        edges.add(((x, y + 1), (x, y)))
+
+    outgoing: dict[tuple[int, int], list[tuple[int, int]]] = {}
+    incoming_count: Counter[tuple[int, int]] = Counter()
+    for start, end in sorted(edges):
+        outgoing.setdefault(start, []).append(end)
+        incoming_count[end] += 1
+    invalid = sorted(
+        vertex
+        for vertex in set(outgoing) | set(incoming_count)
+        if len(outgoing.get(vertex, ())) != incoming_count.get(vertex, 0)
+        or len(outgoing.get(vertex, ())) not in (1, 2)
+    )
+    if invalid:
+        raise ProcessError(
+            "pixel-union contour topology is not balanced at "
+            f"{len(invalid)} vertex/vertices"
+        )
+    ambiguous = {
+        vertex for vertex, destinations in outgoing.items() if len(destinations) == 2
+    }
+
+    def turn_rank(
+        previous: tuple[int, int],
+        vertex: tuple[int, int],
+        destination: tuple[int, int],
+    ) -> tuple[int, tuple[int, int]]:
+        incoming = (vertex[0] - previous[0], vertex[1] - previous[1])
+        candidate = (destination[0] - vertex[0], destination[1] - vertex[1])
+        directions = (
+            (-incoming[1], incoming[0]),  # right turn: preserve 4-connectivity
+            incoming,
+            (incoming[1], -incoming[0]),
+            (-incoming[0], -incoming[1]),
+        )
+        try:
+            rank = directions.index(candidate)
+        except ValueError as exc:
+            raise ProcessError("pixel-union contour contains a non-unit edge") from exc
+        return rank, destination
+
+    unused = set(edges)
+    raw_contours: list[list[tuple[int, int]]] = []
+    while unused:
+        start, current = min(
+            unused, key=lambda edge: (edge[0][1], edge[0][0], edge[1])
+        )
+        previous = start
+        contour = [start]
+        unused.remove((start, current))
+        while current != start:
+            contour.append(current)
+            candidates = [
+                destination
+                for destination in outgoing.get(current, ())
+                if (current, destination) in unused
+            ]
+            if not candidates:
+                raise ProcessError("pixel-union contour could not be closed")
+            following = min(
+                candidates,
+                key=lambda destination: turn_rank(previous, current, destination),
+            )
+            unused.remove((current, following))
+            previous, current = current, following
+        if len(contour) < 3:
+            raise ProcessError("pixel-union tracing emitted a degenerate contour")
+        raw_contours.append(contour)
+
+    pixel_area = sum(
+        _polygon_area([(float(x), float(y)) for x, y in contour])
+        for contour in raw_contours
+    )
+    if not math.isclose(pixel_area, float(np.count_nonzero(values)), abs_tol=1e-9):
+        raise ProcessError(
+            "pixel-union contours do not preserve the binary-mask area: "
+            f"{pixel_area:g} != {int(np.count_nonzero(values))} px2"
+        )
+
+    # Clip only the checkerboard contact itself. All coordinates stay on a
+    # deterministic quarter-pixel lattice.
+    chamfer = 0.25
+    contours: list[list[tuple[float, float]]] = []
+    for raw in raw_contours:
+        contour: list[tuple[float, float]] = []
+        for index, point in enumerate(raw):
+            if point not in ambiguous:
+                contour.append((float(point[0]), float(point[1])))
+                continue
+            before = raw[index - 1]
+            after = raw[(index + 1) % len(raw)]
+            contour.extend(
+                (
+                    (
+                        point[0] + chamfer * (before[0] - point[0]),
+                        point[1] + chamfer * (before[1] - point[1]),
+                    ),
+                    (
+                        point[0] + chamfer * (after[0] - point[0]),
+                        point[1] + chamfer * (after[1] - point[1]),
+                    ),
+                )
+            )
+        anchor = min(
+            range(len(contour)),
+            key=lambda index: (contour[index][1], contour[index][0]),
+        )
+        contours.append(contour[anchor:] + contour[:anchor])
+    contours.sort(
+        key=lambda contour: (
+            min(point[1] for point in contour),
+            min(point[0] for point in contour),
+            max(point[1] for point in contour),
+            max(point[0] for point in contour),
+            len(contour),
+            contour,
+        )
+    )
+    return contours
 
 
-def _write_svg(mask: np.ndarray, path: Path, face_mm: float, fill: str) -> int:
-    rectangles = _merged_rectangles(mask)
-    commands = "".join(f"M{x} {y}h{w}v{h}h{-w}z" for x, y, w, h in rectangles)
+def _point_segment_distance(
+    point: tuple[float, float],
+    start: tuple[float, float],
+    end: tuple[float, float],
+) -> float:
+    dx = end[0] - start[0]
+    dy = end[1] - start[1]
+    if dx == 0 and dy == 0:
+        return math.hypot(point[0] - start[0], point[1] - start[1])
+    position = max(
+        0.0,
+        min(
+            1.0,
+            ((point[0] - start[0]) * dx + (point[1] - start[1]) * dy)
+            / (dx * dx + dy * dy),
+        ),
+    )
+    return math.hypot(
+        point[0] - (start[0] + position * dx),
+        point[1] - (start[1] + position * dy),
+    )
+
+
+def _rdp_open(
+    points: list[tuple[float, float]], tolerance: float
+) -> list[tuple[float, float]]:
+    if len(points) <= 2 or tolerance <= 0:
+        return list(points)
+    keep = {0, len(points) - 1}
+    stack = [(0, len(points) - 1)]
+    while stack:
+        first, last = stack.pop()
+        if last <= first + 1:
+            continue
+        maximum = -1.0
+        selected = -1
+        for index in range(first + 1, last):
+            distance = _point_segment_distance(points[index], points[first], points[last])
+            if distance > maximum:
+                maximum = distance
+                selected = index
+        if selected >= 0 and maximum > tolerance:
+            keep.add(selected)
+            stack.extend(((first, selected), (selected, last)))
+    return [points[index] for index in sorted(keep)]
+
+
+def _polygon_area(points: list[tuple[float, float]]) -> float:
+    return 0.5 * sum(
+        left[0] * right[1] - right[0] * left[1]
+        for left, right in zip(points, points[1:] + points[:1])
+    )
+
+
+def _without_collinear_vertices(
+    points: list[tuple[float, float]],
+) -> list[tuple[float, float]]:
+    """Remove zero-error vertices on straight runs of a closed polygon."""
+
+    if len(points) <= 3:
+        return list(points)
+    result = [
+        point
+        for index, point in enumerate(points)
+        if not math.isclose(
+            (point[0] - points[index - 1][0])
+            * (points[(index + 1) % len(points)][1] - point[1])
+            - (point[1] - points[index - 1][1])
+            * (points[(index + 1) % len(points)][0] - point[0]),
+            0.0,
+            abs_tol=1e-12,
+        )
+    ]
+    return result if len(result) >= 3 else list(points)
+
+
+def _protected_right_angle_indices(
+    points: list[tuple[float, float]], minimum_run_px: float
+) -> list[int]:
+    """Locate printable orthogonal corners that contour smoothing must retain."""
+
+    protected: list[int] = []
+    for index, point in enumerate(points):
+        previous = points[index - 1]
+        following = points[(index + 1) % len(points)]
+        incoming = (point[0] - previous[0], point[1] - previous[1])
+        outgoing = (following[0] - point[0], following[1] - point[1])
+        incoming_axis = math.isclose(incoming[0], 0.0) != math.isclose(
+            incoming[1], 0.0
+        )
+        outgoing_axis = math.isclose(outgoing[0], 0.0) != math.isclose(
+            outgoing[1], 0.0
+        )
+        perpendicular = math.isclose(
+            incoming[0] * outgoing[0] + incoming[1] * outgoing[1],
+            0.0,
+            abs_tol=1e-12,
+        )
+        if (
+            incoming_axis
+            and outgoing_axis
+            and perpendicular
+            and math.hypot(*incoming) >= minimum_run_px
+            and math.hypot(*outgoing) >= minimum_run_px
+        ):
+            protected.append(index)
+    return protected
+
+
+def _simplify_closed_contour(
+    points: list[tuple[float, float]],
+    tolerance: float,
+    *,
+    hard_corner_run_px: float = 2.0,
+) -> list[tuple[float, float]]:
+    """Simplify a closed contour while pinning printable right-angle corners."""
+
+    if len(points) <= 3:
+        return list(points)
+    compact = _without_collinear_vertices(points)
+    protected = _protected_right_angle_indices(compact, hard_corner_run_px)
+    if len(protected) >= 2:
+        anchor = protected[0]
+        rotated = compact[anchor:] + compact[:anchor]
+        protected = sorted((index - anchor) % len(compact) for index in protected)
+        closed = rotated + [rotated[0]]
+        bounds = protected + [len(rotated)]
+        simplified: list[tuple[float, float]] = []
+        for first, last in zip(bounds, bounds[1:]):
+            simplified.extend(_rdp_open(closed[first : last + 1], tolerance)[:-1])
+        if len(simplified) >= 3:
+            original_area = _polygon_area(compact)
+            simplified_area = _polygon_area(simplified)
+            if (
+                original_area != 0
+                and simplified_area != 0
+                and original_area * simplified_area > 0
+            ):
+                return simplified
+
+    anchor = min(range(len(compact)), key=lambda index: compact[index])
+    rotated = compact[anchor:] + compact[:anchor]
+    split = max(
+        range(1, len(rotated)),
+        key=lambda index: (
+            (rotated[index][0] - rotated[0][0]) ** 2
+            + (rotated[index][1] - rotated[0][1]) ** 2,
+            -index,
+        ),
+    )
+    first = _rdp_open(rotated[: split + 1], tolerance)
+    second = _rdp_open(rotated[split:] + [rotated[0]], tolerance)
+    simplified = first[:-1] + second[:-1]
+    if len(simplified) < 3:
+        return list(points)
+    original_area = _polygon_area(compact)
+    simplified_area = _polygon_area(simplified)
+    if original_area == 0 or simplified_area == 0 or original_area * simplified_area < 0:
+        return compact
+    return simplified
+
+
+def _svg_number(value: float) -> str:
+    rounded = round(value * 4.0) / 4.0
+    if math.isclose(rounded, round(rounded), abs_tol=1e-12):
+        return str(int(round(rounded)))
+    return f"{rounded:.2f}".rstrip("0").rstrip(".")
+
+
+def _write_svg(
+    mask: np.ndarray,
+    path: Path,
+    face_mm: float,
+    fill: str,
+    *,
+    nozzle_mm: float,
+) -> dict[str, Any]:
+    contours = _trace_mask_contours(mask)
+    pixel_pitch_mm = float(face_mm) / int(mask.shape[1])
+    # Use at most half a raster cell and remain below one nozzle.
+    # Printable orthogonal corners are pinned separately; the remaining budget
+    # turns digital stair runs into short diagonals without inventing detail.
+    tolerance_mm = min(0.10, float(nozzle_mm) * 0.50, pixel_pitch_mm * 0.50)
+    tolerance_px = tolerance_mm / pixel_pitch_mm
+    hard_corner_run_px = max(
+        2.0, math.ceil(float(nozzle_mm) / pixel_pitch_mm - 1e-12)
+    )
+    simplified = [
+        _simplify_closed_contour(
+            contour,
+            tolerance_px,
+            hard_corner_run_px=hard_corner_run_px,
+        )
+        for contour in contours
+    ]
+    commands = "".join(
+        "M"
+        + "L".join(f"{_svg_number(x)} {_svg_number(y)}" for x, y in contour)
+        + "Z"
+        for contour in simplified
+    )
     svg = (
         '<?xml version="1.0" encoding="UTF-8"?>\n'
         f'<svg xmlns="http://www.w3.org/2000/svg" width="{face_mm:g}mm" height="{face_mm:g}mm" '
-        f'viewBox="0 0 {mask.shape[1]} {mask.shape[0]}" shape-rendering="crispEdges">\n'
-        f'  <path fill="{fill}" fill-rule="nonzero" d="{commands}"/>\n'
+        f'viewBox="0 0 {mask.shape[1]} {mask.shape[0]}" shape-rendering="geometricPrecision">\n'
+        f'  <path fill="{fill}" fill-rule="evenodd" d="{commands}"/>\n'
         '</svg>\n'
     )
     _atomic_text(path, svg)
-    return len(rectangles)
+    diagonal_segments = sum(
+        1
+        for contour in simplified
+        for left, right in zip(contour, contour[1:] + contour[:1])
+        if not math.isclose(left[0], right[0]) and not math.isclose(left[1], right[1])
+    )
+    filled_area_px2 = sum(_polygon_area(contour) for contour in simplified)
+    if filled_area_px2 < -1e-9:
+        raise ProcessError("pixel-union SVG has a negative compound filled area")
+    source_area_px2 = float(np.count_nonzero(mask))
+    return {
+        "algorithm": "directed-pixel-union-quarter-chamfer-rdp",
+        "contours": len(simplified),
+        "vertices_before": sum(len(contour) for contour in contours),
+        "vertices_after": sum(len(contour) for contour in simplified),
+        "diagonal_segments": diagonal_segments,
+        "pixel_pitch_mm": pixel_pitch_mm,
+        "coordinate_quantum_mm": pixel_pitch_mm / 4.0,
+        "simplification_tolerance_px": tolerance_px,
+        "maximum_deviation_mm": tolerance_mm,
+        "protected_corner_minimum_run_px": hard_corner_run_px,
+        "source_pixel_area_mm2": source_area_px2 * pixel_pitch_mm * pixel_pitch_mm,
+        "filled_area_mm2": filled_area_px2 * pixel_pitch_mm * pixel_pitch_mm,
+        "filled_area_delta_mm2": (filled_area_px2 - source_area_px2)
+        * pixel_pitch_mm
+        * pixel_pitch_mm,
+        "fill_rule": "evenodd",
+    }
 
 
 def _relative(path: Path, root: Path) -> str:
@@ -744,14 +1112,20 @@ def process(config: PipelineConfig, *, force: bool = False) -> dict[str, Any]:
 
     mask_paths: dict[str, str] = {}
     svg_paths: dict[str, str] = {}
-    svg_counts: dict[str, int] = {}
+    svg_vectorization: dict[str, dict[str, Any]] = {}
     mask_stats: dict[str, Any] = {}
     for p in config.palette:
         mask = inside & (labels == p.index)
         mask_path = masks_dir / f"{p.name}.png"
         _atomic_image(Image.fromarray(np.where(mask, 255, 0).astype(np.uint8), mode="L"), mask_path)
         svg_path = vector_dir / f"{p.name}.svg"
-        svg_counts[p.name] = _write_svg(mask, svg_path, config.face_diameter_mm, _hex(p.rgb))
+        svg_vectorization[p.name] = _write_svg(
+            mask,
+            svg_path,
+            config.face_diameter_mm,
+            _hex(p.rgb),
+            nozzle_mm=config.nozzle_mm,
+        )
         mask_paths[p.name] = _relative(mask_path, config.output_dir)
         svg_paths[p.name] = _relative(svg_path, config.output_dir)
         ys, xs = np.nonzero(mask)
@@ -762,7 +1136,9 @@ def process(config: PipelineConfig, *, force: bool = False) -> dict[str, Any]:
             "height_mm": p.height_mm,
             "mask_sha256": sha256_file(mask_path),
             "svg_sha256": sha256_file(svg_path),
-            "svg_rectangles": svg_counts[p.name],
+            "svg_contours": svg_vectorization[p.name]["contours"],
+            "svg_vertices": svg_vectorization[p.name]["vertices_after"],
+            "svg_vectorization": svg_vectorization[p.name],
         }
 
     # A palette entry marked ``required`` is a contract, not a hint: the
@@ -775,7 +1151,7 @@ def process(config: PipelineConfig, *, force: bool = False) -> dict[str, Any]:
         mask_present = (config.output_dir / "masks" / f"{p.name}.png").is_file()
         svg_present = (config.output_dir / "vector" / f"{p.name}.svg").is_file()
         nonempty = int(stats["pixels"]) > 0
-        svg_nonempty = int(stats["svg_rectangles"]) > 0
+        svg_nonempty = int(stats["svg_contours"]) > 0
         if p.required:
             palette_status = bool(mask_present and svg_present and nonempty and svg_nonempty)
         else:
@@ -827,7 +1203,7 @@ def process(config: PipelineConfig, *, force: bool = False) -> dict[str, Any]:
         "role_masks": role_paths,
         "masks": mask_paths,
         "svgs": svg_paths,
-        "svg_rectangle_counts": svg_counts,
+        "svg_vectorization": svg_vectorization,
         "config_normalized": _relative(config_copy_path, config.output_dir),
         "source_lock": _relative(source_lock_path, config.output_dir),
         "run_manifest": "run-manifest.json",

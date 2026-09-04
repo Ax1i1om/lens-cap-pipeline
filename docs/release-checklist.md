@@ -54,6 +54,15 @@ Use this checklist for each tagged release and for each published lens job.
       redistribute (or is kept outside the repository).
 - [ ] Brand/model text and historical references are listed as allowed marks;
       no stale tokens from another lens leaked into the job.
+- [ ] The design brief is schema v2; `design_review` binds the exact candidate
+      hash, selects one structural anchor with matching stable index/id, binds
+      two distinct-system consequences back to that same id, and passes full-resolution text-off, nearest-neighbour
+      swap, composition, visual-grammar, finish-target, and printable-reduction
+      checks with substantive thesis/finish/reviewer evidence.
+- [ ] Every user-supplied quality benchmark has a local hashed snapshot,
+      observable transferable traits, and exactly one passing comparison; no
+      quality reference was silently demoted to a generic style reference, and
+      every reference uses a canonical `roles` array rather than packed text.
 - [ ] Every rendered brand, coating, series, and mount mark is an exact entry
       in the current manifest's `allowed_text`/`allowed_marks`; no generic
       Skill, template, test, or model code supplies a maker-specific default.
@@ -124,6 +133,11 @@ The public same-canvas projection audit (or an equivalent adapter) must be
 run for every relief STL, with its diff/report archived beside the job. A
 model/validation PASS without this footprint check is not a claim that the
 manifest-declared artwork text or marks stayed in place.
+For the canonical anti-jag contour, confirm that the process report names the
+directed pixel-union algorithm, preserves `evenodd` compound-path holes,
+records vector footprint/source-area delta, and keeps maximum deviation below
+one nozzle. Projection tolerance must be derived from that recorded budget,
+not hand-raised after a failure.
 
 ## Publication
 

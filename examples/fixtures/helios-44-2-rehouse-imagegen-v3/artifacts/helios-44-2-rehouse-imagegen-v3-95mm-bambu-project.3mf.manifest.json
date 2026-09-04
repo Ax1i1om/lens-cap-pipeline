@@ -4,10 +4,10 @@
   "bambu": "<BambuStudio.app>/Contents/MacOS/BambuStudio",
   "bambu_result": {
     "error_string": "Success.",
-    "export_time": 892,
+    "export_time": 868,
     "layer_height": 0.0,
     "plate_index": 0,
-    "prepare_time": 155,
+    "prepare_time": 152,
     "return_code": 0,
     "sparse_infill_density": 0.0,
     "wall_loops": 0
@@ -123,7 +123,7 @@
     "scope": "resolved_profile_chain_and_effective_project_settings",
     "status": "passed"
   },
-  "generated_at_utc": "2026-09-03T09:42:39.859916+00:00",
+  "generated_at_utc": "2026-09-03T14:32:49.936110+00:00",
   "input": "<external>/helios-44-2-rehouse-imagegen-v3-95mm-base.stl",
   "input_sha256": "a973b694238cedc809b4c7d1a08675d72b3e24e85fc5d35ecd5dfd24ecedd951",
   "inputs": [
@@ -263,7 +263,7 @@
   "profiles_are_external": true,
   "python": "3.11.15",
   "stderr_tail": "",
-  "stdout_tail": "[2026-09-03 17:42:35.193351] [0x0000000204b87100] [trace]   Initializing StaticPrintConfigs\n",
+  "stdout_tail": "[2026-09-03 22:32:45.431957] [0x0000000204b87100] [trace]   Initializing StaticPrintConfigs\n",
   "verification": {
     "bytes": 2458834,
     "closed_direct_mesh_required": false,
@@ -325,7 +325,7 @@
       "zero_volume_components": 0
     },
     "path": "examples/fixtures/helios-44-2-rehouse-imagegen-v3/artifacts/helios-44-2-rehouse-imagegen-v3-95mm-bambu-project.3mf",
-    "sha256": "7f1596a3eadc0f654cf9a325ed0c50dbb9f5d5abf63449f60f6cbd6ba23814dc",
+    "sha256": "7701225e1ffe7668f84773d671b7bc04f07275b2cf7c3862c562f338ccb97656",
     "single_positive_volume_required": false,
     "slice_audit": null
   }

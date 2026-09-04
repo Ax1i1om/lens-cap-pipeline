@@ -5,7 +5,7 @@
 > **ALPHA · v0.1.0-alpha.2**：这是首个公开预览版的路由修订版。配置 schema、模型适配器和
 > CLI 仍可能发生不兼容变化；文件检查不等于实体卡合或 Bambu 3MF 切片验证。
 
-本项目的核心原则是：**批准的图稿只读，模型化不重新绘图**。图像阶段的“高质量”验收是镜头规格、文字层级和视觉风格等价，而不是要求生成像素一致；用户批准的栅格及其哈希才是后续确定性生产的精确边界。当前稳定核心负责在同一坐标画布上按声明的 palette 生成索引处理稿、材料遮罩和 SVG，并输出可复核 JSON 报告；OpenSCAD／3MF 是显式的后续适配层，不会隐藏在图像处理里。
+本项目的核心原则是：**批准的图稿只读，模型化不重新绘图**。图像阶段的“高质量”验收是镜头规格、文字层级和视觉风格等价，而不是要求生成像素一致；用户批准的栅格及其哈希才是后续确定性生产的精确边界。当前稳定核心负责在同一坐标画布上按声明的 palette 生成索引处理稿、材料遮罩和 SVG，并输出可复核 JSON 报告；OpenSCAD／3MF 是显式的后续适配层，不会隐藏在图像处理里。SVG 使用保留字体直角的有向像素并集轮廓，不再把像素／行程矩形原样挤出；曲线与斜线只在报告记录的亚喷嘴偏差内简化。
 
 ## 快速开始
 
@@ -157,8 +157,11 @@ STL、handoff JSON、命令说明或预检通过都不是 3MF 交付成功。
 ```
 
 `lens-cap-3mf` 是发布级端点，默认会在生成任何派生物前验证当前任务的
-`design-brief.json`：必须明确标记 `generation.approved=true`，锁定当前
-`source_art` 的 SHA-256，包含焦段／光圈顺序、来源锚点和许可记录。桥接器会先看
+schema-v2 `design-brief.json`：必须明确标记 `generation.approved=true`，锁定当前
+`source_art` 的 SHA-256，包含焦段／光圈顺序、来源锚点、已通过的 `design_review`
+反通用化与完成度检查和许可记录。审核还必须绑定同一候选图哈希、用稳定 ID 选定
+结构性主锚点、把至少两个不同系统的后果绑定回同一锚点，并逐项比较所有本地哈希
+质量参考；参考角色统一使用 `roles` 数组。桥接器会先看
 任务 `[metadata].design_brief`，再查找任务目录向上的最近 `design-brief.json`；也可用
 `--brief PATH` 显式指定。缺失、未批准或与当前任务不一致的 brief 返回 `FAILED` 并退出非零，不能把
 裸 TOML/PNG 误报为完成的 3MF。已有的私有 `process`／`model` 实验仍可直接运行核心 CLI。
@@ -174,12 +177,18 @@ lens-cap handoff-init jobs/my-lens/job.toml \
   --anchor-source https://www.suaudeau.eu/memo/Manuels/Mamiya_M645_Service_Manual.pdf
 # 审阅来源后让 anchor.evidence_state 以 sourced／verified 等正向状态开头；
 # 补齐全部 REPLACE、三项 provenance 许可字段和 notes；不适用时写明原因（例如
-# “not applicable — no third-party mark rendered”），再核对完整文字闭集与圆形构图，
-# 最后才把 generation.approved 改为 true。
+# “not applicable — no third-party mark rendered”），再核对完整文字闭集与圆形构图；
+# 全分辨率审核后填写候选哈希、结构性 hero_anchor_index／hero_anchor_id、两个带相同
+# anchor_id 且属于不同系统的结构后果、
+# 隐藏文字／最近邻替换／构图／造型语法／完成度／收敛检查及具体 thesis/notes；
+# 所有质量参考也逐项通过后，才把 generation.approved 改为 true。
 lens-cap handoff-check jobs/my-lens/job.toml --json
 ./bin/lens-cap-3mf jobs/my-lens/job.toml --force --json
 ```
 
+`handoff-init` 属于可打印图稿桥，因此任何含有效正面直径的 job 都会标为
+`printable_front`；只有 `face_diameter_mm` 的独立浮雕正面可以完成图稿交接，但卡合盖
+仍会在取得 `measured_diameter_mm` 前被机械阶段阻止，二者不能混为同一个尺寸。
 `handoff-init` 默认拒绝覆盖已有 brief；`--force` 只应在确认目标路径后使用。
 `init` 的 `--lens-identity` 与 `--display-text` 必须成对提供；后者的前两项必须与
 `handoff-init` 的焦段／光圈一致，后续型号、系统等二级文字也会原样进入
@@ -351,7 +360,9 @@ base／relief STL）；`fit_coupon` 只用于先打印试配环。不要把一�
 `measured_diameter_mm`（实际卡合外径）；只有图稿处理时可以只提供
 `face_diameter_mm`。
 
-导出 STL 后，可用公开的投影审计脚本把每个浮雕网格与同画布遮罩逐色比对：
+导出 STL 后，可用公开的投影审计脚本把每个浮雕网格与同画布遮罩逐色比对。下例
+的 `1` 适用于未简化轮廓；标准 `lens-cap-3mf` 会从 process 报告中已限定的
+矢量偏差自动推导容差（当前抗锯齿轮廓通常为 `2`），不要任意放宽：
 
 ~~~sh
 ./bin/audit-stl-projection \

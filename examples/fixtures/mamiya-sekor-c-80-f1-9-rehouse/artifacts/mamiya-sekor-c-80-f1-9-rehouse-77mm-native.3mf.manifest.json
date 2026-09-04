@@ -11,7 +11,7 @@
   ],
   "command_exit_code": 0,
   "determinism": "byte-stable for identical OpenSCAD geometry under the same OpenSCAD/Python/zlib toolchain after nonsemantic metadata canonicalization; exporter geometry may vary by OpenSCAD release",
-  "generated_at_utc": "2026-09-03T09:44:36.160712+00:00",
+  "generated_at_utc": "2026-09-04T08:50:27.108962+00:00",
   "input": "<external>/mamiya-sekor-c-80-f1-9-rehouse-77mm.scad",
   "input_sha256": "b022ff41f564ca9a1491b5f157cf8dee3efc77b512979b550f63ec0abbd3ab7f",
   "openscad": "<OpenSCAD.app>/Contents/MacOS/OpenSCAD",
@@ -25,16 +25,16 @@
     "dropped_triangles": 0,
     "dropped_vertices": 0,
     "dropped_zero_volume_components": 0,
-    "maximum_nudge_mm": 0.0,
-    "nudged_collinear_triangles": 0,
+    "maximum_nudge_mm": 1e-06,
+    "nudged_collinear_triangles": 3,
     "removed_volatile_metadata": 1,
     "scope": "zero_volume_components_submicron_collinear_facets_and_nonsemantic_openscad_metadata",
     "status": "passed"
   },
-  "stderr_tail": "Geometries in cache: 27\nGeometry cache size in bytes: 4636976\nCGAL Polyhedrons in cache: 6\nCGAL cache size in bytes: 5611500\nTotal rendering time: 0:00:00.114\n   Top level object is a 3D object (manifold):\n   Status:     NoError\n   Genus:      0\n   Vertices:    14790\n   Facets:      29576\n",
+  "stderr_tail": "Geometries in cache: 27\nGeometry cache size in bytes: 4105184\nCGAL Polyhedrons in cache: 6\nCGAL cache size in bytes: 5338500\nTotal rendering time: 0:00:00.114\n   Top level object is a 3D object (manifold):\n   Status:     NoError\n   Genus:      0\n   Vertices:    13698\n   Facets:      27392\n",
   "stdout_tail": "",
   "verification": {
-    "bytes": 269991,
+    "bytes": 252878,
     "closed_direct_mesh_required": true,
     "entries": [
       "3D/3dmodel.model",
@@ -44,7 +44,7 @@
     "gcode_bytes": 0,
     "has_embedded_gcode": false,
     "model": {
-      "absolute_volume_mm3": 20949.273776787963,
+      "absolute_volume_mm3": 20948.276301109872,
       "boundary_edges": 0,
       "bounds": {
         "max_mm": [
@@ -74,15 +74,15 @@
       "parts": 1,
       "transformed_build_items": 0,
       "transformed_components": 0,
-      "triangles": 29576,
+      "triangles": 27392,
       "unreferenced_vertices": 0,
-      "vertices": 14790,
+      "vertices": 13698,
       "volume_components": 1,
       "zero_area_triangles": 0,
       "zero_volume_components": 0
     },
     "path": "<external>/mamiya-sekor-c-80-f1-9-rehouse-77mm-native.3mf",
-    "sha256": "841c5f142685bebf6d75c6e0ccd22d2979b56b60b1253b827206f114ee93451b",
+    "sha256": "42672e2f7a7820f4acdac3cd21f5d80b7b4a366cbd3f5dccb69bfc4cb865b321",
     "single_positive_volume_required": true,
     "slice_audit": null
   }

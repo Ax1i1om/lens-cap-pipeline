@@ -95,8 +95,8 @@ def test_cross_context_trigger_and_intake_contract_is_present() -> None:
         assert "foam" in lowered and "friction" in lowered and "default" in lowered
         assert "only" in lowered and "design skill" in lowered
         assert "once per job" in lowered or "每个任务最多询问一次" in document
-    assert "焦段是最大、第一阅读层级" in imagegen_zh
-    assert "最大光圈（F 值）是第二大阅读层级" in imagegen_zh
+    assert "焦段是最强、第一阅读层级" in imagegen_zh
+    assert "最大光圈（F 值）是第二强阅读层级" in imagegen_zh
     assert "镜头实际卡合的圆柱外径" in production_zh
     assert "最大光圈（F 值）／F值／F-stop／F-number 是第二层级" in production_zh
     assert "默认开启" in production_zh and "摩擦凸条" in production_zh

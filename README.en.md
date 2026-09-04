@@ -200,11 +200,16 @@ preflight is not a successful 3MF delivery:
   --filament-profile /path/to/filament.json --json
 ```
 
-The `lens-cap-3mf` bridge is a release endpoint and now validates a
-`design-brief.json` before creating any derivative. The brief must set
-`generation.approved=true`, bind the current `source_art` SHA-256, preserve
-focal-length/aperture order, and include source-backed anchor and licence
-records. Discovery checks `[metadata].design_brief`, then the nearest
+The `lens-cap-3mf` bridge is a release endpoint and validates the current
+schema-v2 `design-brief.json` before creating any derivative. The brief must
+set `generation.approved=true`, bind the current `source_art` SHA-256,
+preserve focal-length/aperture order, and include source-backed anchors,
+passed `design_review` anti-generic/completion checks, and licence records.
+The review must bind the same candidate hash, select a structural hero anchor
+by matching index and stable id, bind at least two observable consequences in
+distinct systems back to that same anchor id, and
+compare every local hashed quality reference individually. Discovery checks
+`[metadata].design_brief`, then the nearest
 ancestor `design-brief.json`; pass `--brief PATH` when the brief is elsewhere.
 Missing, unapproved, or current-job-mismatched briefs return `FAILED` with a non-zero exit code,
 so a bare TOML/PNG cannot be mistaken for an approved 3MF. Private
@@ -222,15 +227,29 @@ lens-cap handoff-init jobs/my-lens/job.toml \
 # After reviewing the source, start anchor.evidence_state with a positive
 # sourced/verified status. Complete every REPLACE, all three provenance licence
 # fields, and notes; when one is inapplicable, give a reasoned sentence such as
-# "not applicable — no third-party mark rendered". Then review the text/circle.
+# "not applicable — no third-party mark rendered". Then review the complete
+# closed text set and circular composition. At full resolution, fill the exact
+# reviewed_candidate_sha256, a structural hero_anchor_index plus matching
+# hero_anchor_id, and at least two anchor_system_consequences that carry that
+# same anchor_id while using distinct systems. Set
+# full_resolution_reviewed only after passing text_off_anchor_recognizable,
+# identity_swap_requires_redesign, anchor_drives_primary_composition,
+# composition_resolved, visual_grammar_consistent, finish_target_met, and
+# production_reduction_preserves_authorship with a substantive structural_thesis,
+# finish_target_note, and reviewer_note.
+# Pass every quality-reference comparison before setting generation.approved=true.
 lens-cap handoff-check jobs/my-lens/job.toml --json
 ./bin/lens-cap-3mf jobs/my-lens/job.toml --force --json
 ```
 
 The scaffold records candidate hashes, mechanical values, and an alpha-circle
 suggestion. Opaque artwork still needs a human-reviewed `[circle]` center and
-radius in the TOML. Pass `init --lens-identity` and `--display-text` together;
-the first two text entries must agree with the handoff focal length/aperture,
+radius in the TOML. Pass `init --lens-identity` and `--display-text` together.
+Because handoff-init is the printable-artwork bridge, it marks every valid
+face job as `printable_front`; a face-diameter-only relief may pass artwork
+handoff while a fitted cap still remains blocked until `measured_diameter_mm`
+is supplied.
+The first two text entries must agree with the handoff focal length/aperture,
 and every secondary model/system line is copied verbatim into `display_text`
 and `allowed_text`. The strict gate requires that complete ordered set to equal
 the job metadata. It also requires the job's normalized identity text to
@@ -240,15 +259,27 @@ first-end anchor plus `--maximum-aperture-display F3.5-5.6`; en-dash input is
 accepted and normalized, while the complete range remains `display_text[1]`.
 This brief schema intentionally rejects T-stop notation for now.
 `handoff-init --provider` is required, and its `next` output lists the remaining
-evidence-state, licence, text, circle, and approval reviews.
+evidence-state, licence, text, circle, design-review, and approval work. The
+scaffold deliberately leaves the candidate-bound review hash, hero index/id,
+structural thesis, finish target, reviewer note, and all review booleans
+unapproved; placeholder or generic notes do not satisfy the release gate.
 The scaffold also freezes the current `[circle]`, complete palette (roles, RGB,
 relief heights, and related fields), grid, safe border, prefilter, cleanup, and
 assembly mode under `job_binding`; any post-approval job drift fails. Review an
 opaque source's TOML circle before scaffolding. If one of those values changes
 afterward, rerun the same `handoff-init --force` command to refresh the snapshot
 before filling the human-review fields. Every
-anchor needs a reviewable http(s) source or explicit `archive:` identifier plus
+anchor needs a unique lowercase `anchor_id`, a reviewable http(s) source or
+explicit `archive:` identifier plus
 substantive summary/context/motif/recognition fields; a bare `x` cannot pass.
+Any image used as a quality or finish floor must be recorded with the
+`quality_reference` value in its canonical `roles` array, a local snapshot
+inside the brief directory, a
+matching SHA-256 included in `generation.reference_hashes`, and at least two
+transferable traits. `design_review.quality_reference_checks` must cover every
+such reference exactly once with `met=true` and a substantive comparison note.
+Use a `roles` array even for one role; packed comma-separated role strings are
+invalid and cannot bypass the quality gate.
 `handoff-init` refuses to overwrite an existing brief
 unless `--force` is explicit; `handoff-check` and the 3MF bridge share the
 same strict validator. The brief is a semantic, provenance, and human-approval

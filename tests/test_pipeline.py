@@ -7,8 +7,16 @@ from pathlib import Path
 import numpy as np
 from PIL import Image, ImageDraw
 
-from lens_cap_pipeline.config import ConfigError, PaletteSpec, load_config
-from lens_cap_pipeline.process import ProcessError, _minimum_relief_feature_audit, process
+from lens_cap_pipeline.config import ConfigError, PaletteSpec, load_config, template_config
+from lens_cap_pipeline.process import (
+    ProcessError,
+    _minimum_relief_feature_audit,
+    _polygon_area,
+    _simplify_closed_contour,
+    _trace_mask_contours,
+    _write_svg,
+    process,
+)
 from lens_cap_pipeline.validate import validate_job
 
 
@@ -76,6 +84,81 @@ deltas = {{ g = 45, b = 40 }}
 
 def _sha(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def test_default_grid_uses_two_geometry_samples_per_nozzle() -> None:
+    config = template_config("master.png", 95.0, nozzle_mm=0.2)
+    assert config["grid_size"] == 950
+
+
+def test_pixel_union_contours_keep_holes_and_split_diagonal_contacts() -> None:
+    ring = np.zeros((10, 10), dtype=bool)
+    ring[1:9, 1:9] = True
+    ring[4:6, 4:6] = False
+    contours = _trace_mask_contours(ring)
+    assert len(contours) == 2
+    assert all(len(contour) >= 4 for contour in contours)
+    assert sorted(_polygon_area(contour) for contour in contours) == [-4.0, 64.0]
+    assert sum(_polygon_area(contour) for contour in contours) == float(ring.sum())
+
+    diagonal = np.zeros((4, 4), dtype=bool)
+    diagonal[1, 1] = True
+    diagonal[2, 2] = True
+    diagonal_contours = _trace_mask_contours(diagonal)
+    assert len(diagonal_contours) == 2
+    assert not (set(diagonal_contours[0]) & set(diagonal_contours[1]))
+    assert all(_polygon_area(contour) == 0.96875 for contour in diagonal_contours)
+
+
+def test_pixel_union_simplification_preserves_rectangular_type_corners() -> None:
+    mask = np.zeros((10, 12), dtype=bool)
+    mask[2:7, 3:9] = True
+
+    contours = _trace_mask_contours(mask)
+    assert len(contours) == 1
+    simplified = _simplify_closed_contour(contours[0], 0.4)
+
+    assert simplified == [
+        (3.0, 2.0),
+        (9.0, 2.0),
+        (9.0, 7.0),
+        (3.0, 7.0),
+    ]
+    assert _polygon_area(simplified) == 30.0
+
+
+def test_pixel_union_traces_every_three_by_three_topology_without_shared_vertices() -> None:
+    for bits in range(1 << 9):
+        mask = np.asarray(
+            [(bits >> index) & 1 for index in range(9)], dtype=bool
+        ).reshape(3, 3)
+        contours = _trace_mask_contours(mask)
+        filled_area = sum(_polygon_area(contour) for contour in contours)
+        assert -1e-9 <= filled_area <= float(mask.sum()) + 1e-9
+        for left_index, left in enumerate(contours):
+            for right in contours[:left_index]:
+                assert not (set(left) & set(right))
+
+
+def test_svg_vectorization_uses_smooth_contours_not_pixel_rectangles(
+    tmp_path: Path,
+) -> None:
+    yy, xx = np.indices((96, 96), dtype=np.float64)
+    mask = np.hypot(xx - 47.5, yy - 47.5) <= 34.0
+    target = tmp_path / "circle.svg"
+
+    stats = _write_svg(mask, target, 19.2, "#F2E7D3", nozzle_mm=0.2)
+    payload = target.read_text(encoding="utf-8")
+
+    assert stats["algorithm"] == "directed-pixel-union-quarter-chamfer-rdp"
+    assert stats["contours"] == 1
+    assert stats["vertices_after"] < stats["vertices_before"]
+    assert stats["maximum_deviation_mm"] <= 0.10 + 1e-9
+    assert abs(stats["filled_area_delta_mm2"]) < 0.5
+    assert 'fill-rule="evenodd"' in payload
+    assert 'shape-rendering="geometricPrecision"' in payload
+    assert "h1v1" not in payload
+    assert stats["diagonal_segments"] > 0
 
 
 def test_minimum_feature_gate_rejects_hairline_below_nozzle() -> None:

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 
@@ -18,13 +19,56 @@ def _approve_design_brief(path: Path) -> dict:
     brief["generation"]["approval_note"] = (
         "Human reviewer confirmed the exact text, hierarchy, circular composition, and source scope."
     )
+    brief["design_review"].update(
+        {
+            "reviewed_candidate_sha256": brief["generation"]["candidate_sha256"],
+            "hero_anchor_index": 0,
+            "hero_anchor_id": "anchor-1",
+            "anchor_system_consequences": [
+                {
+                    "anchor_id": "anchor-1",
+                    "system": "typography_or_counterform",
+                    "effect": "The system grid controls the focal-length counterform and spacing.",
+                },
+                {
+                    "anchor_id": "anchor-1",
+                    "system": "container_or_perimeter",
+                    "effect": "The same grid resolves into the circular perimeter rhythm.",
+                },
+            ],
+            "full_resolution_reviewed": True,
+            "text_off_anchor_recognizable": True,
+            "identity_swap_requires_redesign": True,
+            "anchor_drives_primary_composition": True,
+            "composition_resolved": True,
+            "visual_grammar_consistent": True,
+            "finish_target_met": True,
+            "production_reduction_preserves_authorship": True,
+            "structural_thesis": (
+                "The sourced system grid organizes the full circular field, locks into "
+                "the focal-length counterform, and continues through the perimeter rhythm."
+            ),
+            "finish_target_note": (
+                "The approved finish floor requires deliberate negative space, systematic "
+                "weights and alignments, and no provisional or filler regions."
+            ),
+            "quality_reference_checks": [],
+            "reviewer_note": (
+                "At full resolution, the sourced system geometry controls type, field, and "
+                "perimeter; its visual grammar is resolved, the printable reduction keeps "
+                "that topology, and a neighbouring lens would require structural redesign."
+            ),
+        }
+    )
     brief["anchors"][0].update(
         {
+            "anchor_id": "anchor-1",
             "evidence_state": "verified_from_cited_source",
             "summary": "The cited manufacturer catalog identifies this lens and system.",
             "anchor_context": "Manufacturer-system evidence only; no film association is claimed.",
             "anchor_visual_motif": "Original modular geometry derived from the documented system context.",
             "recognition_cue": "The ordered model text and modular system grid remain recognizable.",
+            "motif_commitment": "structural",
             "qualifier": "Manufacturer catalog evidence; visual geometry is original.",
         }
     )
@@ -104,10 +148,31 @@ def test_handoff_init_writes_hash_and_reviewable_circle_scaffold(tmp_path: Path,
         ]
     ) == 0
     brief = json.loads((tmp_path / "design-brief.json").read_text(encoding="utf-8"))
+    assert brief["schema_version"] == 2
     assert brief["generation"]["approved"] is False
+    assert brief["design_review"] == {
+        "reviewed_candidate_sha256": None,
+        "hero_anchor_index": None,
+        "hero_anchor_id": None,
+        "anchor_system_consequences": [],
+        "full_resolution_reviewed": False,
+        "text_off_anchor_recognizable": False,
+        "identity_swap_requires_redesign": False,
+        "anchor_drives_primary_composition": False,
+        "composition_resolved": False,
+        "visual_grammar_consistent": False,
+        "finish_target_met": False,
+        "production_reduction_preserves_authorship": False,
+        "structural_thesis": None,
+        "finish_target_note": None,
+        "quality_reference_checks": [],
+        "reviewer_note": None,
+    }
     assert len(brief["generation"]["candidate_sha256"]) == 64
     assert brief["circle_suggestion"]["method"] == "alpha_bbox_suggestion_review_required"
     assert brief["physical_fit"]["measured_diameter_mm"] == 95.0
+    assert brief["anchors"][0]["anchor_id"] == "anchor-1"
+    assert brief["production_target"] == "printable_front"
 
 
 def test_handoff_init_keeps_custom_brief_path_in_follow_up_commands(tmp_path: Path, capsys) -> None:
@@ -154,6 +219,49 @@ def test_handoff_init_keeps_custom_brief_path_in_follow_up_commands(tmp_path: Pa
     assert brief_path.is_file()
     assert all(str(brief_path) in step for step in report["next"][-2:])
     assert "--brief" in report["next"][-1]
+
+
+def test_handoff_init_marks_face_only_relief_as_printable_front(
+    tmp_path: Path, capsys
+) -> None:
+    source = tmp_path / "master.png"
+    Image.new("RGB", (64, 64), (17, 18, 17)).save(source)
+    config_path = tmp_path / "job.toml"
+    assert main(
+        [
+            "init",
+            str(config_path),
+            "--source",
+            str(source),
+            "--face-diameter",
+            "95",
+            "--lens-identity",
+            "Example Prime 50mm F1.4",
+            "--display-text",
+            "50",
+            "F1.4",
+        ]
+    ) == 0
+    assert main(
+        [
+            "handoff-init",
+            str(config_path),
+            "--brand",
+            "Example",
+            "--model",
+            "Prime",
+            "--focal-length",
+            "50",
+            "--maximum-aperture",
+            "F1.4",
+            "--provider",
+            "test-image-provider",
+        ]
+    ) == 0
+    brief = json.loads((tmp_path / "design-brief.json").read_text(encoding="utf-8"))
+    assert brief["production_target"] == "printable_front"
+    assert brief["physical_fit"]["face_target_mm"] == 95.0
+    assert brief["physical_fit"]["measured_diameter_mm"] is None
 
 
 def test_handoff_check_rejects_unapproved_scaffold(tmp_path: Path, capsys) -> None:
@@ -764,7 +872,7 @@ def test_handoff_check_rejects_circle_palette_and_artwork_process_job_drift(
     assert approved["job_binding"]["circle"]["allow_outside"] is False
     assert approved["job_binding"]["palette"]["gray"]["height_mm"] == 0.4
     assert approved["job_binding"]["artwork_process"] == {
-        "grid_size": 260,
+        "grid_size": 520,
         "safe_border_mm": 0.4,
         "prefilter": {"name": "median", "size": 5, "radius": 0.8},
         "cleanup": {
@@ -785,7 +893,7 @@ def test_handoff_check_rejects_circle_palette_and_artwork_process_job_drift(
     mutations = (
         ("allow_outside = false", "allow_outside = true", "job_binding.circle"),
         ("height_mm = 0.4", "height_mm = 0.9", "job_binding.palette"),
-        ("grid_size = 260", "grid_size = 512", "job_binding.artwork_process"),
+        ("grid_size = 520", "grid_size = 512", "job_binding.artwork_process"),
         ("safe_border_mm = 0.4", "safe_border_mm = 0.9", "job_binding.artwork_process"),
         ('name = "median"', 'name = "none"', "job_binding.artwork_process"),
         (
@@ -942,6 +1050,229 @@ def test_handoff_check_rejects_empty_anchor_mapping_and_provenance(
         brief_path.write_text(json.dumps(mutated, indent=2) + "\n", encoding="utf-8")
         assert main(["handoff-check", str(config_path), "--json"]) == 2
         assert f"provenance.{field}" in capsys.readouterr().err
+
+    for field in (
+        "full_resolution_reviewed",
+        "text_off_anchor_recognizable",
+        "identity_swap_requires_redesign",
+        "anchor_drives_primary_composition",
+        "composition_resolved",
+        "visual_grammar_consistent",
+        "finish_target_met",
+        "production_reduction_preserves_authorship",
+    ):
+        mutated = json.loads(json.dumps(approved))
+        mutated["design_review"][field] = False
+        brief_path.write_text(json.dumps(mutated, indent=2) + "\n", encoding="utf-8")
+        assert main(["handoff-check", str(config_path), "--json"]) == 2
+        assert f"design_review.{field}" in capsys.readouterr().err
+
+    for field in ("structural_thesis", "finish_target_note", "reviewer_note"):
+        shallow_review = json.loads(json.dumps(approved))
+        shallow_review["design_review"][field] = "generic"
+        brief_path.write_text(
+            json.dumps(shallow_review, indent=2) + "\n", encoding="utf-8"
+        )
+        assert main(["handoff-check", str(config_path), "--json"]) == 2
+        assert f"design_review.{field}" in capsys.readouterr().err
+
+    missing_approval_evidence = json.loads(json.dumps(approved))
+    missing_approval_evidence["generation"]["approval_note"] = None
+    brief_path.write_text(
+        json.dumps(missing_approval_evidence, indent=2) + "\n", encoding="utf-8"
+    )
+    assert main(["handoff-check", str(config_path), "--json"]) == 2
+    assert "generation.approval_note" in capsys.readouterr().err
+
+    invalid_hero = json.loads(json.dumps(approved))
+    invalid_hero["design_review"]["hero_anchor_index"] = 99
+    brief_path.write_text(json.dumps(invalid_hero, indent=2) + "\n", encoding="utf-8")
+    assert main(["handoff-check", str(config_path), "--json"]) == 2
+    assert "hero_anchor_index is outside anchors" in capsys.readouterr().err
+
+    nonstructural_hero = json.loads(json.dumps(approved))
+    nonstructural_hero["anchors"][0]["motif_commitment"] = "supporting"
+    brief_path.write_text(
+        json.dumps(nonstructural_hero, indent=2) + "\n", encoding="utf-8"
+    )
+    assert main(["handoff-check", str(config_path), "--json"]) == 2
+    assert "motif_commitment is structural" in capsys.readouterr().err
+
+    repeated_consequence = json.loads(json.dumps(approved))
+    repeated_consequence["design_review"]["anchor_system_consequences"][1][
+        "system"
+    ] = "typography_or_counterform"
+    brief_path.write_text(
+        json.dumps(repeated_consequence, indent=2) + "\n", encoding="utf-8"
+    )
+    assert main(["handoff-check", str(config_path), "--json"]) == 2
+    assert "must use distinct systems" in capsys.readouterr().err
+
+    mismatched_hero_id = json.loads(json.dumps(approved))
+    mismatched_hero_id["design_review"]["hero_anchor_id"] = "another-anchor"
+    brief_path.write_text(
+        json.dumps(mismatched_hero_id, indent=2) + "\n", encoding="utf-8"
+    )
+    assert main(["handoff-check", str(config_path), "--json"]) == 2
+    assert "hero_anchor_id must match" in capsys.readouterr().err
+
+    mismatched_consequence = json.loads(json.dumps(approved))
+    mismatched_consequence["design_review"]["anchor_system_consequences"][0][
+        "anchor_id"
+    ] = "another-anchor"
+    brief_path.write_text(
+        json.dumps(mismatched_consequence, indent=2) + "\n", encoding="utf-8"
+    )
+    assert main(["handoff-check", str(config_path), "--json"]) == 2
+    assert "must equal design_review.hero_anchor_id" in capsys.readouterr().err
+
+    duplicate_anchor_id = json.loads(json.dumps(approved))
+    duplicate_anchor_id["anchors"].append(
+        json.loads(json.dumps(duplicate_anchor_id["anchors"][0]))
+    )
+    brief_path.write_text(
+        json.dumps(duplicate_anchor_id, indent=2) + "\n", encoding="utf-8"
+    )
+    assert main(["handoff-check", str(config_path), "--json"]) == 2
+    assert "duplicate anchor_id" in capsys.readouterr().err
+
+    for filler in (
+        "a" * 40,
+        "1234" * 10,
+        "ok " * 20,
+        "asdf qwer zxcv " * 4,
+        "anchor system consequence " * 4,
+    ):
+        mechanical_review = json.loads(json.dumps(approved))
+        mechanical_review["design_review"]["reviewer_note"] = filler
+        brief_path.write_text(
+            json.dumps(mechanical_review, indent=2) + "\n", encoding="utf-8"
+        )
+        assert main(["handoff-check", str(config_path), "--json"]) == 2
+        assert "reviewer_note" in capsys.readouterr().err
+
+    natural_replacement_note = json.loads(json.dumps(approved))
+    natural_replacement_note["design_review"]["reviewer_note"] = (
+        "Replacement geometry preserves the approved topology while the sourced "
+        "grid still controls type, field rhythm, and the circular perimeter."
+    )
+    brief_path.write_text(
+        json.dumps(natural_replacement_note, indent=2) + "\n", encoding="utf-8"
+    )
+    assert main(["handoff-check", str(config_path), "--json"]) == 0
+    capsys.readouterr()
+
+    chinese_review_note = json.loads(json.dumps(approved))
+    chinese_review_note["design_review"]["reviewer_note"] = (
+        "同一套校准网格切入焦段数字的反形，并继续收束到外圆周；替换近邻镜头时必须重做比例与节奏。"
+    )
+    brief_path.write_text(
+        json.dumps(chinese_review_note, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    assert main(["handoff-check", str(config_path), "--json"]) == 0
+    capsys.readouterr()
+
+    reference_path = tmp_path / "quality-reference.png"
+    Image.new("RGB", (32, 32), (242, 231, 211)).save(reference_path)
+    reference_hash = hashlib.sha256(reference_path.read_bytes()).hexdigest()
+    with_quality_reference = json.loads(json.dumps(approved))
+    with_quality_reference["approved_references"] = [
+        {
+            "id": "finish-benchmark",
+            "roles": ["quality_reference", "style_reference"],
+            "path_or_url": "user-supplied comparison",
+            "snapshot_path": reference_path.name,
+            "snapshot_sha256": reference_hash,
+            "transferable_traits": [
+                "Integrated focal typography and structural geometry",
+                "Systematic edge weights and resolved negative space",
+            ],
+        }
+    ]
+    with_quality_reference["generation"]["reference_hashes"] = [reference_hash]
+    brief_path.write_text(
+        json.dumps(with_quality_reference, indent=2) + "\n", encoding="utf-8"
+    )
+    assert main(["handoff-check", str(config_path), "--json"]) == 2
+    assert "must cover every quality_reference" in capsys.readouterr().err
+
+    with_quality_reference["design_review"]["quality_reference_checks"] = [
+        {
+            "reference_id": "finish-benchmark",
+            "met": True,
+            "comparison_note": (
+                "The candidate matches the benchmark's integration, edge discipline, "
+                "and deliberate negative-space relationships without copying its motif."
+            ),
+        }
+    ]
+    brief_path.write_text(
+        json.dumps(with_quality_reference, indent=2) + "\n", encoding="utf-8"
+    )
+    assert main(["handoff-check", str(config_path), "--json"]) == 0
+    quality_report = json.loads(capsys.readouterr().out)
+    assert quality_report["quality_reference_count"] == 1
+
+    packed_reference_roles = json.loads(json.dumps(with_quality_reference))
+    packed_reference_roles["approved_references"][0].pop("roles")
+    packed_reference_roles["approved_references"][0]["role"] = (
+        "quality_reference,style_reference"
+    )
+    brief_path.write_text(
+        json.dumps(packed_reference_roles, indent=2) + "\n", encoding="utf-8"
+    )
+    assert main(["handoff-check", str(config_path), "--json"]) == 2
+    assert ".role is ambiguous" in capsys.readouterr().err
+
+    duplicate_reference_roles = json.loads(json.dumps(with_quality_reference))
+    duplicate_reference_roles["approved_references"][0]["roles"] = [
+        "quality_reference",
+        "quality_reference",
+    ]
+    brief_path.write_text(
+        json.dumps(duplicate_reference_roles, indent=2) + "\n", encoding="utf-8"
+    )
+    assert main(["handoff-check", str(config_path), "--json"]) == 2
+    assert "roles must not contain duplicates" in capsys.readouterr().err
+
+    stale_quality_reference = json.loads(json.dumps(with_quality_reference))
+    stale_quality_reference["approved_references"][0]["snapshot_sha256"] = "f" * 64
+    stale_quality_reference["generation"]["reference_hashes"] = ["f" * 64]
+    brief_path.write_text(
+        json.dumps(stale_quality_reference, indent=2) + "\n", encoding="utf-8"
+    )
+    assert main(["handoff-check", str(config_path), "--json"]) == 2
+    assert "snapshot_sha256 does not match" in capsys.readouterr().err
+
+    stale_review = json.loads(json.dumps(approved))
+    stale_review["design_review"]["reviewed_candidate_sha256"] = "0" * 64
+    brief_path.write_text(json.dumps(stale_review, indent=2) + "\n", encoding="utf-8")
+    assert main(["handoff-check", str(config_path), "--json"]) == 2
+    assert "reviewed_candidate_sha256 does not match" in capsys.readouterr().err
+
+    legacy_review = json.loads(json.dumps(approved))
+    legacy_review["schema_version"] = 1
+    brief_path.write_text(json.dumps(legacy_review, indent=2) + "\n", encoding="utf-8")
+    assert main(["handoff-check", str(config_path), "--json"]) == 2
+    schema_error = capsys.readouterr().err
+    assert "schema_version must be 2" in schema_error
+    assert "legacy v1 requires a new reviewed v2 brief" in schema_error
+
+    for invalid_version in (2.0, True, None):
+        invalid_schema = json.loads(json.dumps(approved))
+        invalid_schema["schema_version"] = invalid_version
+        brief_path.write_text(
+            json.dumps(invalid_schema, indent=2) + "\n", encoding="utf-8"
+        )
+        assert main(["handoff-check", str(config_path), "--json"]) == 2
+        assert "schema_version must be the integer 2" in capsys.readouterr().err
+
+    future_schema = json.loads(json.dumps(approved))
+    future_schema["schema_version"] = 3
+    brief_path.write_text(json.dumps(future_schema, indent=2) + "\n", encoding="utf-8")
+    assert main(["handoff-check", str(config_path), "--json"]) == 2
+    assert "unsupported design brief schema_version 3" in capsys.readouterr().err
 
     for token_only in ("NONE", "not applicable"):
         mutated = json.loads(json.dumps(approved))

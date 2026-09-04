@@ -167,8 +167,19 @@ sourced` are failures, not positive substring matches. When a provenance field
 does not apply, use a reasoned sentence such as `not applicable — no
 third-party mark rendered`; bare `NONE`/`N/A` remains insufficient. Confirm that `display_text` and
 `allowed_text` exactly preserve the complete job metadata text list, review
-the circular composition, then set `generation.approved=true` only after a
-human review and run `lens-cap handoff-check jobs/name/job.toml --json`.
+the circular composition, and complete schema-v2 `design_review`. Bind
+`reviewed_candidate_sha256` only after full-resolution inspection; give every
+anchor a unique stable `anchor_id`, choose a structural `hero_anchor_index`,
+copy its id into `hero_anchor_id`, and bind at least two observable consequences
+to that same id in different systems; then pass text-off, closest-sibling/competitor swap,
+composition, visual-grammar, finish-target, and printable-reduction checks.
+If a user supplied a quality benchmark, include `quality_reference` in that
+reference's canonical `roles` array, save and hash a local snapshot, and record
+exactly one passing comparison with observable transferable traits. A singular
+or comma-packed `role` string is invalid.
+Add a verb-led structural thesis plus substantive finish/reviewer notes, then set
+`generation.approved=true` only after human review and run
+`lens-cap handoff-check jobs/name/job.toml --json`.
 The scaffold never invokes an image provider and never assumes approval. For
 opaque artwork, set an explicitly reviewed `[circle]` rather than letting a
 downstream stage recenter the image. If any bound artwork-process setting
@@ -241,15 +252,20 @@ The core performs only deterministic transformations:
 5. sample labels onto a normalized square canvas with nearest-neighbour maps;
 6. clip the circle and reserve a base-only safe border;
 7. remove only isolated components below the declared area/dimension limits;
-8. emit an RGBA process master, role masks, per-colour masks, and same-canvas
-   SVGs.
+8. trace each binary mask as one deterministic directed pixel-union compound
+   path, preserving orthogonal corners and holes while separating only
+   checkerboard point contacts;
+9. apply bounded, hard-corner-protected contour simplification to curves and
+   diagonals, then emit an RGBA process master, role masks, per-colour masks,
+   and same-canvas SVGs.
 
 Use a lossless PNG/PPM source when the output must compare byte-for-byte across
 machines. JPEG is accepted, but its Pillow/libjpeg decoder version is part of
 the effective environment and is therefore recorded as a release assumption.
 
 The process report includes source/config hashes, pixel counts, component
-changes, SVG rectangle counts, polarity samples from the raw source, and
+changes, SVG contour/vertex/diagonal counts, vector area and source-area delta,
+the coordinate/deviation budget, polarity samples from the raw source, and
 boolean safety checks. A failed check stops the pipeline before CAD.
 It also records the Python, NumPy, Pillow and byte-order runtime used for
 decoding/classification; retain this block when comparing artifacts across
