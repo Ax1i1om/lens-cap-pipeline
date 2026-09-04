@@ -191,9 +191,6 @@ class FitSpec:
     wall_thickness_mm: float = 2.4
     bottom_thickness_mm: float = 2.0
     side_height_mm: float = 14.0
-    # Optional 45-degree bevel on the closed front face's outer circumference.
-    # Zero preserves the historical square edge.
-    front_outer_chamfer_mm: float = 0.0
     bare_clearance_mm: float = 0.40
     retention_strategy: str = "auto"
     # Vertical interference ribs are a generic retention aid for fitted caps.
@@ -220,6 +217,10 @@ class FitSpec:
     # automatically turns the values into explicit overrides at load time.
     friction_rib_profile_derived: bool = False
     friction_rib_profile_reference_cavity_mm: float | None = None
+    # Optional 45-degree bevel on the closed front face's outer circumference.
+    # Appended after the historical fields so positional FitSpec callers keep
+    # their original argument mapping. Zero preserves the square edge.
+    front_outer_chamfer_mm: float = 0.0
 
     def public(self) -> dict[str, Any]:
         return {

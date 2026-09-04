@@ -350,6 +350,10 @@ def test_current_imagegen_rehouse_fixture_and_retained_3mf_are_self_contained(tm
     assert current_rib_audit["detected_start_positions"] == 12
     assert current_rib_audit["detected_end_positions"] == 12
     assert current_rib_audit["minimum_full_height_tip_face_width_mm"] > 0
+    assert {
+        entry["minimum_inside_interval_mm"]
+        for entry in current_rib_audit["axial_continuity_sample_hits"]
+    } == {round(float(geometry["mechanical"]["friction_rib_height_mm"]), 9)}
     assert release_report["friction_rib_mesh_audit"] == current_rib_audit
 
     expected_top = bridge._expected_relief_top_z(geometry)

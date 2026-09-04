@@ -566,7 +566,7 @@
       {
         "continuous_columns": 15,
         "maximum_surface_intersections": 4,
-        "minimum_inside_interval_mm": 7.999999999999998,
+        "minimum_inside_interval_mm": 8.0,
         "position": 7
       },
       {
@@ -584,13 +584,13 @@
       {
         "continuous_columns": 15,
         "maximum_surface_intersections": 4,
-        "minimum_inside_interval_mm": 7.999999999999998,
+        "minimum_inside_interval_mm": 8.0,
         "position": 10
       },
       {
         "continuous_columns": 15,
         "maximum_surface_intersections": 4,
-        "minimum_inside_interval_mm": 7.999999999999998,
+        "minimum_inside_interval_mm": 8.0,
         "position": 11
       }
     ],

@@ -9,11 +9,19 @@ import pytest
 from PIL import Image, ImageDraw
 from test_pipeline import _job
 
-from lens_cap_pipeline.config import ConfigError, friction_rib_profile_defaults, load_config
+from lens_cap_pipeline.config import ConfigError, FitSpec, friction_rib_profile_defaults, load_config
 from lens_cap_pipeline.external import write_bambu_handoff
 from lens_cap_pipeline.model import ModelError, _mechanical_values, generate_model
 from lens_cap_pipeline.process import process
 from lens_cap_pipeline.validate import validate_job
+
+
+def test_fit_spec_keeps_the_pre_chamfer_positional_argument_order() -> None:
+    fit = FitSpec("none", None, None, 0.20, True, 2.4, 2.0, 14.0, 0.75, "custom")
+
+    assert fit.bare_clearance_mm == pytest.approx(0.75)
+    assert fit.retention_strategy == "custom"
+    assert fit.front_outer_chamfer_mm == pytest.approx(0.0)
 
 
 def test_model_consumes_process_without_retyping_art(tmp_path: Path) -> None:

@@ -1118,7 +1118,11 @@ def _audit_integrated_ribs(path: Path, mechanical: dict[str, Any]) -> dict[str, 
                 {
                     "position": position,
                     "continuous_columns": axial_hits,
-                    "minimum_inside_interval_mm": minimum_axial_span,
+                    # The pass/fail decision above uses the unrounded value.
+                    # Canonicalise only the published diagnostic: libm can
+                    # otherwise spell the same 8 mm span as either 8.0 or
+                    # 7.999999999999998 on different operating systems.
+                    "minimum_inside_interval_mm": round(minimum_axial_span, 9),
                     "maximum_surface_intersections": maximum_axial_intersections,
                 }
             )

@@ -14,6 +14,13 @@ if str(SCRIPTS) not in sys.path:
 import install_skills  # noqa: E402
 
 
+def test_managed_skill_yaml_is_forced_to_lf_for_cross_platform_hashes() -> None:
+    attributes = (ROOT / ".gitattributes").read_text(encoding="utf-8")
+
+    assert "*.yaml text eol=lf" in attributes
+    assert "*.yml text eol=lf" in attributes
+
+
 def test_source_check_reports_manifest_version_and_hashes() -> None:
     report = install_skills.inspect_skills(root=ROOT)
     assert report["status"] == "passed"
