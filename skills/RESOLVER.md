@@ -64,10 +64,11 @@ context. Metadata/photo/manual/review/warranty/poster/pouch ownership also vetoe
 | User intent | Primary route | Allowed sequence |
 | --- | --- | --- |
 | Cap-owned concept art, badge, medallion, or front graphic | `$lens-cap-imagegen` | ImageGen/web research as supporting tools; no second creative Skill |
-| Printable cap/front-cap, cap relief/model/part, SCAD/STL/3MF, or fit | `$lens-cap-production` | `$lens-cap-imagegen` first only when approved artwork is missing |
+| Printable cap/front-cap, cap relief/model/part, SCAD/STL/3MF, or fit | `$lens-cap-production` | `$lens-cap-imagegen` first only when a new artwork-based build lacks approved artwork |
+| Explicit structural edit of a supplied cap model, with its front preserved | `$lens-cap-production` | Existing-model branch; no image regeneration or template-shell replacement |
 | Both design and printable production | `$lens-cap-imagegen` → `$lens-cap-production` | Sequential handoff; never parallel creative redesign |
 
-When the user explicitly asks to end at a 3MF, the production route must call
+For a new artwork-based build ending at a 3MF, the production route must call
 `./bin/lens-cap-3mf JOB.toml --force --json` after artwork approval. If the
 brief has not been scaffolded, run `lens-cap handoff-init JOB.toml` and review
 all placeholders first; `lens-cap handoff-check JOB.toml` is the preflight. This bridge
@@ -77,6 +78,13 @@ is the portable geometry-audit master, not a Bambu project. For a Bambu
 destination use `--bambu export` with named local machine/process/filament
 profiles; reserve `--bambu slice` for an explicit embedded-toolpath request.
 Missing desktop tools remain `UNVERIFIABLE`.
+
+An explicit edit of a supplied model uses the production Skill's
+`references/rib-attachment-and-existing-models.md` instead of that build bridge.
+The source-model hash and requested edit scope bind preservation; missing
+original artwork does not authorize redrawing it. This branch still requires
+actual-wall measurement, rib fusion/continuity and preservation/package/import
+checks, and must not claim a bridge run that did not occur.
 
 If intent is ambiguous, ask one focused clarification rather than falling back
 to a generic design Skill. An explicit request for a separate unrelated

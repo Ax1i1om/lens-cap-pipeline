@@ -18,12 +18,14 @@
     },
     "lens-cap-production": {
       "files": {
-        "SKILL.md": "ea3211b9d4b44388dcaddb78bf9b58a734c6ec1590d17f2d2a04441f3a106357",
-        "SKILL.zh-CN.md": "89a436728baf27ea09f77db89341b9e02d5abaea02f69643e2f35ae3ad3c3a3b",
-        "agents/openai.yaml": "7a69060c9877ebb10ab16d067c881ec32570da89a4fa4b9d40bd4544df43e5cc"
+        "SKILL.md": "c53424bdf81ec9103f007f7281e28b8a88761bf016690c4d42bffa74c0ff5fa5",
+        "SKILL.zh-CN.md": "9a3174ff2f519f75a15a1d1f3d3c28974fc17579ff2ebefeb5d95e4e86835536",
+        "agents/openai.yaml": "7a69060c9877ebb10ab16d067c881ec32570da89a4fa4b9d40bd4544df43e5cc",
+        "references/front-edge-and-face-junction.md": "c76faf91e0ccaf2ac9ce9073a3c087bcd1f812ba9c2404eef286d550c9d054ce",
+        "references/rib-attachment-and-existing-models.md": "5299625215842fd34ca6c8e778430880661bda9060635c6ea99e157b54f4f831"
       },
       "source_dir": "skills/lens-cap-production",
-      "tree_sha256": "da097cac9d23b46c088c2b890e477741d69919292cc6e5e04e574aa6116ecddd",
+      "tree_sha256": "2dd4ce45fc0aceeb471005e6e1330d84b23c39b56ae79dbc7c03e6bf23a86e38",
       "version": "0.1.0a2"
     }
   }

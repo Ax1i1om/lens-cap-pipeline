@@ -23,7 +23,7 @@ Use this checklist for each tagged release and for each published lens job.
       NumPy/Pillow, OpenSCAD and slicer versions in the release note.
 - [ ] `python -m pytest`, `python -m compileall -q lens_cap_pipeline` and CI
       pass on all supported Python versions.
-- [ ] For any release that claims an actual 3MF,
+- [ ] For a new artwork-based release that claims an actual 3MF,
       `./bin/lens-cap-3mf <job.toml> --force --json` returns `passed`, the
       reported `.3mf` exists, and the adjacent release report records
       `scripts/build_3mf.py` as its runner. A successful `lens-cap build`, SCAD,
@@ -83,14 +83,52 @@ Use this checklist for each tagged release and for each published lens job.
 
 ## Geometry and printing
 
+For an explicitly requested existing-model edit, use the production Skill's
+[existing-model contract](../skills/lens-cap-production/references/rib-attachment-and-existing-models.md)
+instead of the new-artwork brief/build-bridge requirements. Record the exact
+source hash and edit scope; do not claim that the canonical bridge ran.
+
+- [ ] Rib roots use measured target-wall geometry in resolved units/transforms,
+      not a filename, presumed cavity or reference source defaults. Actual
+      contact fit, foam stack-up and minimum full-footprint overlap are recorded.
+- [ ] Each rib is Boolean-fused to the structural body. The final structural
+      mesh is closed and connected; sections near both ends, interior heights
+      and profile changes prove wall continuity across the root width, not just
+      connection through the floor. Intentional colour islands are audited
+      separately. Save per-rib evidence rather than just a component count.
+- [ ] For existing-model edits, the front geometry/materials/transforms,
+      unedited silhouette/chamfers and project settings are preserved and
+      compared; source remains recoverable. Stale sliced toolpaths are removed
+      or regenerated. Package and target-slicer import checks bind the exact
+      edited output; new-build-only checks below are not falsely attested.
+
+- [ ] For front finishing, identify the authorized edge: cap outer bevel,
+      badge shoulder or artwork contour. Measure the delivered bevel and
+      narrowest remaining face support; no face resizing, stroke rounding or
+      newly exposed border was used to fit it. Follow the Skill's
+      [front-junction contract](../skills/lens-cap-production/references/front-edge-and-face-junction.md).
+- [ ] Sections around and through the face/body joint prove positive-area
+      support/contact or controlled construction overlap, without air slits,
+      point-only connections or unsupported lips. Preserve colour parts;
+      record their interface strategy rather than requiring a monochrome
+      component count or claiming an unimplemented Boolean material partition.
+- [ ] Top/oblique final-material views show no introduced thin rim, filler
+      band or unintended shoulder. Distinguish real geometry/material defects
+      from selection highlighting. Dedicated bevel/joint audits are not yet
+      automatic; archive the checks actually performed. If claiming sliced or
+      print-ready, verify interface layers and colour transitions in toolpaths.
+
 - [ ] The user-facing file is the release report's `primary_3mf`. For a Bambu
-      destination it is a verified `--bambu export`/`--bambu slice` project,
-      not the internal `native_3mf` Core geometry master. The Bambu project
+      new-build destination it is a verified `--bambu export`/`--bambu slice`
+      project, not the internal `native_3mf` Core geometry master. For an
+      existing-project edit, it is the source-preserving edited project with
+      package and target-slicer import evidence. The Bambu project
       contains both `Metadata/project_settings.config` and
       `Metadata/model_settings.config`; neither file was fabricated by hand.
 
-- [ ] Face diameter equals the current measured gripping diameter unless an
-      explicit override is documented.
+- [ ] For a new build, face diameter equals the current measured gripping
+      diameter unless an explicit override is documented. For an existing-model
+      structural edit, preserve the original face unless resizing it is requested.
 - [ ] The measured diameter and foam decision came from the current job. A
       fixture's `95 mm` or no-foam value was not treated as a universal default.
 - [ ] Foam thickness/compression or bare-plastic retention is documented;
@@ -146,8 +184,11 @@ Use this checklist for each tagged release and for each published lens job.
 - [ ] STL projection/geometry audit passes, or the job is clearly marked
       `UNVERIFIABLE` with the reason.
 
-The public same-canvas projection audit (or an equivalent adapter) must be
-run for every relief STL, with its diff/report archived beside the job. A
+For artwork-based builds, the public same-canvas projection audit (or an
+equivalent adapter) must be run for every relief STL, with its diff/report
+archived beside the job. An existing-model edit without source masks uses the
+contract's original-versus-output geometry/material preservation comparison;
+do not invent mask evidence. A
 model/validation PASS without this footprint check is not a claim that the
 manifest-declared artwork text or marks stayed in place.
 For the canonical anti-jag contour, confirm that the process report names the

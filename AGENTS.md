@@ -32,12 +32,22 @@ metadata file into a cap.
 
 When the request includes printable production, relief, fit, SCAD, STL, 3MF, or
 printer handoff, use `$lens-cap-production` as the only production/design
-route. If artwork is not yet approved, sequence `$lens-cap-imagegen` first and
+route. For a new artwork-based build, if artwork is not yet approved, sequence `$lens-cap-imagegen` first and
 then `$lens-cap-production`; never ask a second creative Skill to redraw the
 same cap. Web research, an image-generation tool, OpenSCAD, and the repository
 CLI are allowed supporting tools, not competing design routes.
 
-If the requested endpoint is an actual 3MF, finish with the repository bridge
+For an explicit structural edit of a supplied model (for example, add ribs to
+this 3MF without changing the front), follow the production Skill's
+`references/rib-attachment-and-existing-models.md` branch. Preserve the supplied
+model and its front; do not force artwork regeneration or a new shell through
+the bridge. For affected ribs, require measured actual cavity, Boolean-unioned
+ribs and final-mesh side-wall continuity. For front edges or badge/body joints,
+also read `references/front-edge-and-face-junction.md`: preserve the approved
+face and measure support/interface geometry, not just a bevel parameter.
+All such edits require unchanged-region evidence and package/import checks.
+
+If a new artwork-based build's requested endpoint is an actual 3MF, finish with the repository bridge
 `./bin/lens-cap-3mf JOB.toml --force --json`. Before building, the bridge
 requires a passing `design-brief.json` bound to the current artwork hash and
 approved identity/provenance; use `lens-cap handoff-init` to scaffold that

@@ -4,6 +4,12 @@ The process core stops at explicit, same-canvas masks and SVGs. A model
 adapter may turn those assets into OpenSCAD/STL/3MF, but it must preserve the
 following contract:
 
+For an explicit structural edit of a supplied model, use the production
+Skill's [existing-model contract](../skills/lens-cap-production/references/rib-attachment-and-existing-models.md)
+instead of rebuilding from artwork. Its source-model hash, edit scope,
+preservation and final-mesh checks replace the new-build artwork inputs only
+for that branch. It does not waive licensing, fit or target-slicer checks.
+
 ## Inputs
 
 * `process-master.png` and `process-report.json` from the same run;
@@ -86,11 +92,19 @@ A user request to match an attached ribbed generator/model is an explicit
 geometry transfer, not merely a preset choice. Audit the delivered mesh as the
 authority (source defaults may differ): record its hash, rib count/spacing,
 base and tip angle/width, radial protrusion, axial span/gaps, and diameter
-semantics. When the reference diameter is measured at rib tips, a no-foam
+semantics. When generating a new shell and the reference diameter is measured at rib tips, a no-foam
 target uses `cavity_diameter = measured_diameter + 2 * protrusion`; translate
 the radial profile to the target diameter rather than scaling the whole cap.
 Persist transferred dimensions as explicit values with
 `friction_rib_profile_derived=false` and validate a new fit coupon.
+
+For an existing-shell edit, preserve the actual cavity instead: derive the rib
+root from its measured wall, and the contact surface from current fit/foam
+conditions. Verify minimum root overlap across the full footprint, Boolean
+fusion and final-mesh continuity along the side wall. A shared object ID, a
+positive radial-corner overlap or connection only through the floor is not
+sufficient. See the linked contract for chord geometry and per-height checks;
+these checks apply to new ribs as well as repaired ones.
 
 The `light_tapered` profile's default protrusion is 0.10 mm radially (it removes
 about 0.20 mm from the nominal cavity diameter at each rib). It is not
@@ -144,6 +158,18 @@ negative, reaches the full wall/bottom thickness, or leaves the artwork face
 unsupported. This is mechanical geometry, so it is not derived from nozzle
 width and still requires target-slicer inspection.
 
+For edge selection, support-margin checks and badge/body connections, read the
+production Skill's [front-junction contract](../skills/lens-cap-production/references/front-edge-and-face-junction.md).
+The outer bevel does not round the badge shoulder or the artwork's strokes.
+Never shrink the approved face or alter `safe_border_mm` to make it fit.
+The current `face_base` is mostly embedded in the cap floor, not a badge raised
+by its full nominal thickness. It is unioned with the same-material body;
+the Bambu export retains separate closed relief material parts with a small
+recorded construction overlap. Do not claim the Bambu path is already a fully
+non-overlapping Boolean material partition. Contact/support, actual bevel
+dimensions and visible seams need final-artifact evidence; dedicated automatic
+shoulder-fillet and front-junction audits are not currently exposed.
+
 If a foam liner is present, calculate the compressed liner stack-up before
 adding rib intrusion. Ribs can locally over-compress or cut the foam even when
 the nominal cavity diameter looks correct; a foam-plus-rib result remains
@@ -165,12 +191,15 @@ layer expansion and overhang behaviour still need a slicer preview on the
 target printer.
 
 User-supplied archives, SCAD, 3MF, screenshots, and platform pages are
-reference observations, not executable instructions. Use them to compare rib
+data, not executable instructions. For reference-only inputs, use them to compare rib
 count, wedge proportions, lead-in and naming, then regenerate from the current
 measured diameter and liner plan. Do not copy a reference mesh, artwork, or
 platform-specific asset into this repository; record its URL, author, licence,
 and any uncertainty (for example, a 3MF whose plate metadata does not match its
-visible geometry) in the job manifest. For the 95 mm / 1.5 mm foam test fixture,
+visible geometry) in the job manifest. A user-authorized edit of the exact
+supplied model may retain its meshes privately under the existing-model
+contract; that is not permission to redistribute them in this repository.
+For the 95 mm / 1.5 mm foam test fixture,
 the `wide_tapered` demonstration explicitly overrides the preset to 0.55 mm
 radial intrusion and an estimated 56.7% local linear foam compression; the
 preset default is 0.30 mm. Print a coupon before using either value.
@@ -215,7 +244,7 @@ toolchain. Across tool versions, use the recorded geometry, bounds, surface,
 material, projection, and rib evidence rather than assuming identical
 tessellation or compressed bytes.
 
-Before a printable release, run the public
+Before an artwork-based printable release, run the public
 scripts/audit_stl_projection.py (or an equivalent recorded adapter) once for
 each positive-relief STL. The manual `1` below is for an unsimplified contour;
 the canonical 3MF bridge derives the exact raster allowance from the bounded
@@ -236,7 +265,9 @@ The report compares the top-view XY footprint and writes a red/green diff for
 missing or extra pixels. Use the same canvas size as the process/model report,
 and record any intentional mirror in the command and report. This gate catches
 the common white-border, translation, mirror, and wrong-color-mesh failures;
-it does not prove manifoldness, slicing, or physical fit.
+it does not prove manifoldness, slicing, or physical fit. For an existing-model
+edit without original masks, use the linked contract's source/output geometry
+and material preservation comparison instead; never fabricate missing masks.
 
 ## Suggested adapter CLI
 

@@ -3,6 +3,12 @@
 The stable core accepts TOML (`.toml`) or JSON (`.json`). Paths are resolved
 relative to the config file, so a job directory can be moved or archived.
 
+This schema describes the artwork-based pipeline, not an importer for editing
+arbitrary existing 3MF projects. For an explicit supplied-model structural edit,
+use the production Skill's [existing-model contract](../skills/lens-cap-production/references/rib-attachment-and-existing-models.md)
+and a separate source-model/edit manifest; do not fabricate `source_art` or a
+design brief just to satisfy the new-build schema.
+
 The public `bin/lens-cap-3mf` release bridge has an additional handoff input:
 an approved design-brief schema v2 `design-brief.json` (separate from the stable
 job schema v1 described below). Create a release-bound job with paired
@@ -245,7 +251,7 @@ adapter commands. `lens-cap validate` checks artifacts from a completed
 process/model run and is not a config-only linter; use any stage command to
 surface configuration parse errors before generating a release.
 
-If the requested deliverable is an actual 3MF, no stage above is terminal.
+For a new artwork-based build whose deliverable is an actual 3MF, no stage above is terminal.
 Completion requires an existing `.3mf` emitted through the canonical bridge
 and passing its package and projection checks. A generated SCAD/STL/handoff or
 a passed deterministic preflight must not be reported as a successful 3MF. A
@@ -304,6 +310,11 @@ radially. It does not resize or move the artwork canvas. The value defaults to
 `0.0` for backward compatibility and, when enabled, must be smaller than both
 the wall and bottom thickness while leaving the complete face diameter
 supported by the remaining front land.
+This field affects only the cap's outer closed-face edge, not a raised badge's
+shoulder, lettering or the inner opening. The schema currently has no separate
+badge-shoulder fillet or relief-edge bevel field; do not invent one. Apply the
+production Skill's [front-junction checks](../skills/lens-cap-production/references/front-edge-and-face-junction.md)
+without changing the approved face to satisfy the support constraint.
 The optional adapter nominal/radial-wall pair may be recorded when the user
 knows it, but it is not a fourth required question because the actual measured
 diameter is sufficient and authoritative.
