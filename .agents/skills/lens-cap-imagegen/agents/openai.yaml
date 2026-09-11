@@ -40,7 +40,15 @@ interface:
     command; do not enter production until that gate is complete (unless the
     current TOML already contains all three). If printable production is
     requested, finish and approve the artwork here, then hand it to
-    $lens-cap-production. Treat saving the provider attachment, recording its
+    $lens-cap-production. Before the first generation in a clean task, run
+    ./scripts/reference_pack.py check and read
+    references/quality-library/reference-manifest.json. Use the six checked-in
+    images as the default quality pack; the Odyssey image is the default lead
+    and the moon image is the alternate orbital/candlelight lead. Ask once
+    whether the user wants to upload a reference; a supplied image wins after
+    it is saved and hashed. Do not inspect deprecated job folders. Attach the
+    selected local reference when supported, and transfer only finish traits,
+    not its text, lens identity, exact layout, logo, or film claim. Treat saving the provider attachment, recording its
     hash, and marking human approval as an explicit handoff gate; never invent
     or self-attest those fields. If the user requested an actual 3MF, do not stop at artwork
     or a command suggestion: continue sequentially after approval and report

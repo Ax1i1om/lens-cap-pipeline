@@ -79,7 +79,7 @@ def test_sync_is_dry_run_by_default_and_idempotent_after_apply(tmp_path: Path) -
     assert {path: path.stat().st_mtime_ns for path in tracked} == mtimes
     checked = install_skills.inspect_skills(destination, root=ROOT)
     assert checked["marker"]["actual_project_version"] == "0.1.0a2"
-    assert checked["skills"]["lens-cap-imagegen"]["actual_version"] == "0.1.0a2"
+    assert checked["skills"]["lens-cap-imagegen"]["actual_version"] == "0.1.0a3"
 
 
 def test_sync_detects_and_protects_user_drift_until_force(tmp_path: Path) -> None:

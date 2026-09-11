@@ -1,32 +1,40 @@
 {
-  "manifest_sha256": "9a4c97dc61fc080d304fa8f827ce4045d15a55d68936d0d5d6d077cc51dbf52e",
+  "manifest_sha256": "6550af4a066041edec2822d6f16b9fceadd81913efc1df6fe9d039cf19af09e7",
   "project": "lens-cap-pipeline",
   "project_version": "0.1.0a2",
   "schema_version": 1,
   "skills": {
     "lens-cap-imagegen": {
       "files": {
-        "SKILL.md": "cc7a0b85edd5102621f3b8310e70976703ebdfa722f61d3a0f2eab78db94937e",
-        "SKILL.zh-CN.md": "3645a0a0f2c79a6921b5effdf62522bc093c66c4e5ea089c421469c06b7d4373",
-        "agents/openai.yaml": "59681dc04959fc1142bba327aca9ad951bead8b7a831c3d363e5bf8827aea13f",
+        "SKILL.md": "8465a8ec512cb34e8b04a7b21dcfee3c85d6cf35e213831739732dd8b6fd44cb",
+        "SKILL.zh-CN.md": "ad3ff09a76d03e9d468966ae2a053ecbd6cf285214c89b9c2239db0aff1bd2a0",
+        "agents/openai.yaml": "82ef5a0af42655b029ab4e95bd0e79ce9c38f60fa972e1cc3be81233ca3475f8",
         "references/design-depth.md": "5e7ec617a0b81280d64450daa3ac7e758f81462a75b3cab71039b8852e23c2bb",
-        "references/design-depth.zh-CN.md": "50ebe8e820686f79d2277521262a499e2cc1a8132e452983562bd2094c260780"
+        "references/design-depth.zh-CN.md": "50ebe8e820686f79d2277521262a499e2cc1a8132e452983562bd2094c260780",
+        "references/quality-library/README.md": "5162cf727ecef75a7e42c376bac5d79d1f6585bc1d6c85db59d9072cf7cebe03",
+        "references/quality-library/canon-ef-35-105-reference.png": "a5ff40783cd6ad1a2d122443d90706f875293b187ced20cd9956ad551f676f49",
+        "references/quality-library/carl-zeiss-jena-135-f3-5-reference.png": "1dfe731363f3302ea52bdaf8634dfe727fdb9f8686d551cdc9af9a32eaedf0d2",
+        "references/quality-library/contax-planar-50-f1-4-moon-reference.png": "c14688d00471d26611783c62afe28c23aa35d5e02226c197753560811baa54b4",
+        "references/quality-library/contax-planar-50-f1-4-odyssey-reference.png": "60a42ea525ca0bf47d85f75ab141a276f73898a8b9c421a55e34b9dfe1a15582",
+        "references/quality-library/helios-44-2-reference.png": "4bf579d6ca36ffbd562cfec669f0a826e469d637f38f6e1c298ce8b3b2283758",
+        "references/quality-library/olympus-zuiko-28-f2-reference.png": "cddede2fd26f4e6c80f7dfc733505ed2ba1820b1fb23838eb933314c9bec1291",
+        "references/quality-library/reference-manifest.json": "338adb3e62d2ab5fb99aa403324cb17d6484741f0147b84a7cb0c4a0f8cbfd9a"
       },
       "source_dir": "skills/lens-cap-imagegen",
-      "tree_sha256": "67273a60c6aaf7211a9427ed42ac3fbbc3e8f47ef8e17baa229dd60aa2299420",
-      "version": "0.1.0a2"
+      "tree_sha256": "b4ad20e30283ad45541ba748569556bb333d873cd4e2e369888ac532bc395ad8",
+      "version": "0.1.0a3"
     },
     "lens-cap-production": {
       "files": {
-        "SKILL.md": "c53424bdf81ec9103f007f7281e28b8a88761bf016690c4d42bffa74c0ff5fa5",
-        "SKILL.zh-CN.md": "9a3174ff2f519f75a15a1d1f3d3c28974fc17579ff2ebefeb5d95e4e86835536",
-        "agents/openai.yaml": "7a69060c9877ebb10ab16d067c881ec32570da89a4fa4b9d40bd4544df43e5cc",
+        "SKILL.md": "e3acbd983792e067a45bef5720d7f53ca492187600e79adffeaeb043b0a1150f",
+        "SKILL.zh-CN.md": "33dad3b31b4f85746f32a7e270fa4987a2ed3709c938a9706f090d64af6fb9ab",
+        "agents/openai.yaml": "8e5c15084f193313dd42bc5399f3dcf150f8e9b10b03afd7a53ed40c0a272599",
         "references/front-edge-and-face-junction.md": "c76faf91e0ccaf2ac9ce9073a3c087bcd1f812ba9c2404eef286d550c9d054ce",
         "references/rib-attachment-and-existing-models.md": "5299625215842fd34ca6c8e778430880661bda9060635c6ea99e157b54f4f831"
       },
       "source_dir": "skills/lens-cap-production",
-      "tree_sha256": "2dd4ce45fc0aceeb471005e6e1330d84b23c39b56ae79dbc7c03e6bf23a86e38",
-      "version": "0.1.0a2"
+      "tree_sha256": "f13cdb867de605581bf77d43e45d1b9f15fe265136399529a63eb4247f6d676d",
+      "version": "0.1.0a3"
     }
   }
 }

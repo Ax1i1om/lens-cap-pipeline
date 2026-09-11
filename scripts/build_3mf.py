@@ -18,6 +18,7 @@ have an externally generated STL can still use the adapter's dependency-free
 from __future__ import annotations
 
 import argparse
+from collections import Counter
 import hashlib
 import json
 import math
@@ -2538,6 +2539,111 @@ def _binary_stl_surface_fingerprint(path: Path) -> dict[str, Any]:
     return _surface_fingerprint(triangles())
 
 
+def _audit_bambu_float32_roundtrip(
+    source: Path, obj: ET.Element, translation: Sequence[float]
+) -> dict[str, Any]:
+    """Prove a float32 STL round-trip despite quantization-cell crossings.
+
+    Bambu translates float vertices by a float displacement, then writes 9
+    significant digits (TriangleMesh.cpp::translate and bbs_3mf.cpp). A tiny
+    serialization error can cross a fingerprint's rounding boundary. Require
+    an unambiguous vertex bijection AND the exact triangle multiset, with an
+    independently derived float32/decimal budget capped at 0.00001 mm. This
+    does not alter geometry or widen the primary 0.0001 mm fingerprint quantum.
+    """
+    data = source.read_bytes()
+    if len(data) < 84:
+        raise ReleaseError("round-trip source STL is truncated")
+    count = struct.unpack_from("<I", data, 80)[0]
+    if count <= 0 or len(data) != 84 + 50 * count:
+        raise ReleaseError("round-trip source STL is not canonical binary STL")
+    vertices: list[tuple[float, float, float]] = []
+    lookup: dict[tuple[float, float, float], int] = {}
+    expected_faces: Counter[tuple[int, ...]] = Counter()
+    for index in range(count):
+        values = struct.unpack_from("<12f", data, 84 + 50 * index)
+        ids = []
+        for offset in (3, 6, 9):
+            point = tuple(values[offset:offset + 3])
+            if not all(math.isfinite(value) for value in point):
+                raise ReleaseError("round-trip source has non-finite vertices")
+            if point not in lookup:
+                lookup[point] = len(vertices)
+                vertices.append(point)
+            ids.append(lookup[point])
+        expected_faces[tuple(sorted(ids))] += 1
+    minimum = [min(point[axis] for point in vertices) for axis in range(3)]
+    maximum = [max(point[axis] for point in vertices) for axis in range(3)]
+    center = [(minimum[axis] + maximum[axis]) / 2 for axis in range(3)]
+
+    def float32(value: float) -> float:
+        return struct.unpack("<f", struct.pack("<f", value))[0]
+
+    def half_ulp32(value: float) -> float:
+        return 2.0 ** max(-150, math.floor(math.log2(abs(value))) - 24) if value else 2.0 ** -150
+
+    def half_decimal9(value: float) -> float:
+        return 0.5 * 10.0 ** (math.floor(math.log10(abs(value))) - 8) if value else 0.0
+
+    budgets = []
+    for axis in range(3):
+        local = max(abs(minimum[axis] - float32(center[axis])), abs(maximum[axis] - float32(center[axis])))
+        budget = half_ulp32(center[axis]) + half_ulp32(local) + half_decimal9(local) + half_decimal9(center[axis]) + 1e-12
+        if budget > 1e-5:
+            raise ReleaseError("float32 round-trip budget exceeds the 0.00001 mm safety cap")
+        budgets.append(max(budget, 1e-12))
+        if abs(float(translation[axis]) - center[axis]) > half_decimal9(center[axis]) + 1e-10:
+            raise ReleaseError("Bambu recentering translation is not the source bounding-box center")
+    cell_size = max(budgets)
+    buckets: dict[tuple[int, int, int], list[int]] = {}
+    for index, point in enumerate(vertices):
+        cell = tuple(math.floor(value / cell_size) for value in point)
+        buckets.setdefault(cell, []).append(index)
+    mesh = next((node for node in obj if node.tag.rsplit("}", 1)[-1] == "mesh"), None)
+    if mesh is None:
+        raise ReleaseError("round-trip target has no mesh")
+    target_points = [node for node in mesh.iter() if node.tag.rsplit("}", 1)[-1] == "vertex"]
+    target_faces = [node for node in mesh.iter() if node.tag.rsplit("}", 1)[-1] == "triangle"]
+    if len(target_points) != len(vertices) or len(target_faces) != count:
+        raise ReleaseError("round-trip vertex or triangle count changed")
+    mapped: list[int] = []
+    used: set[int] = set()
+    maxima = [0.0, 0.0, 0.0]
+    for node in target_points:
+        point = tuple(float(node.attrib[axis]) + float(translation[index]) for index, axis in enumerate("xyz"))
+        if not all(math.isfinite(value) for value in point):
+            raise ReleaseError("round-trip target has non-finite vertices")
+        cell = tuple(math.floor(value / cell_size) for value in point)
+        matches = []
+        for dx in (-1, 0, 1):
+            for dy in (-1, 0, 1):
+                for dz in (-1, 0, 1):
+                    for index in buckets.get((cell[0] + dx, cell[1] + dy, cell[2] + dz), []):
+                        if all(abs(point[axis] - vertices[index][axis]) <= budgets[axis] for axis in range(3)):
+                            matches.append(index)
+        if len(matches) != 1 or matches[0] in used:
+            raise ReleaseError("round-trip vertices do not have an unambiguous budget-bounded bijection")
+        match = matches[0]
+        used.add(match)
+        mapped.append(match)
+        maxima = [max(maxima[axis], abs(point[axis] - vertices[match][axis])) for axis in range(3)]
+    observed_faces: Counter[tuple[int, ...]] = Counter()
+    for node in target_faces:
+        indices = tuple(int(node.attrib[key]) for key in ("v1", "v2", "v3"))
+        if any(index < 0 or index >= len(mapped) for index in indices):
+            raise ReleaseError("round-trip triangle has an invalid vertex index")
+        observed_faces[tuple(sorted(mapped[index] for index in indices))] += 1
+    if observed_faces != expected_faces:
+        raise ReleaseError("round-trip triangle connectivity changed")
+    return {
+        "status": "passed", "method": "float32_decimal9_vertex_bijection_and_exact_facets_v1",
+        "vertices": len(vertices), "triangles": count,
+        "per_axis_budget_mm": budgets, "per_axis_maximum_displacement_mm": maxima,
+        "maximum_allowed_budget_mm": 1e-5, "primary_coordinate_quantum_mm_unchanged": 0.0001,
+        "vertex_bijection": True, "triangle_multiset_identical": True,
+    }
+
+
 def _mesh_geometry_from_object(
     obj: ET.Element,
     label: str,
@@ -2665,41 +2771,31 @@ def _prepare_closed_bambu_parts(
     prepared: list[dict[str, Any]] = []
     for spec in specs:
         output = destination / str(spec["filename"])
+        # Preserve the same audited contour/CSG used by the native package.
+        # Re-extruding mask pixels here discarded protected diagonal/curve
+        # contours and made a second, visibly stair-stepped relief geometry.
+        command = [
+            sys.executable,
+            str(ADAPTER),
+            "openscad-stl",
+            str(scad),
+            str(output),
+            "--render-part",
+            str(spec["selector"]),
+            "--openscad",
+            openscad,
+            "--timeout",
+            str(timeout),
+        ]
         if str(spec["role"]) == "base":
-            command = [
-                sys.executable,
-                str(ADAPTER),
-                "openscad-stl",
-                str(scad),
-                str(output),
-                "--render-part",
-                "base",
-                "--openscad",
-                openscad,
-                "--timeout",
-                str(timeout),
-                "--require-single-volume",
-            ]
-            run = _run(command, timeout=timeout + 120)
-            if run["returncode"] != 0:
-                raise ReleaseError(
-                    "closed Bambu base export failed "
-                    f"(rc={run['returncode']})\n{run['stdout'][-1200:]}\n{run['stderr'][-1200:]}"
-                )
-            generation = _last_json(run["stdout"])
-        else:
-            try:
-                total_height = float(mechanical["total_height_mm"])
-            except (KeyError, TypeError, ValueError, OverflowError) as exc:
-                raise ReleaseError("geometry report lacks total_height_mm for Bambu relief") from exc
-            generation = _write_mask_voxel_relief(
-                config.output_dir / "masks" / f"{spec['name']}.png",
-                output,
-                face_diameter_mm=float(config.face_diameter_mm),
-                base_z_mm=total_height,
-                height_mm=float(spec["height_mm"]),
+            command.append("--require-single-volume")
+        run = _run(command, timeout=timeout + 120)
+        if run["returncode"] != 0:
+            raise ReleaseError(
+                f"closed Bambu {spec['selector']} export failed "
+                f"(rc={run['returncode']})\n{run['stdout'][-1200:]}\n{run['stderr'][-1200:]}"
             )
-            command = ["internal:binary_mask_union_of_pixels_v1"]
+        generation = _last_json(run["stdout"])
 
         verify_command = [sys.executable, str(ADAPTER), "verify-stl", str(output)]
         if str(spec["role"]) == "base":
@@ -2734,6 +2830,7 @@ def _prepare_closed_bambu_parts(
                     "surface_fingerprint": _binary_stl_surface_fingerprint(output),
                 },
                 "generation": generation,
+                "preparation_contract_version": 2,
                 "preparation_command": command,
                 "preparation_manifest": Path(f"{output}.manifest.json"),
             }
@@ -2746,6 +2843,7 @@ def _audit_bambu_project(
     expected_parts: Sequence[dict[str, Any]],
     *,
     nozzle_mm: float,
+    require_printable_placement: bool = False,
 ) -> dict[str, Any]:
     """Require a real multipart/extruder Bambu project, not a flattened STL."""
 
@@ -2893,7 +2991,9 @@ def _audit_bambu_project(
     if any(
         not math.isclose(actual, expected, rel_tol=0.0, abs_tol=1e-7)
         for actual, expected in zip(build_transform[:9], identity_linear, strict=True)
-    ) or any(abs(value) > 1e-7 for value in build_transform[9:]):
+    ) or abs(build_transform[11]) > 1e-7 or (
+        not require_printable_placement and any(abs(value) > 1e-7 for value in build_transform[9:])
+    ):
         raise ReleaseError("Bambu build transform must be identity for aligned cap parts")
     object_nodes = [
         node
@@ -2915,6 +3015,7 @@ def _audit_bambu_project(
             "Bambu object model ids disagree with the reachable Core components"
         )
     world_bounds: list[dict[str, list[float]]] = []
+    serialization_audits: list[dict[str, Any]] = []
     for component, expected in zip(core_components, expected_parts, strict=True):
         path_value = (_xml_attribute(component, "path") or "").lstrip("/")
         if path_value != "3D/Objects/object_1.model":
@@ -3005,9 +3106,18 @@ def _audit_bambu_project(
         if not isinstance(expected_fingerprint, dict):
             raise ReleaseError("audited Bambu STL lacks a surface fingerprint")
         if geometry["surface_fingerprint"] != expected_fingerprint:
-            raise ReleaseError(
-                f"Bambu surface geometry drifted for {expected['filename']}"
-            )
+            try:
+                source_path = Path(expected["path"])
+                if _binary_stl_surface_fingerprint(source_path) != expected_fingerprint:
+                    raise ReleaseError("round-trip source no longer matches its audited fingerprint")
+                if expected.get("sha256") and _sha256(source_path) != expected["sha256"]:
+                    raise ReleaseError("round-trip source hash changed")
+                serialization_audits.append({
+                    "part": expected["filename"],
+                    **_audit_bambu_float32_roundtrip(source_path, object_by_id[object_id], translation),
+                })
+            except (OSError, ValueError, KeyError, ReleaseError) as exc:
+                raise ReleaseError(f"Bambu surface geometry drifted for {expected['filename']}: {exc}") from exc
         try:
             expected_volume = float(expected_mesh["absolute_volume_mm3"])
         except (KeyError, TypeError, ValueError, OverflowError) as exc:
@@ -3024,6 +3134,39 @@ def _audit_bambu_project(
                 f"{observed_volume:g} != {expected_volume:g} mm3"
             )
         world_bounds.append(expanded)
+    placement_audit: dict[str, Any] = {"status": "not_requested"}
+    if require_printable_placement:
+        placed_min = [min(bounds["min_mm"][axis] for bounds in world_bounds) + build_transform[9 + axis] for axis in range(3)]
+        placed_max = [max(bounds["max_mm"][axis] for bounds in world_bounds) + build_transform[9 + axis] for axis in range(3)]
+        areas = [project_settings.get("printable_area")]
+        for area in project_settings.get("extruder_printable_area", []):
+            if area:
+                areas.append(area.split(","))
+        checked_areas = []
+        for area in areas:
+            if not isinstance(area, list) or len(area) != 4:
+                raise ReleaseError("Bambu plate audit requires an explicit rectangular printable area")
+            try:
+                points = [tuple(float(value) for value in token.split("x")) for token in area]
+                if any(len(point) != 2 or not all(math.isfinite(value) for value in point) for point in points):
+                    raise ValueError("invalid coordinate")
+                low = [min(point[axis] for point in points) for axis in range(2)]
+                high = [max(point[axis] for point in points) for axis in range(2)]
+                if set(points) != {(x, y) for x in (low[0], high[0]) for y in (low[1], high[1])}:
+                    raise ValueError("nonrectangular area")
+            except (TypeError, ValueError, AttributeError) as exc:
+                raise ReleaseError("invalid rectangular Bambu printable area") from exc
+            if any(placed_min[axis] < low[axis] - 1e-5 or placed_max[axis] > high[axis] + 1e-5 for axis in range(2)):
+                raise ReleaseError("Bambu assembled cap is outside a required extruder printable area")
+            checked_areas.append({"min_xy_mm": low, "max_xy_mm": high})
+        if abs(placed_min[2]) > 1e-5 or placed_max[2] > float(project_settings.get("printable_height", 0)) + 1e-5:
+            raise ReleaseError("Bambu assembled cap is not on the bed or exceeds printable height")
+        placement_audit = {
+            "status": "passed", "build_translation_mm": build_transform[9:],
+            "placed_bounds": {"min_mm": placed_min, "max_mm": placed_max},
+            "checked_printable_areas": checked_areas,
+            "scope": "assembled_model_bounds_on_bed_inside_all_declared_extruder_rectangles; tower/brim/toolpaths require slicing",
+        }
     colors = [str(value).upper() for value in project_settings.get("filament_colour", [])]
     expected_colors = [str(item["color"]).upper() for item in expected_parts]
     if colors != expected_colors:
@@ -3063,6 +3206,8 @@ def _audit_bambu_project(
         "surface_fingerprints": [
             expected["mesh"]["surface_fingerprint"] for expected in expected_parts
         ],
+        "float32_roundtrip_audits": serialization_audits,
+        "plate_placement_audit": placement_audit,
         "scope": (
             "bambu_parts_extruders_palette_all_nozzles_core_transforms_world_bounds_volume_and_surface_fingerprints"
         ),
@@ -3159,6 +3304,13 @@ def _projection_audit(config: Any, *, timeout: int = 1200) -> dict[str, Any]:
     }
 
 
+def _filament_slot_override(value: str) -> tuple[int, Path]:
+    slot, separator, raw_path = value.partition("=")
+    if not separator or not slot.isdigit() or int(slot) < 1 or not raw_path.strip():
+        raise argparse.ArgumentTypeError("filament override must be a positive SLOT=PATH")
+    return int(slot), Path(raw_path).expanduser().resolve()
+
+
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Build, verify, and optionally slice a lens-cap 3MF from a job TOML/JSON."
@@ -3181,6 +3333,10 @@ def _parser() -> argparse.ArgumentParser:
     parser.add_argument("--machine-profile", type=Path)
     parser.add_argument("--process-profile", type=Path)
     parser.add_argument("--filament-profile", type=Path)
+    parser.add_argument(
+        "--slot-filament-profile", action="append", default=[], type=_filament_slot_override,
+        metavar="SLOT=PATH", help="override one-based base-then-relief filament slot; repeat for mixed materials",
+    )
     parser.add_argument("--native-output", type=Path, help="native 3MF path (default: job out/model/<slug>-native.3mf)")
     parser.add_argument("--slice-output", type=Path, help="sliced 3MF path (default: alongside native output)")
     parser.add_argument("--report", type=Path, help="release JSON path (default: alongside native output)")
@@ -3357,6 +3513,13 @@ def main(argv: list[str] | None = None) -> int:
                     "Bambu export/slice requires --machine-profile, --process-profile, "
                     "and --filament-profile so parts, extruders, palette, and nozzle can be audited"
                 )
+            seen_slots: set[int] = set()
+            for slot, path in args.slot_filament_profile:
+                if slot in seen_slots:
+                    raise ReleaseError(f"duplicate filament override for slot {slot}")
+                seen_slots.add(slot)
+                if not path.is_file():
+                    raise ExternalDependencyUnavailable(f"filament slot {slot} profile is missing: {path}")
         # Do not create a job output tree until the required external tool has
         # been resolved.  A failed/unverifiable request should be side-effect
         # free, so callers cannot mistake an empty ``build/`` directory for a
@@ -3584,6 +3747,10 @@ def main(argv: list[str] | None = None) -> int:
             ]
             for part in bambu_parts[1:]:
                 bambu_command.extend(("--part", str(part["path"])))
+            for slot, path in args.slot_filament_profile:
+                if slot > len(bambu_parts):
+                    raise ReleaseError(f"filament slot {slot} is outside the {len(bambu_parts)} palette parts")
+                bambu_command.extend(("--slot-filament-profile", f"{slot}={path}"))
             for part in bambu_parts:
                 bambu_command.extend(("--filament-color", str(part["color"])))
             sliced_report = _adapter(
@@ -3598,12 +3765,14 @@ def main(argv: list[str] | None = None) -> int:
                 stage_bambu,
                 bambu_parts,
                 nozzle_mm=loaded.nozzle_mm,
+                require_printable_placement=True,
             )
             adapter_manifest = sliced_report["adapter_manifest"]
             profile_inputs = adapter_manifest.get("profiles")
             profile_resolution = adapter_manifest.get("profile_resolution")
             effective_profile_audit = adapter_manifest.get("effective_profile_audit")
             expected_profile_keys = {"machine", "process", "filament"}
+            expected_profile_keys.update(f"filament_slot_{slot}" for slot, _ in args.slot_filament_profile)
             if not isinstance(profile_inputs, dict) or set(profile_inputs) != expected_profile_keys:
                 raise ReleaseError("Bambu adapter manifest lacks complete profile input evidence")
             if (
@@ -3633,6 +3802,7 @@ def main(argv: list[str] | None = None) -> int:
                     {
                         "name": part["name"],
                         "role": part["role"],
+                        "preparation_contract_version": part["preparation_contract_version"],
                         "selector": part["selector"],
                         "filename": part["filename"],
                         "sha256": part["sha256"],

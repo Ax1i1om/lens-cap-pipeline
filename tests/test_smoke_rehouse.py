@@ -433,6 +433,14 @@ def test_current_imagegen_rehouse_fixture_and_retained_3mf_are_self_contained(tm
         expected_parts,
         nozzle_mm=config.nozzle_mm,
     )
+    # The retained project predates the additive float32/bed-placement audit
+    # fields. It needs no float32 fallback and this legacy call supplies no
+    # machine profile, so require the exact inactive states before comparing
+    # every original fixture field. Do not rewrite the retained artifact.
+    assert current_bambu_audit.pop("float32_roundtrip_audits") == []
+    assert current_bambu_audit.pop("plate_placement_audit") == {
+        "status": "not_requested"
+    }
     assert current_bambu_audit == bambu_release["multipart_audit"]
     current_bambu_mesh = bridge._audit_bambu_mesh_report(bambu_verification)
     assert current_bambu_mesh == bambu_release["mesh_audit"]

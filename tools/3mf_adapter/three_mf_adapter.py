@@ -14,6 +14,7 @@ command creates a tiny, closed cube in this file for smoke testing.
 from __future__ import annotations
 
 import argparse
+import csv
 import hashlib
 import html
 import json
@@ -584,15 +585,16 @@ def _triangle_cross_and_volume(
 
 
 def _sanitize_openscad_core(path: Path) -> dict[str, object]:
-    """Remove zero-volume exporter shells and nudge collinear facets.
+    """Remove zero-volume exporter shells and retriangulate collinear facets.
 
     OpenSCAD can emit a tiny, detached, zero-thickness shell at a colour-mask
     boundary and occasionally triangulates a straight boundary with one
-    collinear face.  Both are irrelevant below printer resolution but violate
-    a literal solid-mesh contract.  This repair is deliberately narrow: it
-    drops only whole zero-volume components and moves a collinear midpoint by
-    at most one micrometre in its local surface plane.  Material properties
-    and every positive-volume component remain unchanged.
+    collinear face.  This repair is deliberately narrow and independent of
+    printer resolution: discard only whole zero-volume components, and replace
+    a zero-area face plus its long-edge neighbour with an exact subdivision of
+    that neighbour at the already-existing middle vertex. No vertex is moved;
+    positive-area surfaces and their material properties remain unchanged.
+    Ambiguous or merely near-collinear cases fail instead of nudging artwork.
     """
 
     try:
@@ -623,8 +625,9 @@ def _sanitize_openscad_core(path: Path) -> dict[str, object]:
     dropped_components = 0
     dropped_triangles = 0
     dropped_vertices = 0
-    nudged_triangles = 0
-    max_nudge_mm = 0.0
+    retriangulated_collinear_triangles = 0
+    collapsed_zero_length_edges = 0
+    dropped_collapsed_triangles = 0
     for mesh in (node for node in root.iter() if _xml_local(node.tag) == "mesh"):
         vertices_node = next(
             (node for node in mesh if _xml_local(node.tag) == "vertices"), None
@@ -658,6 +661,44 @@ def _sanitize_openscad_core(path: Path) -> dict[str, object]:
             for triangle in triangle_indices
         ):
             raise ValueError("OpenSCAD Core mesh has invalid triangle indices")
+
+        # An exporter may serialize both ends of an existing edge to exactly
+        # the same coordinate. Collapse only those zero-length *edges*, never
+        # globally weld coincident vertices: unrelated relief contacts can
+        # deliberately have separate IDs at the same point. All positive-area
+        # facets retain their coordinates and properties; only repeated-index
+        # (necessarily zero-area) facets are discarded. Strict post-export
+        # manifold validation still rejects an unsafe edge contraction.
+        parents = list(range(len(coordinates)))
+
+        def representative(index: int) -> int:
+            while parents[index] != index:
+                parents[index] = parents[parents[index]]
+                index = parents[index]
+            return index
+
+        for triangle in triangle_indices:
+            for left, right in ((triangle[0], triangle[1]), (triangle[1], triangle[2]), (triangle[2], triangle[0])):
+                if coordinates[left] != coordinates[right]:
+                    continue
+                left_root, right_root = representative(left), representative(right)
+                if left_root != right_root:
+                    parents[max(left_root, right_root)] = min(left_root, right_root)
+                    collapsed_zero_length_edges += 1
+        collapsed_indices = []
+        collapsed_nodes = []
+        for triangle, node in zip(triangle_indices, triangle_nodes, strict=True):
+            resolved = tuple(representative(index) for index in triangle)
+            if len(set(resolved)) < 3:
+                cross, _ = _triangle_cross_and_volume(coordinates, triangle)
+                if any(value != 0 for value in cross):
+                    raise ValueError("zero-length edge contraction would remove a positive-area facet")
+                dropped_collapsed_triangles += 1
+                continue
+            collapsed_indices.append(resolved)
+            collapsed_nodes.append(node)
+        triangle_indices = collapsed_indices
+        triangle_nodes = collapsed_nodes
 
         adjacency: list[set[int]] = [set() for _ in coordinates]
         for triangle in triangle_indices:
@@ -712,9 +753,12 @@ def _sanitize_openscad_core(path: Path) -> dict[str, object]:
         if not kept_triangle_numbers:
             raise ValueError("OpenSCAD sanitization removed every zero-volume component")
 
-        # Build local edge neighbourhoods before making sub-micron repairs.
-        edge_to_triangles: dict[tuple[int, int], list[int]] = {}
-        for triangle_number in kept_triangle_numbers:
+        # Keep a conforming triangulation without removing a boundary point.
+        # Simply dropping a collinear triangle leaves a T-junction: its long
+        # edge belongs to one face while the two short edges belong to others.
+        edge_to_triangles: dict[tuple[int, int], set[int]] = {}
+
+        def update_edges(triangle_number: int, *, add: bool) -> None:
             triangle = triangle_indices[triangle_number]
             for left, right in (
                 (triangle[0], triangle[1]),
@@ -722,74 +766,99 @@ def _sanitize_openscad_core(path: Path) -> dict[str, object]:
                 (triangle[2], triangle[0]),
             ):
                 edge = (left, right) if left < right else (right, left)
-                edge_to_triangles.setdefault(edge, []).append(triangle_number)
-        mutable_coordinates = [list(vertex) for vertex in coordinates]
+                if add:
+                    edge_to_triangles.setdefault(edge, set()).add(triangle_number)
+                else:
+                    edge_to_triangles[edge].discard(triangle_number)
+
+        kept = set(kept_triangle_numbers)
         for triangle_number in kept_triangle_numbers:
+            update_edges(triangle_number, add=True)
+        for triangle_number in kept_triangle_numbers:
+            if triangle_number not in kept:
+                continue
             triangle = triangle_indices[triangle_number]
-            cross, _ = _triangle_cross_and_volume(mutable_coordinates, triangle)
+            cross, _ = _triangle_cross_and_volume(coordinates, triangle)
             if sum(value * value for value in cross) > 1e-20:
                 continue
+            if any(value != 0.0 for value in cross):
+                raise ValueError("cannot retriangulate a merely near-collinear OpenSCAD face without changing its surface")
             pairs = (
                 (triangle[0], triangle[1], triangle[2]),
                 (triangle[1], triangle[2], triangle[0]),
                 (triangle[2], triangle[0], triangle[1]),
             )
-            endpoint_a, endpoint_b, mover = max(
+            endpoint_a, endpoint_b, middle = max(
                 pairs,
                 key=lambda item: sum(
-                    (mutable_coordinates[item[0]][axis] - mutable_coordinates[item[1]][axis]) ** 2
+                    (coordinates[item[0]][axis] - coordinates[item[1]][axis]) ** 2
                     for axis in range(3)
                 ),
             )
-            normal = [0.0, 0.0, 0.0]
-            for left, right in (
-                (triangle[0], triangle[1]),
-                (triangle[1], triangle[2]),
-                (triangle[2], triangle[0]),
-            ):
-                edge = (left, right) if left < right else (right, left)
-                for neighbor_number in edge_to_triangles.get(edge, ()):
-                    if neighbor_number == triangle_number:
-                        continue
-                    neighbor_cross, _ = _triangle_cross_and_volume(
-                        mutable_coordinates, triangle_indices[neighbor_number]
-                    )
-                    length = math.sqrt(sum(value * value for value in neighbor_cross))
-                    if length > 1e-10:
-                        for axis in range(3):
-                            normal[axis] += neighbor_cross[axis] / length
             line = [
-                mutable_coordinates[endpoint_b][axis]
-                - mutable_coordinates[endpoint_a][axis]
+                coordinates[endpoint_b][axis] - coordinates[endpoint_a][axis]
                 for axis in range(3)
             ]
-            normal_length = math.sqrt(sum(value * value for value in normal))
-            if normal_length <= 1e-10:
-                axis = min(range(3), key=lambda item: abs(line[item]))
-                normal = [0.0, 0.0, 0.0]
-                normal[axis] = 1.0
-            direction = [
-                normal[1] * line[2] - normal[2] * line[1],
-                normal[2] * line[0] - normal[0] * line[2],
-                normal[0] * line[1] - normal[1] * line[0],
+            length_squared = sum(value * value for value in line)
+            along = sum(
+                (coordinates[middle][axis] - coordinates[endpoint_a][axis]) * line[axis]
+                for axis in range(3)
+            )
+            if not 0 < along < length_squared:
+                raise ValueError("collinear OpenSCAD face lacks a strict interior edge vertex")
+            edge = tuple(sorted((endpoint_a, endpoint_b)))
+            neighbors = edge_to_triangles.get(edge, set()) - {triangle_number}
+            if len(neighbors) != 1:
+                raise ValueError("collinear OpenSCAD face lacks one unambiguous long-edge neighbour")
+            neighbor_number = next(iter(neighbors))
+            neighbor = triangle_indices[neighbor_number]
+            neighbor_cross, _ = _triangle_cross_and_volume(coordinates, neighbor)
+            if sum(value * value for value in neighbor_cross) <= 1e-20:
+                raise ValueError("collinear OpenSCAD long-edge neighbour is also degenerate")
+            node = triangle_nodes[neighbor_number]
+            property_one = _xml_attr(node, "p1")
+            if any(
+                (_xml_attr(node, name) or property_one) != property_one
+                for name in ("p2", "p3")
+            ):
+                raise ValueError("cannot subdivide nonuniform vertex material properties without interpolation")
+            for first, second, third in (
+                (neighbor[0], neighbor[1], neighbor[2]),
+                (neighbor[1], neighbor[2], neighbor[0]),
+                (neighbor[2], neighbor[0], neighbor[1]),
+            ):
+                if {first, second} == {endpoint_a, endpoint_b}:
+                    children = ((first, middle, third), (middle, second, third))
+                    break
+            child_crosses = [
+                _triangle_cross_and_volume(coordinates, child)[0] for child in children
             ]
-            direction_length = math.sqrt(sum(value * value for value in direction))
-            if direction_length <= 1e-15:
-                raise ValueError("cannot repair a collinear OpenSCAD triangle safely")
-            displacement = min(0.001, max(0.000001, math.sqrt(sum(v * v for v in line)) * 1e-6))
-            trial = list(mutable_coordinates[mover])
-            for axis in range(3):
-                trial[axis] += displacement * direction[axis] / direction_length
-            previous = mutable_coordinates[mover]
-            mutable_coordinates[mover] = trial
-            trial_cross, _ = _triangle_cross_and_volume(mutable_coordinates, triangle)
-            if sum(trial_cross[axis] * normal[axis] for axis in range(3)) < 0:
-                mutable_coordinates[mover] = [
-                    previous[axis] - displacement * direction[axis] / direction_length
-                    for axis in range(3)
-                ]
-            nudged_triangles += 1
-            max_nudge_mm = max(max_nudge_mm, displacement)
+            if any(
+                sum(value * value for value in child_cross) <= 1e-20
+                or sum(a * b for a, b in zip(child_cross, neighbor_cross, strict=True)) <= 0
+                for child_cross in child_crosses
+            ):
+                raise ValueError("collinear subdivision would create degenerate or reversed facets")
+            if any(
+                not math.isclose(
+                    sum(child_cross[axis] for child_cross in child_crosses),
+                    neighbor_cross[axis], rel_tol=1e-12, abs_tol=1e-12,
+                )
+                for axis in range(3)
+            ):
+                raise ValueError("collinear subdivision did not preserve the original oriented area")
+            update_edges(triangle_number, add=False)
+            update_edges(neighbor_number, add=False)
+            kept.remove(triangle_number)
+            triangle_indices[neighbor_number] = children[0]
+            triangle_indices.append(children[1])
+            triangle_nodes.append(ET.Element(node.tag, dict(node.attrib)))
+            new_number = len(triangle_indices) - 1
+            kept.add(new_number)
+            update_edges(neighbor_number, add=True)
+            update_edges(new_number, add=True)
+            retriangulated_collinear_triangles += 1
+        kept_triangle_numbers = sorted(kept)
 
         kept_vertices = sorted(
             {
@@ -805,8 +874,8 @@ def _sanitize_openscad_core(path: Path) -> dict[str, object]:
                 vertices_node.remove(node)
         for old_index in kept_vertices:
             node = vertex_nodes[old_index]
-            for axis, value in zip("xyz", mutable_coordinates[old_index], strict=True):
-                node.set(axis, f"{value:.9g}")
+            # Preserve the producer's coordinate strings exactly; even a
+            # harmless decimal reformat is unnecessary for an index-only fix.
             vertices_node.append(node)
         for node in list(triangles_node):
             if _xml_local(node.tag) == "triangle":
@@ -850,16 +919,21 @@ def _sanitize_openscad_core(path: Path) -> dict[str, object]:
             temporary.unlink()
     return {
         "status": "passed",
+        "sanitizer_version": 2,
         "dropped_zero_volume_components": dropped_components,
         "dropped_triangles": dropped_triangles,
         "dropped_vertices": dropped_vertices,
-        "nudged_collinear_triangles": nudged_triangles,
-        "maximum_nudge_mm": max_nudge_mm,
+        "retriangulated_collinear_triangles": retriangulated_collinear_triangles,
+        "collapsed_zero_length_edges": collapsed_zero_length_edges,
+        "dropped_collapsed_triangles": dropped_collapsed_triangles,
+        "nudged_collinear_triangles": 0,
+        "maximum_nudge_mm": 0.0,
+        "vertex_coordinates_preserved": True,
         "removed_volatile_metadata": removed_volatile_metadata,
         "canonicalized_uuid_attributes": len(uuid_attributes),
         "archive_entries_canonicalized": len(entries),
         "scope": (
-            "zero_volume_components_submicron_collinear_facets_and_"
+            "zero_volume_components_zero_length_edges_exact_vertex_collinear_retriangulation_and_"
             "nonsemantic_openscad_metadata"
         ),
     }
@@ -1340,6 +1414,29 @@ def _unquoted_gcode_value(value: str) -> str:
     return result
 
 
+def _gcode_positive_numeric_list(value: str, *, key: str, name: str) -> list[float]:
+    """Parse vendor comma-separated numeric vectors without dropping entries."""
+    values = [
+        _finite_gcode_float(token.strip(), label=f"config {key}", name=name)
+        for token in _unquoted_gcode_value(value).split(",")
+    ]
+    if any(number <= 0 for number in values):
+        raise ValueError(f"sliced G-code config {key} must be positive: {name}")
+    return values
+
+
+def _gcode_profile_value_list(value: str, *, key: str, name: str) -> list[str]:
+    """Read Bambu's semicolon-delimited, optionally quoted profile strings."""
+    try:
+        values = next(csv.reader([value], delimiter=";", escapechar="\\", strict=True, skipinitialspace=True))
+    except (csv.Error, StopIteration) as exc:
+        raise ValueError(f"sliced G-code has invalid config {key}: {name}") from exc
+    values = [item.strip() for item in values]
+    if not values or any(not item for item in values):
+        raise ValueError(f"sliced G-code has empty material/profile configuration: {name}")
+    return values
+
+
 def _audit_bambu_gcode(
     payload: bytes,
     *,
@@ -1458,8 +1555,6 @@ def _audit_bambu_gcode(
     for key in (
         "layer_height",
         "initial_layer_print_height",
-        "nozzle_diameter",
-        "filament_diameter",
     ):
         numeric_config[key] = _finite_gcode_float(
             _unquoted_gcode_value(
@@ -1470,9 +1565,14 @@ def _audit_bambu_gcode(
         )
         if numeric_config[key] <= 0:
             raise ValueError(f"sliced G-code config {key} must be positive: {name}")
-    text_config = {
-        key: _unquoted_gcode_value(
-            _one_gcode_config_value(assignments, key, name=name)
+    diameter_config = {
+        key: _gcode_positive_numeric_list(
+            _one_gcode_config_value(assignments, key, name=name), key=key, name=name,
+        ) for key in ("nozzle_diameter", "filament_diameter")
+    }
+    text_values = {
+        key: _gcode_profile_value_list(
+            _one_gcode_config_value(assignments, key, name=name), key=key, name=name,
         )
         for key in (
             "filament_type",
@@ -1481,16 +1581,14 @@ def _audit_bambu_gcode(
             "filament_settings_id",
         )
     }
-    if any(not value for value in text_config.values()):
-        raise ValueError(f"sliced G-code has empty material/profile configuration: {name}")
-    if not any(
-        math.isclose(
-            numeric_config["nozzle_diameter"],
-            nozzle,
-            rel_tol=0.0,
-            abs_tol=1e-6,
+    if not nozzle_diameters or any(not math.isfinite(nozzle) or nozzle <= 0 for nozzle in nozzle_diameters):
+        raise ValueError(f"sliced G-code audit lacks valid expected nozzle diameters: {name}")
+    if any(
+        not any(
+            math.isclose(configured, nozzle, rel_tol=0.0, abs_tol=1e-6)
+            for nozzle in nozzle_diameters
         )
-        for nozzle in nozzle_diameters
+        for configured in diameter_config["nozzle_diameter"]
     ):
         raise ValueError(f"sliced G-code nozzle disagrees with slice metadata: {name}")
 
@@ -1531,7 +1629,11 @@ def _audit_bambu_gcode(
     path_z: list[float] = []
     saw_xyz_mode = False
     saw_extrusion_mode = False
+    active_layer_index = -1
+    startup_xy_extrusion_moves = 0
     for raw_line in blocks["executable"].splitlines():
+        if re.fullmatch(r";[ \t]*CHANGE_LAYER[ \t]*", raw_line, re.IGNORECASE):
+            active_layer_index += 1
         code = raw_line.split(";", 1)[0].strip()
         match = re.match(r"^(?:N\d+\s+)?([GMT]\d+(?:\.\d+)?)\b", code, re.IGNORECASE)
         if match is None:
@@ -1609,6 +1711,12 @@ def _audit_bambu_gcode(
         distance = math.hypot(float(after_x) - float(before_x), float(after_y) - float(before_y))
         if distance <= max(1e-6, min(nozzle_diameters) * 1e-4):
             continue
+        # H2C's startup purge may deposit at Z5.8 before the first actual
+        # CHANGE_LAYER. Track its modes/position but do not misclassify it as
+        # a model layer. Reverse-Z checks remain unchanged within the print.
+        if active_layer_index < 0:
+            startup_xy_extrusion_moves += 1
+            continue
         positive_path_moves += 1
         positive_extrusion += extrusion_delta
         path_length += distance
@@ -1670,6 +1778,7 @@ def _audit_bambu_gcode(
         "minimum_layer_height_mm": min(declared_heights),
         "maximum_layer_height_mm": max(declared_heights),
         "positive_xy_extrusion_moves": positive_path_moves,
+        "startup_xy_extrusion_moves_excluded_from_layers": startup_xy_extrusion_moves,
         "positive_extrusion_mm": positive_extrusion,
         "extrusion_path_length_mm": path_length,
         "unique_extrusion_xy_points": len(unique_xy),
@@ -1679,11 +1788,85 @@ def _audit_bambu_gcode(
         "config": {
             "layer_height_mm": nominal_height,
             "initial_layer_height_mm": first_height,
-            "nozzle_diameter_mm": numeric_config["nozzle_diameter"],
-            "filament_diameter_mm": numeric_config["filament_diameter"],
-            **text_config,
+            # Legacy scalar fields retain the first value for existing report
+            # consumers; validation below binds the complete ordered vectors.
+            "nozzle_diameter_mm": diameter_config["nozzle_diameter"][0],
+            "filament_diameter_mm": diameter_config["filament_diameter"][0],
+            "nozzle_diameters_mm": diameter_config["nozzle_diameter"],
+            "filament_diameters_mm": diameter_config["filament_diameter"],
+            **{key: values[0] for key, values in text_values.items()},
+            "profile_values": text_values,
         },
     }
+
+
+def _assembled_model_bounds(archive: zipfile.ZipFile) -> dict[str, list[float]]:
+    """Measure built vertices after every nested Core/Production transform.
+
+    Local resource bounds are intentionally retained in legacy mesh reports;
+    they are not the placed model envelope used to bind a sliced G-code file.
+    """
+    roots = {name: ET.fromstring(archive.read(name)) for name in archive.namelist() if name.lower().endswith(".model")}
+    objects = {
+        name: {_xml_attr(obj, "id"): obj for obj in root.iter() if _xml_local(obj.tag) == "object"}
+        for name, root in roots.items()
+    }
+    minimum, maximum = [math.inf] * 3, [-math.inf] * 3
+    identity = (1., 0., 0., 0., 1., 0., 0., 0., 1., 0., 0., 0.)
+
+    def matrix(node: ET.Element) -> tuple[float, ...]:
+        raw = _xml_attr(node, "transform")
+        if raw is None:
+            return identity
+        try:
+            values = tuple(float(value) for value in raw.split())
+        except ValueError as exc:
+            raise ValueError("assembled model has a malformed transform") from exc
+        if len(values) != 12 or not all(math.isfinite(value) for value in values):
+            raise ValueError("assembled model has a malformed/non-finite transform")
+        return values
+
+    def target(node: ET.Element, current: str) -> str:
+        path = _xml_attr(node, "path")
+        if path is None:
+            return current
+        direct = posixpath.normpath(path.lstrip("/"))
+        if direct in roots:
+            return direct
+        return posixpath.normpath(posixpath.join(posixpath.dirname(current), path))
+
+    def visit(part: str, object_id: str | None, transforms: tuple[tuple[float, ...], ...], seen: frozenset[tuple[str, str | None]]) -> None:
+        key = (part, object_id)
+        if key in seen:
+            raise ValueError("assembled model has cyclic component references")
+        obj = objects.get(part, {}).get(object_id)
+        if obj is None:
+            raise ValueError(f"assembled model references missing object {part}:{object_id}")
+        for child in obj:
+            if _xml_local(child.tag) == "mesh":
+                vertices = next(node for node in child if _xml_local(node.tag) == "vertices")
+                triangles = next(node for node in child if _xml_local(node.tag) == "triangles")
+                used = {int(_xml_attr(face, axis)) for face in triangles for axis in ("v1", "v2", "v3")}
+                for index in used:
+                    point = tuple(float(_xml_attr(vertices[index], axis)) for axis in "xyz")
+                    for transform in transforms:
+                        point = tuple(sum(point[row] * transform[row * 3 + axis] for row in range(3)) + transform[9 + axis] for axis in range(3))
+                    if not all(math.isfinite(value) for value in point):
+                        raise ValueError("assembled model has non-finite transformed vertices")
+                    for axis, value in enumerate(point):
+                        minimum[axis], maximum[axis] = min(minimum[axis], value), max(maximum[axis], value)
+            elif _xml_local(child.tag) == "components":
+                for component in child:
+                    visit(target(component, part), _xml_attr(component, "objectid"), (matrix(component),) + transforms, seen | {key})
+
+    build = next((node for node in roots[CORE_MODEL] if _xml_local(node.tag) == "build"), None)
+    if build is None:
+        raise ValueError("assembled model lacks a build")
+    for item in build:
+        visit(target(item, CORE_MODEL), _xml_attr(item, "objectid"), (matrix(item),), frozenset())
+    if not all(math.isfinite(value) for value in minimum + maximum):
+        raise ValueError("assembled model has no built vertices")
+    return {"min_mm": minimum, "max_mm": maximum, "size_mm": [high - low for low, high in zip(minimum, maximum, strict=True)]}
 
 
 def verify_3mf(
@@ -1705,6 +1888,7 @@ def verify_3mf(
     if require_single_volume:
         require_closed = True
     slice_audit: dict[str, object] | None = None
+    assembled_bounds: dict[str, list[float]] | None = None
     with zipfile.ZipFile(path) as archive:
         bad = archive.testzip()
         names = set(archive.namelist())
@@ -1777,6 +1961,7 @@ def verify_3mf(
         if require_slice and gcode_bytes == 0:
             raise ValueError("sliced 3MF contains only empty G-code entries")
         if require_slice:
+            assembled_bounds = _assembled_model_bounds(archive)
             slice_info_name = "Metadata/slice_info.config"
             model_settings_name = "Metadata/model_settings.config"
             if slice_info_name not in names or model_settings_name not in names:
@@ -1865,6 +2050,7 @@ def verify_3mf(
                     )
                 project_numbers[key] = values
             project_text: dict[str, set[str]] = {}
+            project_text_ordered: dict[str, list[str]] = {}
             for key in (
                 "filament_type",
                 "print_settings_id",
@@ -1881,6 +2067,7 @@ def verify_3mf(
                         f"sliced 3MF project settings lack non-empty {key!r}"
                     )
                 project_text[key] = values
+                project_text_ordered[key] = [str(value).strip() for value in project_values(key)]
             if any(
                 not any(
                     math.isclose(nozzle, configured, rel_tol=0.0, abs_tol=1e-6)
@@ -1945,8 +2132,6 @@ def verify_3mf(
                 for key, project_key in (
                     ("layer_height_mm", "layer_height"),
                     ("initial_layer_height_mm", "initial_layer_print_height"),
-                    ("nozzle_diameter_mm", "nozzle_diameter"),
-                    ("filament_diameter_mm", "filament_diameter"),
                 ):
                     if not any(
                         math.isclose(
@@ -1961,15 +2146,26 @@ def verify_3mf(
                             f"sliced G-code {key} disagrees with project settings: "
                             f"{gcode_name}"
                         )
+                for key, project_key in (
+                    ("nozzle_diameters_mm", "nozzle_diameter"),
+                    ("filament_diameters_mm", "filament_diameter"),
+                ):
+                    actual = config[key]
+                    expected = project_numbers[project_key]
+                    if len(actual) != len(expected) or any(
+                        not math.isclose(float(left), right, rel_tol=0.0, abs_tol=1e-6)
+                        for left, right in zip(actual, expected, strict=True)
+                    ):
+                        raise ValueError(f"sliced G-code {key} disagrees with ordered project settings: {gcode_name}")
                 for key in (
                     "filament_type",
                     "print_settings_id",
                     "printer_settings_id",
                     "filament_settings_id",
                 ):
-                    if str(config[key]) not in project_text[key]:
+                    if config["profile_values"][key] != project_text_ordered[key]:
                         raise ValueError(
-                            f"sliced G-code {key} disagrees with project settings: "
+                            f"sliced G-code {key} disagrees with ordered project settings: "
                             f"{gcode_name}"
                         )
                 gcode_semantics.append(semantic)
@@ -2075,10 +2271,11 @@ def verify_3mf(
         }
     if require_slice:
         assert slice_audit is not None
-        bounds = mesh_report.get("bounds")
+        bounds = assembled_bounds
         if not isinstance(bounds, dict):
             raise ValueError("sliced 3MF has no model bounds for G-code binding")
-        model_height = float(bounds["size_mm"][2])
+        model_height = float(bounds["max_mm"][2])
+        slice_audit["assembled_model_bounds"] = bounds
         header_height = float(slice_audit["header_max_z_mm"])
         if not math.isclose(model_height, header_height, rel_tol=0.0, abs_tol=0.5):
             raise ValueError(
@@ -2223,8 +2420,81 @@ def _manifest(path: Path, payload: dict[str, object]) -> Path:
     return manifest_path
 
 
-def _patch_bambu_project_colors(path: Path, colors: Sequence[str]) -> dict[str, object]:
-    """Set the project palette after Bambu has created a multipart project."""
+def _bambu_flush_values(settings: dict[str, object], field: str) -> list[object]:
+    values = settings.get(field, [])
+    if not isinstance(values, list):
+        raise ValueError(f"Bambu {field} must be a list")
+    for value in values:
+        try:
+            valid = not isinstance(value, bool) and math.isfinite(float(value)) and float(value) >= 0
+        except (TypeError, ValueError, OverflowError):
+            valid = False
+        if not valid:
+            raise ValueError(f"Bambu {field} contains an invalid purge volume: {value!r}")
+    return values
+
+
+def _audit_bambu_flush_configuration(settings: dict[str, object], count: int) -> dict[str, object]:
+    matrix = _bambu_flush_values(settings, "flush_volumes_matrix")
+    vector = _bambu_flush_values(settings, "flush_volumes_vector")
+    if len(matrix) != count * count or len(vector) != 2 * count:
+        raise ValueError(
+            f"Bambu purge volumes do not match {count} filament slots: "
+            f"matrix={len(matrix)} (expected {count * count}), "
+            f"vector={len(vector)} (expected {2 * count})"
+        )
+    # Bambu's preset JSON reader expects numeric options as string tokens.
+    # JSON number tokens pass our numerical validation but its native loader
+    # rejects a mixed array before slicing.
+    if any(not isinstance(value, str) for value in (*matrix, *vector)):
+        raise ValueError("Bambu purge volumes must be serialized as JSON string tokens")
+    return {"status": "passed", "filament_slots": count,
+            "matrix_length": len(matrix), "vector_length": len(vector),
+            "json_scalar_type": "string"}
+
+
+def _resize_bambu_flush_configuration(settings: dict[str, object], count: int) -> dict[str, object]:
+    """Extend Bambu's four-slot defaults without losing directional purge pairs.
+
+    Vendor defaults are 140 mm^3 load/unload and 280 mm^3 per transition,
+    with zero diagonal. These are defaults, not a color-calibrated estimate.
+    https://github.com/bambulab/BambuStudio/blob/master/src/libslic3r/PrintConfig.cpp
+    """
+    if count < 1:
+        raise ValueError("Bambu purge configuration requires at least one filament slot")
+    matrix = _bambu_flush_values(settings, "flush_volumes_matrix")
+    vector = _bambu_flush_values(settings, "flush_volumes_vector")
+    old_count = math.isqrt(len(matrix))
+    if old_count * old_count != len(matrix) or len(vector) % 2:
+        raise ValueError("Bambu purge matrix must be square and load/unload vector must have even length")
+    # Remap row-major indices: appending to a flat 4x4 list would corrupt all
+    # transitions after its first row when the palette grows to five colors.
+    settings["flush_volumes_matrix"] = [
+        str(matrix[row * old_count + column])
+        if row < old_count and column < old_count
+        else ("0" if row == column else "280")
+        for row in range(count) for column in range(count)
+    ]
+    settings["flush_volumes_vector"] = [
+        str(vector[index]) if index < len(vector) else "140" for index in range(2 * count)
+    ]
+    return {
+        **_audit_bambu_flush_configuration(settings, count),
+        "previous_matrix_slots": old_count,
+        "previous_vector_slots": len(vector) // 2,
+        "preserved_matrix_values": min(old_count, count) ** 2,
+        "preserved_vector_values": min(len(vector), 2 * count),
+        "new_transition_default_mm3": 280,
+        "new_load_unload_default_mm3": 140,
+        "defaults_source": "BambuStudio/src/libslic3r/PrintConfig.cpp",
+        "scope": "cardinality_and_finite_nonnegative_volumes_not_color_calibration",
+    }
+
+
+def _patch_bambu_project_colors(
+    path: Path, colors: Sequence[str], *, filament_count: int | None = None,
+) -> dict[str, object]:
+    """Set palette and matching purge tables in an official Bambu project."""
 
     normalized: list[str] = []
     for value in colors:
@@ -2232,7 +2502,10 @@ def _patch_bambu_project_colors(path: Path, colors: Sequence[str]) -> dict[str, 
         if not re.fullmatch(r"#[0-9A-F]{6}", color):
             raise ValueError(f"invalid Bambu filament colour: {value!r}")
         normalized.append(color)
-    if not normalized:
+    count = filament_count if filament_count is not None else len(normalized)
+    if normalized and len(normalized) != count:
+        raise ValueError("Bambu palette does not match the requested filament count")
+    if not normalized and not count:
         return {"status": "not_requested", "colors": []}
     settings_name = "Metadata/project_settings.config"
     try:
@@ -2243,8 +2516,10 @@ def _patch_bambu_project_colors(path: Path, colors: Sequence[str]) -> dict[str, 
             settings = json.loads(source.read(settings_name).decode("utf-8"))
             if not isinstance(settings, dict):
                 raise ValueError("Bambu project settings are not a JSON object")
-            settings["filament_colour"] = normalized
-            settings["default_filament_colour"] = normalized
+            if normalized:
+                settings["filament_colour"] = normalized
+                settings["default_filament_colour"] = normalized
+            flush_configuration = _resize_bambu_flush_configuration(settings, count)
             replacement = (
                 json.dumps(settings, ensure_ascii=False, separators=(",", ":")) + "\n"
             ).encode("utf-8")
@@ -2271,7 +2546,7 @@ def _patch_bambu_project_colors(path: Path, colors: Sequence[str]) -> dict[str, 
                 temporary.unlink()
     except (OSError, UnicodeDecodeError, json.JSONDecodeError, zipfile.BadZipFile) as exc:
         raise ValueError(f"cannot patch Bambu project palette: {exc}") from exc
-    return {"status": "passed", "colors": normalized}
+    return {"status": "passed", "colors": normalized, "flush_configuration": flush_configuration}
 
 
 def standard_command(args: argparse.Namespace) -> int:
@@ -2377,7 +2652,7 @@ def openscad_command(args: argparse.Namespace) -> int:
         verified["path"] = str(output_path)
         payload = {
             "adapter": "openscad-native-3mf",
-            "adapter_version": 1,
+            "adapter_version": 2,
             "python": sys.version.split()[0],
             "input": _portable_path(input_path),
             "input_sha256": sha256(input_path),
@@ -2465,7 +2740,7 @@ def openscad_stl_command(args: argparse.Namespace) -> int:
         os.replace(staged_stl, output_path)
         payload = {
             "adapter": "openscad-core-to-binary-stl",
-            "adapter_version": 1,
+            "adapter_version": 2,
             "python": sys.version.split()[0],
             "input": _portable_path(input_path),
             "input_sha256": sha256(input_path),
@@ -2534,12 +2809,36 @@ def _resolve_profile_inheritance(path: Path) -> dict[str, object]:
 
     Bambu's CLI accepts a leaf JSON path but, with an isolated data directory,
     can retain the leaf's display name while silently falling back to 0.4 mm
-    process defaults.  Resolve sibling ``inherits`` chains ourselves so the
+    process defaults.  Resolve sibling ``inherits`` / ``include`` dependencies so the
     executable receives a complete profile rather than a misleading label.
+
+    Bambu's PresetBundle.cpp applies the inherited config, then sparse include
+    templates in list order, and finally the leaf's own settings. Includes are
+    configuration fragments, so their profile metadata must not replace the
+    leaf identity. In particular H2C keeps its machine G-code in templates.
     """
 
     chain: list[dict[str, str]] = []
     active: set[Path] = set()
+    profile_metadata = {
+        "name", "type", "from", "setting_id", "filament_id", "instantiation",
+        "description", "version", "inherits", "include",
+    }
+
+    def dependency(current: Path, name: str, relation: str) -> Path:
+        direct = current.parent / f"{name}.json"
+        if direct.is_file():
+            return direct
+        for candidate in sorted(current.parent.glob("*.json")):
+            try:
+                candidate_payload = json.loads(candidate.read_text(encoding="utf-8"))
+            except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+                continue
+            if isinstance(candidate_payload, dict) and candidate_payload.get("name") == name:
+                return candidate
+        raise RuntimeError(
+            f"cannot resolve Bambu profile {relation} {name!r} beside {current}"
+        )
 
     def read(current: Path) -> dict[str, object]:
         current = current.resolve()
@@ -2556,28 +2855,22 @@ def _resolve_profile_inheritance(path: Path) -> dict[str, object]:
         merged: dict[str, object] = {}
         if isinstance(parent_name, str) and parent_name.strip():
             parent_name = parent_name.strip()
-            direct = current.parent / f"{parent_name}.json"
-            parent_path: Path | None = direct if direct.is_file() else None
-            if parent_path is None:
-                for candidate in current.parent.glob("*.json"):
-                    try:
-                        candidate_payload = json.loads(
-                            candidate.read_text(encoding="utf-8")
-                        )
-                    except (OSError, UnicodeDecodeError, json.JSONDecodeError):
-                        continue
-                    if (
-                        isinstance(candidate_payload, dict)
-                        and candidate_payload.get("name") == parent_name
-                    ):
-                        parent_path = candidate
-                        break
-            if parent_path is None:
-                raise RuntimeError(
-                    f"cannot resolve Bambu profile parent {parent_name!r} beside {current}"
-                )
-            merged.update(read(parent_path))
-        merged.update({key: value for key, value in payload.items() if key != "inherits"})
+            merged.update(read(dependency(current, parent_name, "parent")))
+        includes = payload.get("include", [])
+        if isinstance(includes, str):
+            includes = [includes]
+        if not isinstance(includes, list) or any(
+            not isinstance(name, str) or not name.strip() for name in includes
+        ):
+            raise RuntimeError(f"invalid Bambu profile include list: {current}")
+        for name in includes:
+            included = read(dependency(current, name.strip(), "include"))
+            # Templates carry only their explicit settings, not compiled
+            # default configuration values or the including preset's identity.
+            merged.update({key: value for key, value in included.items() if key not in profile_metadata})
+        merged.update(
+            {key: value for key, value in payload.items() if key not in {"inherits", "include"}}
+        )
         chain.append(
             {
                 "path": _portable_path(current),
@@ -2589,7 +2882,7 @@ def _resolve_profile_inheritance(path: Path) -> dict[str, object]:
         return merged
 
     effective = read(path)
-    return {"effective": effective, "chain": chain}
+    return {"resolver_version": 2, "effective": effective, "chain": chain}
 
 
 def _setting_values(value: object) -> list[object]:
@@ -2618,8 +2911,32 @@ def _settings_equal(actual: object, expected: object) -> bool:
     return True
 
 
+def _filament_slot_override(value: str) -> tuple[int, Path]:
+    slot, separator, raw_path = value.partition("=")
+    if not separator or not slot.isdigit() or int(slot) < 1 or not raw_path.strip():
+        raise argparse.ArgumentTypeError("filament override must be a positive SLOT=PATH")
+    return int(slot), Path(raw_path).expanduser().resolve()
+
+
+def _filament_slot_labels(
+    overrides: Sequence[tuple[int, Path]], count: int
+) -> tuple[list[str], dict[str, Path]]:
+    labels = ["filament"] * count
+    paths: dict[str, Path] = {}
+    for slot, path in overrides:
+        if not 1 <= slot <= count:
+            raise RuntimeError(f"filament slot {slot} is outside the {count} Bambu input parts")
+        label = f"filament_slot_{slot}"
+        if label in paths:
+            raise RuntimeError(f"duplicate filament override for slot {slot}")
+        paths[label] = path
+        labels[slot - 1] = label
+    return labels, paths
+
+
 def _audit_effective_bambu_profiles(
-    path: Path, resolved_profiles: dict[str, dict[str, object]]
+    path: Path, resolved_profiles: dict[str, dict[str, object]],
+    filament_slot_labels: Sequence[str] | None = None,
 ) -> dict[str, object]:
     """Prove the exported project uses the resolved machine/process settings."""
 
@@ -2647,11 +2964,18 @@ def _audit_effective_bambu_profiles(
     }
     checked: dict[str, dict[str, object]] = {}
     for label, fields in critical.items():
+        if label == "filament" and filament_slot_labels is not None:
+            continue
         if label not in resolved_profiles:
             continue
         effective = resolved_profiles[label].get("effective")
         if not isinstance(effective, dict):
             raise RuntimeError(f"resolved Bambu {label} profile is invalid")
+        if label == "machine":
+            fields = (*fields, *(
+                field for field in ("machine_start_gcode", "machine_end_gcode", "change_filament_gcode")
+                if field in effective
+            ))
         checked[label] = {}
         for field in fields:
             if field not in effective:
@@ -2667,6 +2991,29 @@ def _audit_effective_bambu_profiles(
                 "expected": effective[field],
                 "observed": project[field],
             }
+    if filament_slot_labels is not None:
+        expected_fields: dict[str, list[object]] = {
+            "filament_settings_id": [], "filament_type": [], "filament_diameter": [],
+        }
+        for label in filament_slot_labels:
+            effective = resolved_profiles[label]["effective"]
+            assert isinstance(effective, dict)
+            for field in expected_fields:
+                source_field = "name" if field == "filament_settings_id" else field
+                values = _setting_values(effective.get(source_field))
+                if not values or any(value is None for value in values) or len({str(value) for value in values}) != 1:
+                    raise RuntimeError(f"Bambu {label} lacks a uniform per-slot {source_field}")
+                expected_fields[field].append(values[0])
+        checked["filament_slots"] = {}
+        for field, expected in expected_fields.items():
+            actual = project.get(field)
+            if not isinstance(actual, list) or len(actual) != len(expected) or not _settings_equal(actual, expected):
+                raise RuntimeError(f"Bambu per-slot {field} does not match requested filament profiles: {actual!r} != {expected!r}")
+            checked["filament_slots"][field] = {"expected": expected, "observed": actual}
+        try:
+            checked["flush_configuration"] = _audit_bambu_flush_configuration(project, len(filament_slot_labels))
+        except ValueError as exc:
+            raise RuntimeError(str(exc)) from exc
     if "machine" in resolved_profiles and "process" in resolved_profiles:
         machine = resolved_profiles["machine"]["effective"]
         process = resolved_profiles["process"]["effective"]
@@ -2696,6 +3043,11 @@ def bambu_command(args: argparse.Namespace) -> int:
         raise RuntimeError("multipart Bambu mode requires already-audited STL parts")
     if args.filament_color and len(args.filament_color) != len(input_paths):
         raise RuntimeError("--filament-color must be repeated exactly once per Bambu input part")
+    slot_labels, slot_paths = _filament_slot_labels(
+        getattr(args, "slot_filament_profile", []), len(input_paths)
+    )
+    if slot_paths and not args.filament_profile:
+        raise RuntimeError("filament slot overrides require a default --filament-profile")
     output_path = Path(args.output).resolve()
     bambu = _resolve_executable(
         args.bambu,
@@ -2708,6 +3060,7 @@ def bambu_command(args: argparse.Namespace) -> int:
         ("machine", args.machine_profile),
         ("process", args.process_profile),
         ("filament", args.filament_profile),
+        *slot_paths.items(),
     ):
         if raw is None:
             continue
@@ -2787,11 +3140,10 @@ def bambu_command(args: argparse.Namespace) -> int:
         if multipart:
             if not args.filament_profile:
                 raise RuntimeError("multipart Bambu mode requires --filament-profile")
-            profile = str(Path(args.filament_profile).resolve())
             command.extend(
                 [
                     "--load-filaments",
-                    ";".join([profile] * len(prepared_paths)),
+                    ";".join(str(profile_paths[label]) for label in slot_labels),
                     "--load-filament-ids",
                     ",".join(str(index) for index in range(1, len(prepared_paths) + 1)),
                     "--assemble",
@@ -2799,20 +3151,19 @@ def bambu_command(args: argparse.Namespace) -> int:
                     "--orient",
                     "0",
                     "--arrange",
-                    "0",
+                    "1",
+                    "--allow-rotations=0",
                 ]
             )
-        elif args.mode == "slice":
+        elif args.filament_profile:
             command.extend(
                 [
                     "--load-filaments",
-                    str(Path(args.filament_profile).resolve()),
-                    "--orient",
-                    "0",
-                    "--arrange",
-                    "1",
+                    str(profile_paths[slot_labels[0]]),
                 ]
             )
+            if args.mode == "slice":
+                command.extend(["--orient", "0", "--arrange", "1"])
         if args.mode == "slice":
             command.extend(["--slice", "0"])
         command.extend(
@@ -2845,10 +3196,11 @@ def bambu_command(args: argparse.Namespace) -> int:
             )
         output_path.write_bytes(generated.read_bytes())
         palette_patch = _patch_bambu_project_colors(
-            output_path, args.filament_color or []
+            output_path, args.filament_color or [], filament_count=len(slot_labels),
         )
         effective_profile_audit = _audit_effective_bambu_profiles(
-            output_path, resolved_profiles
+            output_path, resolved_profiles,
+            slot_labels if "filament" in resolved_profiles else None,
         )
         result_payload: object = None
         result_file = out_dir / "result.json"
@@ -2860,7 +3212,7 @@ def bambu_command(args: argparse.Namespace) -> int:
         verified = verify_3mf(output_path, require_slice=args.mode == "slice")
         payload = {
             "adapter": "bambu-studio-3mf",
-            "adapter_version": 1,
+            "adapter_version": 6,
             "python": sys.version.split()[0],
             "input": _portable_path(input_path),
             "input_sha256": sha256(input_path),
@@ -2889,6 +3241,10 @@ def bambu_command(args: argparse.Namespace) -> int:
                 "may vary by release/run"
             ),
             "profiles_are_external": True,
+            "filament_slot_profiles": [
+                {"slot": slot, "profile_key": label}
+                for slot, label in enumerate(slot_labels, start=1)
+            ] if "filament" in resolved_profiles else [],
             "profiles": {
                 label: {
                     "path": _portable_path(path),
@@ -2898,7 +3254,7 @@ def bambu_command(args: argparse.Namespace) -> int:
                 for label, path in profile_paths.items()
             },
             "profile_resolution": {
-                label: {"chain": resolved["chain"]}
+                label: {"resolver_version": resolved["resolver_version"], "chain": resolved["chain"]}
                 for label, resolved in resolved_profiles.items()
             },
             "effective_profile_audit": effective_profile_audit,
@@ -3022,6 +3378,10 @@ def parser() -> argparse.ArgumentParser:
     bambu.add_argument("--machine-profile")
     bambu.add_argument("--process-profile")
     bambu.add_argument("--filament-profile")
+    bambu.add_argument(
+        "--slot-filament-profile", action="append", default=[], type=_filament_slot_override,
+        metavar="SLOT=PATH", help="override one-based part/filament slot; repeat for mixed materials",
+    )
     bambu.add_argument(
         "--part",
         action="append",

@@ -34,6 +34,125 @@ def test_bridge_parser_defaults_to_native_only() -> None:
     assert args.bambu == "never"
     assert args.force is False
     assert args.brief is None
+    assert args.slot_filament_profile == []
+
+
+def test_bridge_parser_accepts_mixed_filament_slot_override(tmp_path: Path) -> None:
+    metal = tmp_path / "Metal Profile.json"
+    args = bridge._parser().parse_args([
+        "job.toml", "--filament-profile", "basic.json", "--slot-filament-profile", f"5={metal}",
+    ])
+    assert args.filament_profile == Path("basic.json")
+    assert args.slot_filament_profile == [(5, metal)]
+
+
+@pytest.mark.parametrize("value", ["0=a.json", "-1=a.json", "1=", "1", "x=a.json"])
+def test_bridge_parser_rejects_invalid_filament_slot_override(value: str) -> None:
+    with pytest.raises(SystemExit):
+        bridge._parser().parse_args(["job.toml", "--slot-filament-profile", value])
+
+
+def test_closed_bambu_relief_preserves_named_scad_contours(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    specs = [
+        {"name": "black", "role": "base", "selector": "base", "filename": "base.stl", "path": tmp_path / "original-base.stl"},
+        {"name": "gray", "role": "relief", "selector": "gray_relief", "filename": "gray.stl", "path": tmp_path / "original-gray.stl"},
+    ]
+    calls = []
+    def fake_run(command: list[str], timeout: int) -> dict[str, object]:
+        calls.append(command)
+        if command[2] == "openscad-stl":
+            Path(command[4]).write_bytes(b"test-only geometry")
+            result = {"status": "passed", "adapter": "openscad-core-to-binary-stl"}
+        else:
+            assert command[2] == "verify-stl"
+            result = {
+                "status": "passed", "solid": True, "boundary_edges": 0,
+                "nonmanifold_edges": 0, "inconsistent_orientation_edges": 0,
+                "zero_volume_components": 0,
+            }
+        return {"returncode": 0, "stdout": json.dumps(result), "stderr": ""}
+    def forbidden_pixels(*args: object, **kwargs: object) -> None:
+        raise AssertionError("Bambu relief must not be re-rasterized into pixel geometry")
+    monkeypatch.setattr(bridge, "_run", fake_run)
+    monkeypatch.setattr(bridge, "_write_mask_voxel_relief", forbidden_pixels)
+    monkeypatch.setattr(bridge, "_binary_stl_surface_fingerprint", lambda _: {"test": "fingerprint"})
+    scad = tmp_path / "cap.scad"
+    result = bridge._prepare_closed_bambu_parts(
+        SimpleNamespace(output_dir=tmp_path), scad, specs, mechanical={},
+        destination=tmp_path / "prepared", openscad="openscad", timeout=30,
+    )
+    exports = [command for command in calls if command[2] == "openscad-stl"]
+    assert [command[command.index("--render-part") + 1] for command in exports] == ["base", "gray_relief"]
+    assert all(command[3] == str(scad) for command in exports)
+    assert "--require-single-volume" in exports[0]
+    assert "--require-single-volume" not in exports[1]
+    assert all(part["preparation_contract_version"] == 2 for part in result)
+
+
+def _float32_roundtrip_fixture(tmp_path: Path) -> tuple[Path, ET.Element, list[float]]:
+    def f32(value: float) -> float:
+        return struct.unpack("<f", struct.pack("<f", value))[0]
+    points = [tuple(map(f32, point)) for point in (
+        (18.484848, -38.409092, 16.0), (37.045456, 11.287879, 16.0),
+        (32.954544, 4.015151, 16.801000595), (25.075758, 4.015151, 16.0),
+    )]
+    faces = [(0, 2, 1), (0, 1, 3), (1, 2, 3), (2, 0, 3)]
+    source = tmp_path / "roundtrip.stl"
+    source.write_bytes(b"fixture".ljust(80, b"\0") + struct.pack("<I", len(faces)) + b"".join(
+        struct.pack("<12fH", 0, 0, 0, *(value for index in face for value in points[index]), 0)
+        for face in faces
+    ))
+    center = [(min(point[a] for point in points) + max(point[a] for point in points)) / 2 for a in range(3)]
+    translation = [float(format(value, ".9g")) for value in center]
+    obj = ET.Element("object")
+    mesh = ET.SubElement(obj, "mesh")
+    vertices = ET.SubElement(mesh, "vertices")
+    for point in points:
+        ET.SubElement(vertices, "vertex", {
+            axis: format(f32(point[index] - f32(center[index])), ".9g")
+            for index, axis in enumerate("xyz")
+        })
+    triangles = ET.SubElement(mesh, "triangles")
+    for face in faces:
+        ET.SubElement(triangles, "triangle", dict(zip(("v1", "v2", "v3"), map(str, face))))
+    return source, obj, translation
+
+
+def test_float32_roundtrip_accepts_cell_crossing_with_exact_connectivity(tmp_path: Path) -> None:
+    source, obj, translation = _float32_roundtrip_fixture(tmp_path)
+    expected = bridge._binary_stl_surface_fingerprint(source)
+    observed = bridge._mesh_geometry_from_object(obj, "1", translation=translation)["surface_fingerprint"]
+    assert observed != expected  # Actual H2C gold-coordinate rounding boundary.
+    audit = bridge._audit_bambu_float32_roundtrip(source, obj, translation)
+    assert audit["status"] == "passed"
+    assert audit["vertex_bijection"] and audit["triangle_multiset_identical"]
+    assert max(audit["per_axis_budget_mm"]) < 1e-5
+    assert audit["primary_coordinate_quantum_mm_unchanged"] == 0.0001
+
+
+def test_float32_roundtrip_rejects_real_subquantum_motion(tmp_path: Path) -> None:
+    source, obj, translation = _float32_roundtrip_fixture(tmp_path)
+    vertex = next(obj.iter("vertex"))
+    vertex.set("x", str(float(vertex.attrib["x"]) + 0.00003))
+    with pytest.raises(bridge.ReleaseError, match="bijection"):
+        bridge._audit_bambu_float32_roundtrip(source, obj, translation)
+
+
+def test_float32_roundtrip_rejects_changed_connectivity(tmp_path: Path) -> None:
+    source, obj, translation = _float32_roundtrip_fixture(tmp_path)
+    next(obj.iter("triangle")).set("v3", "3")
+    with pytest.raises(bridge.ReleaseError, match="connectivity changed"):
+        bridge._audit_bambu_float32_roundtrip(source, obj, translation)
+
+
+def test_float32_roundtrip_rejects_nonbijective_or_moved_mesh(tmp_path: Path) -> None:
+    source, obj, translation = _float32_roundtrip_fixture(tmp_path)
+    vertices = list(obj.iter("vertex"))
+    vertices[1].attrib.update(vertices[0].attrib)
+    with pytest.raises(bridge.ReleaseError, match="bijection"):
+        bridge._audit_bambu_float32_roundtrip(source, obj, translation)
+    with pytest.raises(bridge.ReleaseError, match="bounding-box center"):
+        bridge._audit_bambu_float32_roundtrip(source, obj, [translation[0] + 0.01, *translation[1:]])
 
 
 def test_human_report_leads_with_explicit_primary_delivery() -> None:
@@ -340,6 +459,35 @@ def _rewrite_zip_member(path: Path, member: str, payload: bytes) -> None:
         for info in source.infolist():
             output.writestr(info, payload if info.filename == member else source.read(info.filename))
     temporary.replace(path)
+
+
+def test_bambu_plate_placement_allows_rigid_xy_arrangement(tmp_path: Path) -> None:
+    project = tmp_path / "arranged.3mf"
+    expected = _write_minimal_bambu_project(project)
+    with zipfile.ZipFile(project) as archive:
+        core = ET.fromstring(archive.read("3D/3dmodel.model"))
+        settings = json.loads(archive.read("Metadata/project_settings.config"))
+    item = next(node for node in core.iter() if node.tag.rsplit("}", 1)[-1] == "item")
+    item.set("transform", "1 0 0 0 1 0 0 0 1 25 25 0")
+    settings.update({
+        "printable_area": ["0x0", "50x0", "50x50", "0x50"],
+        "extruder_printable_area": ["5x0,45x0,45x50,5x50"], "printable_height": "50",
+    })
+    _rewrite_zip_member(project, "3D/3dmodel.model", ET.tostring(core))
+    _rewrite_zip_member(project, "Metadata/project_settings.config", json.dumps(settings).encode())
+    result = bridge._audit_bambu_project(project, expected, nozzle_mm=0.2, require_printable_placement=True)
+    assert result["plate_placement_audit"]["status"] == "passed"
+    assert result["plate_placement_audit"]["placed_bounds"]["min_mm"] == [24, 24, 0]
+    assert result["world_bounds"][0]["min_mm"] == [-1, -1, 0]  # Source frame is unchanged.
+    # Moving the whole cap still has to fit every declared active-nozzle area.
+    item.set("transform", "1 0 0 0 1 0 0 0 1 0 25 0")
+    _rewrite_zip_member(project, "3D/3dmodel.model", ET.tostring(core))
+    with pytest.raises(bridge.ReleaseError, match="outside a required extruder"):
+        bridge._audit_bambu_project(project, expected, nozzle_mm=0.2, require_printable_placement=True)
+    item.set("transform", "1 0 0 0 1 0 0 0 1 25 25 1")
+    _rewrite_zip_member(project, "3D/3dmodel.model", ET.tostring(core))
+    with pytest.raises(bridge.ReleaseError, match="build transform"):
+        bridge._audit_bambu_project(project, expected, nozzle_mm=0.2, require_printable_placement=True)
 
 
 def test_bambu_audit_binds_component_transforms_to_stl_world_bounds(

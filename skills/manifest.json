@@ -8,6 +8,8 @@
     "legacy_aliases": ["lens-cap-front-image", "lens-cap-front-artwork"],
     "routing_entrypoint": "scripts/resolve_skill_route.py",
     "production_entrypoint": "scripts/build_3mf.py",
+    "reference_pack_entrypoint": "scripts/reference_pack.py",
+    "reference_pack_manifest": "skills/lens-cap-imagegen/references/quality-library/reference-manifest.json",
     "production_alias": "bin/lens-cap-3mf",
     "receipt": ".lens-cap-skills.json",
     "default_mode": "dry-run",
@@ -23,6 +25,13 @@
       "native_kind": "core_geometry_only",
       "bambu_default_mode": "export",
       "bambu_slice_requires_explicit_toolpath_request": true
+    },
+    "quality_reference_pack": {
+      "selection_policy": "user_selected_only",
+      "default_lead": "contax-planar-50-f1-4-odyssey-reference.png",
+      "alternate_mood_lead": "contax-planar-50-f1-4-moon-reference.png",
+      "asset_count": 6,
+      "validation_command": "./scripts/reference_pack.py check"
     }
   },
   "routing_policy": {
@@ -373,7 +382,7 @@
   "skills": [
     {
       "name": "lens-cap-imagegen",
-      "version": "0.1.0a2",
+      "version": "0.1.0a3",
       "path": "skills/lens-cap-imagegen/SKILL.md",
       "localized_paths": ["skills/lens-cap-imagegen/SKILL.zh-CN.md"],
       "phase": "concept_art",
@@ -381,7 +390,7 @@
     },
     {
       "name": "lens-cap-production",
-      "version": "0.1.0a2",
+      "version": "0.1.0a3",
       "path": "skills/lens-cap-production/SKILL.md",
       "localized_paths": ["skills/lens-cap-production/SKILL.zh-CN.md"],
       "phase": "printable_production",

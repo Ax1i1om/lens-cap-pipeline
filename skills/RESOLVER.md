@@ -92,6 +92,18 @@ deliverable may override this route only for that separate deliverable.
 
 ## Shared artwork and fit contract
 
+Every clean-clone artwork request first validates the checked-in quality pack
+with `./scripts/reference_pack.py check`. The pack contains exactly six
+user-selected references under
+`skills/lens-cap-imagegen/references/quality-library/`; the default lead is the
+Contax Odyssey reference and the moon reference is the alternate orbital /
+candlelight lead. Ask once whether the user has a suitable reference to upload.
+An uploaded reference wins after it is saved and hashed; otherwise use the
+pack default and record `reference_selection_mode=repo_default`. Never search
+deprecated job folders or rely on prior conversation images. Transfer finish
+traits only, never another reference's text, lens identity, layout, logo, or
+film/mission claim.
+
 Both host-local copies keep the approved artwork hierarchy: focal length is the
 first visual read, and maximum aperture (F-stop/F-number/F value) is the second.
 For fitted production, ask one grouped intake for the actual mating/front
@@ -115,6 +127,7 @@ same files with `scripts/install_skills.py` (or `bin/lens-cap-skills`):
 
 ```sh
 ./scripts/install_skills.py check --json
+./scripts/reference_pack.py check
 ./scripts/install_skills.py sync --dest .agents/skills
 ./scripts/install_skills.py sync --dest .agents/skills --apply
 ```

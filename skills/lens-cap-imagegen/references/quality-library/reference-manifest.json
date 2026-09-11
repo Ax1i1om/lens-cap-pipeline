@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "pack_id": "lens-cap-quality-reference-pack-2026-09-11",
+  "selection_policy": "user_selected_only",
+  "default_lead": "contax-planar-50-f1-4-odyssey-reference.png",
+  "alternate_lead_by_mood": {
+    "moon_orbital_candlelight": "contax-planar-50-f1-4-moon-reference.png",
+    "technical_archival": "carl-zeiss-jena-135-f3-5-reference.png",
+    "cinema_rehouse": "helios-44-2-reference.png"
+  },
+  "assets": [
+    {
+      "file": "olympus-zuiko-28-f2-reference.png",
+      "lens_identity": "Olympus OM Zuiko 28mm F2",
+      "roles": ["quality_reference", "style_reference"],
+      "sha256": "cddede2fd26f4e6c80f7dfc733505ed2ba1820b1fb23838eb933314c9bec1291",
+      "selection_note": "User-selected reference: large focal/aperture lockup, orbital line rhythm, restrained blue accent, perimeter segmentation."
+    },
+    {
+      "file": "carl-zeiss-jena-135-f3-5-reference.png",
+      "lens_identity": "Carl Zeiss Jena Sonnar 135mm F3.5 DDR",
+      "roles": ["quality_reference", "style_reference"],
+      "sha256": "1dfe731363f3302ea52bdaf8634dfe727fdb9f8686d551cdc9af9a32eaedf0d2",
+      "selection_note": "User-selected reference: archival technical geometry, strong numeric hierarchy, split field, film-strip rhythm."
+    },
+    {
+      "file": "contax-planar-50-f1-4-odyssey-reference.png",
+      "lens_identity": "Contax C/Y Planar T* 50mm F1.4",
+      "roles": ["quality_reference", "style_reference"],
+      "sha256": "60a42ea525ca0bf47d85f75ab141a276f73898a8b9c421a55e34b9dfe1a15582",
+      "selection_note": "User-selected lead reference: resolved hero number, continuous perimeter, vertebral gold gesture, and production-friendly broad color islands."
+    },
+    {
+      "file": "contax-planar-50-f1-4-moon-reference.png",
+      "lens_identity": "Contax C/Y Planar T* 50mm F1.4",
+      "roles": ["quality_reference", "style_reference"],
+      "sha256": "c14688d00471d26611783c62afe28c23aa35d5e02226c197753560811baa54b4",
+      "selection_note": "User-selected alternate mood reference: moon, horizon, flame-like sweep, and candlelight/low-key contrast translated into abstract geometry."
+    },
+    {
+      "file": "canon-ef-35-105-reference.png",
+      "lens_identity": "Canon EF 35-105mm F3.5-4.5",
+      "roles": ["quality_reference", "style_reference"],
+      "sha256": "a5ff40783cd6ad1a2d122443d90706f875293b187ced20cd9956ad551f676f49",
+      "selection_note": "User-selected reference: diagonal focal sweep, strong zoom identity, restrained cinema-history framing."
+    },
+    {
+      "file": "helios-44-2-reference.png",
+      "lens_identity": "Helios-44-2 58mm F2",
+      "roles": ["quality_reference", "style_reference"],
+      "sha256": "4bf579d6ca36ffbd562cfec669f0a826e469d637f38f6e1c298ce8b3b2283758",
+      "selection_note": "User-selected reference: concentric optical motion, large numeric hero, cinema-rehouse tone and controlled line fields."
+    }
+  ],
+  "excluded_from_default_pack": "All other generated tests and deprecated concepts in the workspace."
+}

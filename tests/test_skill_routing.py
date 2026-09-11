@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -101,6 +102,41 @@ def test_cross_context_trigger_and_intake_contract_is_present() -> None:
     assert "最大光圈（F 值）／F值／F-stop／F-number 是第二层级" in production_zh
     assert "默认开启" in production_zh and "摩擦凸条" in production_zh
     assert "不要并行调用任何其他设计 Skill" in production_zh
+
+
+def test_clean_context_quality_pack_is_checked_in_and_not_legacy_gallery() -> None:
+    import hashlib
+    import json
+    import subprocess
+
+    manifest = json.loads(
+        (ROOT / "skills/lens-cap-imagegen/references/quality-library/reference-manifest.json")
+        .read_text(encoding="utf-8")
+    )
+    assert manifest["selection_policy"] == "user_selected_only"
+    assert manifest["default_lead"] == "contax-planar-50-f1-4-odyssey-reference.png"
+    assert manifest["alternate_lead_by_mood"]["moon_orbital_candlelight"] == (
+        "contax-planar-50-f1-4-moon-reference.png"
+    )
+    assert len(manifest["assets"]) == 6
+    for asset in manifest["assets"]:
+        path = ROOT / "skills/lens-cap-imagegen/references/quality-library" / asset["file"]
+        assert path.is_file()
+        assert hashlib.sha256(path.read_bytes()).hexdigest() == asset["sha256"]
+    result = subprocess.run(
+        [sys.executable, str(ROOT / "scripts/reference_pack.py"), "check", "--json"],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    assert result.returncode == 0
+    assert json.loads(result.stdout)["status"] == "passed"
+    imagegen = (ROOT / "skills/lens-cap-imagegen/SKILL.md").read_text(encoding="utf-8")
+    production = (ROOT / "skills/lens-cap-production/SKILL.md").read_text(encoding="utf-8")
+    for document in (imagegen, production):
+        assert "reference_pack.py check" in document
+        assert "deprecated" in document.lower()
+        assert "user-supplied reference" in document.lower() or "用户上传的参考" in document
 
 
 def test_production_skill_never_presents_core_3mf_as_a_bambu_project() -> None:

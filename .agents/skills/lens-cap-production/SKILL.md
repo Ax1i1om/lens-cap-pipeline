@@ -105,6 +105,18 @@ mechanical fit, and slicer review as separate, auditable stages.
 
 ## One default path
 
+### Clean-clone artwork handoff
+
+If the current job has no approved artwork packet, do not improvise from old
+job files, deprecated job folders, or memory. Return to `lens-cap-imagegen`, run
+`./scripts/reference_pack.py check`, and use the repository quality pack or a
+user-supplied reference. The image Skill must attach and
+hash the selected reference in the v2 brief before production continues. A
+reference is a quality/style input, not permission to copy its text, lens
+identity, exact layout, logo, film/mission claim, or literal subject. This
+handoff rule makes a clean clone reproducible; production must never
+manufacture a missing review or silently substitute another job's master.
+
 First distinguish a new artwork-to-model build from an explicit edit of a
 supplied model. For "add ribs to this 3MF; keep the front", use
 [Existing-model edits and rib attachment](references/rib-attachment-and-existing-models.md)

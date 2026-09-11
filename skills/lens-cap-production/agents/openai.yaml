@@ -21,7 +21,10 @@ interface:
     only to $lens-cap-imagegen. Do not invoke generic
     mechanical-CAD, product-design,
     graphic-design, logo,
-    poster, UI, or other design Skills in parallel. Preserve approved artwork
+    poster, UI, or other design Skills in parallel. If approved artwork is
+    missing, return to $lens-cap-imagegen and use the checked-in quality pack
+    after running ./scripts/reference_pack.py check; never search old jobs or
+    substitute a remembered image. Preserve approved artwork
     with focal length as the first visual read and maximum aperture
     (F-stop/F-number/F value) as the second. For a zoom, preserve the numeric
     focal_length_mm anchor and optional full-range focal_length_display token.
